@@ -9,8 +9,8 @@ var SPREADSHEET_ID = '1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU';
 // Nama tab dalam spreadsheet
 var TAB = {
   GURU:        'Maklumat Guru',
-  KANAK:       'PendaftaranBaru!',
-  DEWASA:      'KelasDewasa!',
+  KANAK:       'PendaftaranBaru',
+  DEWASA:      'KelasDewasa',
   KEHADIRAN:   'Kehadiran'
 };
 
@@ -229,9 +229,6 @@ function registerDewasa(params) {
     var sheet = ss.getSheetByName(TAB.DEWASA);
     if (!sheet) return { success: false, message: 'Tab KelasDewasa! tidak dijumpai.' };
 
-    var lastRow = sheet.getLastRow();
-    var muridId = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + (lastRow);
-
     var newRow = new Array(8).fill('');
     newRow[COL_DEWASA.NAMA]    = params.nama.trim();
     newRow[COL_DEWASA.TELEFON] = params.telefon.trim();
@@ -243,6 +240,10 @@ function registerDewasa(params) {
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
+
+    // Jana ID selepas appendRow supaya nombor baris adalah tepat
+    var actualRow = sheet.getLastRow();
+    var muridId = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
 
     Logger.log('registerDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
     return { success: true, id: muridId };
