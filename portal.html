@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Pengurusan Kelas Mengaji</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F5EDD5;
+    --gold-dark: #8B6914;
+    --green: #1A5C3A;
+    --green-mid: #2D7A52;
+    --green-light: #E8F4EE;
+    --cream: #FAF7F0;
+    --text-dark: #1C1C1C;
+    --text-mid: #4A4A4A;
+    --text-muted: #888;
+    --border: #E2D9C5;
+    --white: #FFFFFF;
+    --error: #C0392B;
+    --success: #1A5C3A;
+    --radius: 14px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    color: var(--text-dark);
+  }
+
+  /* === ORNAMENTAL HEADER === */
+  .site-header {
+    background: var(--green);
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .site-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      rgba(201,168,76,0.06) 20px,
+      rgba(201,168,76,0.06) 21px
+    );
+  }
+  .header-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .header-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    object-fit: cover;
+    background: var(--gold-light);
+  }
+  .header-logo-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background: var(--gold-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-family: 'Lora', serif;
+    color: var(--gold-dark);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .header-text h1 {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #FFFFFF;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+  }
+  .header-text p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 3px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+  .header-divider {
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+  }
+
+  /* === NAVIGATION TABS === */
+  .nav-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .nav-tab {
+    padding: 15px 28px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--green); background: var(--green-light); }
+  .nav-tab.active {
+    color: var(--green);
+    border-bottom-color: var(--gold);
+    font-weight: 500;
+  }
+
+  /* === MAIN CONTAINER === */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* === PANELS === */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* === SECTION HEADING === */
+  .section-heading {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .section-heading .arabic {
+    font-family: 'Lora', serif;
+    font-size: 28px;
+    color: var(--gold-dark);
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .section-heading h2 {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+  .section-heading p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .divider-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 10px 0 0;
+  }
+  .divider-ornament::before,
+  .divider-ornament::after {
+    content: '';
+    width: 60px;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.6;
+  }
+  .divider-ornament span { color: var(--gold); font-size: 14px; }
+
+  /* === CARDS === */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 700px) {
+    .card-grid { grid-template-columns: 1fr; }
+    .nav-tab { padding: 12px 16px; font-size: 13px; }
+    .header-inner { padding: 18px 20px; }
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .card-icon.green { background: var(--green-light); color: var(--green); }
+  .card-icon.gold { background: var(--gold-light); color: var(--gold-dark); }
+  .card-header-text h3 {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.2;
+  }
+  .card-header-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .card-body { padding: 24px; }
+
+  /* === FORM ELEMENTS === */
+  .form-group { margin-bottom: 18px; }
+  .form-group:last-of-type { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    margin-bottom: 6px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-dark);
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--green-mid);
+    box-shadow: 0 0 0 3px rgba(26,92,58,0.1);
+    background: var(--white);
+  }
+  input.error-field { border-color: var(--error); }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+  .checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: var(--green-light);
+    border-radius: 8px;
+    border: 1px solid rgba(26,92,58,0.15);
+  }
+  .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    accent-color: var(--green);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .checkbox-group label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 400;
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+
+  /* === BUTTONS === */
+  .btn {
+    width: 100%;
+    padding: 13px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    margin-top: 20px;
+  }
+  .btn-primary {
+    background: var(--green);
+    color: #FFFFFF;
+  }
+  .btn-primary:hover { background: var(--green-mid); }
+  .btn-primary:active { transform: scale(0.99); }
+  .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+  .btn-gold {
+    background: var(--gold);
+    color: #FFFFFF;
+  }
+  .btn-gold:hover { background: var(--gold-dark); }
+  .btn-gold:active { transform: scale(0.99); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--green);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+  }
+  .btn-ghost:hover { background: var(--green-light); border-color: var(--green-mid); }
+  .btn-sm {
+    width: auto;
+    padding: 8px 18px;
+    font-size: 13px;
+    margin-top: 0;
+  }
+
+  /* === ALERTS === */
+  .alert {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 14px;
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .alert.show { display: flex; }
+  .alert-error { background: #FDECEA; color: var(--error); border: 1px solid #F5C6C2; }
+  .alert-success { background: var(--green-light); color: var(--success); border: 1px solid rgba(26,92,58,0.2); }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  /* === LOADER === */
+  .btn-loader {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: 0 auto;
+  }
+  .btn.loading .btn-text { display: none; }
+  .btn.loading .btn-loader { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* === STEP INDICATOR (pendaftaran) === */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 28px;
+  }
+  .step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .step-dot.active { background: var(--green); color: #fff; }
+  .step-dot.done { background: var(--gold); color: #fff; }
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    max-width: 60px;
+    transition: background 0.3s;
+  }
+  .step-line.done { background: var(--gold); }
+  .step-label {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 6px;
+    margin-bottom: 24px;
+  }
+  .step-label span {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    width: 28px;
+  }
+  .step-label span.active { color: var(--green); font-weight: 500; }
+
+  /* Form steps */
+  .form-step { display: none; }
+  .form-step.active { display: block; }
+
+  /* === FORM TABS (kanak/dewasa) === */
+  .tab-switcher {
+    display: flex;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .tab-btn.active { background: var(--white); color: var(--green); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+  /* === SUCCESS CARD === */
+  .success-card {
+    text-align: center;
+    padding: 40px 24px;
+    display: none;
+  }
+  .success-card.show { display: block; }
+  .success-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .success-card h3 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .success-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+  .success-card .bil-badge {
+    display: inline-block;
+    background: var(--gold-light);
+    color: var(--gold-dark);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin: 14px 0;
+    border: 1px solid var(--gold);
+  }
+
+  /* === BADGE === */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-gold { background: var(--gold-light); color: var(--gold-dark); }
+
+  /* === DASHBOARD INFO PANEL === */
+  .info-panel {
+    background: var(--green);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    color: #fff;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .info-panel::after {
+    content: '☽';
+    position: absolute;
+    right: 24px;
+    bottom: -10px;
+    font-size: 80px;
+    opacity: 0.06;
+    color: #fff;
+  }
+  .info-panel-icon { font-size: 32px; flex-shrink: 0; }
+  .info-panel h3 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .info-panel p { font-size: 13px; opacity: 0.8; line-height: 1.6; }
+
+  /* kehadiran panel */
+  .kehadiran-form { max-width: 500px; margin: 0 auto; }
+
+  /* helper text */
+  .helper { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .req { color: var(--error); margin-left: 2px; }
+
+  /* === FOOTER === */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  footer span { color: var(--gold-dark); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <img src="https://i.ibb.co/93rXrkZq/LOGO-SL.png" alt="Logo Kelas Mengaji" class="header-logo">
+    <div class="header-text">
+      <h1>Sistem Pengurusan Kelas Mengaji</h1>
+      <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
+    </div>
+  </div>
+  <div class="header-divider"></div>
+</header>
+
+<!-- NAV -->
+<nav class="nav-bar" role="navigation" aria-label="Menu utama">
+  <button class="nav-tab active" onclick="showPanel('home')" aria-selected="true">🏠 Laman Utama</button>
+  <button class="nav-tab" onclick="showPanel('daftar')" aria-selected="false">📋 Daftar Murid</button>
+  <button class="nav-tab" onclick="showPanel('kehadiran')" aria-selected="false">✅ Kehadiran</button>
+</nav>
+
+<!-- ============================================================ -->
+<!-- PANEL: HOME (LOGIN + REGISTER CTA) -->
+<!-- ============================================================ -->
+<main class="main" id="mainContent">
+
+<section class="panel active" id="panel-home">
+  <div class="section-heading">
+    <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+    <h2>Selamat Datang ke Portal Mengaji</h2>
+    <p>Login sebagai guru atau daftarkan murid baru</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <div class="card-grid">
+
+    <!-- CARD 1: ADMIN LOGIN -->
+    <div class="card" id="loginCard">
+      <div class="card-header">
+        <div class="card-icon green">🔒</div>
+        <div class="card-header-text">
+          <h3>Log Masuk Guru / Admin</h3>
+          <p>Akses dashboard pengurusan kelas</p>
+        </div>
+      </div>
+      <div class="card-body" id="loginFormWrapper">
+        <div class="form-group">
+          <label for="loginEmail">Alamat E-mel <span class="req">*</span></label>
+          <input type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPhone">No. WhatsApp (Kata Laluan) <span class="req">*</span></label>
+          <input type="tel" id="loginPhone" placeholder="0123456789" autocomplete="off">
+          <p class="helper">Masukkan nombor telefon WhatsApp anda</p>
+        </div>
+
+        <div class="alert alert-error" id="loginError">
+          <span class="alert-icon">⚠</span>
+          <span id="loginErrorMsg">E-mel atau nombor tidak sepadan. Sila cuba semula.</span>
+        </div>
+        <div class="alert alert-success" id="loginSuccess">
+          <span class="alert-icon">✓</span>
+          <span id="loginSuccessMsg">Log masuk berjaya! Selamat datang.</span>
+        </div>
+
+        <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
+          <span class="btn-text">Log Masuk</span>
+          <span class="btn-loader"></span>
+        </button>
+        <p style="text-align:center; font-size:12px; color:var(--text-muted); margin-top:14px;">
+          Belum ada akaun guru? Hubungi pentadbir sistem.
+        </p>
+      </div>
+      <!-- Dashboard placeholder (post-login) -->
+      <div class="card-body" id="dashboardPreview" style="display:none;">
+        <div style="padding:10px 0;">
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Selamat datang, <strong id="guruName"></strong> 👋</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div style="background:var(--green-light); border-radius:10px; padding:14px; text-align:center;">
+              <p style="font-size:11px; color:var(--green); font-weight:500; margin-bottom:4px;">MURID AKTIF</p>
+              <p style="font-size:24px; font-weight:500; color:var(--green);">—</p>
+            </div>
+            <div style="background:var(--gold-light); border-radius:10px; padding:14px; text-align:center;">
+              <p style="font-size:11px; color:var(--gold-dark); font-weight:500; margin-bottom:4px;">KEHADIRAN</p>
+              <p style="font-size:24px; font-weight:500; color:var(--gold-dark);">—</p>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="width:100%; margin-top:0;">Log Keluar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: DAFTAR MURID BARU -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon gold">📝</div>
+        <div class="card-header-text">
+          <h3>Daftar Murid Baru</h3>
+          <p>Kanak-kanak &amp; Dewasa</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:20px;">
+          <p style="font-size:13px; color:var(--text-mid); line-height:1.7; margin-bottom:14px;">
+            Ibu bapa atau wali boleh mendaftar murid baru tanpa perlu log masuk. Slip pendaftaran akan dihantar ke e-mel selepas pendaftaran berjaya.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
+              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">1</span>
+              Isi maklumat murid &amp; ibu bapa
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
+              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">2</span>
+              Pilih pakej &amp; kaedah pengajian
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
+              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">3</span>
+              Terima slip pendaftaran melalui e-mel
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border); padding-top:16px; display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-gold" style="margin-top:0;" onclick="showDaftar('kanak')">
+            👦 Daftar Murid Kanak-kanak
+          </button>
+          <button class="btn btn-ghost" style="margin-top:0;" onclick="showDaftar('dewasa')">
+            🧑 Daftar Murid Dewasa
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /card-grid -->
+</section>
+
+
+<!-- ============================================================ -->
+<!-- PANEL: DAFTAR MURID -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-daftar">
+
+  <div class="section-heading">
+    <h2>Pendaftaran Murid Baru</h2>
+    <p>Isikan maklumat dengan tepat. Semua medan bertanda <span style="color:var(--error)">*</span> adalah wajib.</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <!-- TAB SWITCHER -->
+  <div style="max-width:700px; margin:0 auto 28px;">
+    <div class="tab-switcher">
+      <button class="tab-btn active" id="tabKanak" onclick="switchRegTab('kanak')">👦 Murid Kanak-kanak</button>
+      <button class="tab-btn" id="tabDewasa" onclick="switchRegTab('dewasa')">🧑 Murid Dewasa</button>
+    </div>
+  </div>
+
+  <!-- ========== FORM KANAK-KANAK ========== -->
+  <div id="formKanak" style="max-width:700px; margin:0 auto;">
+
+    <!-- STEP INDICATOR -->
+    <div class="step-indicator" id="stepIndicator">
+      <div class="step-dot active" id="s1">1</div>
+      <div class="step-line" id="l1"></div>
+      <div class="step-dot" id="s2">2</div>
+      <div class="step-line" id="l2"></div>
+      <div class="step-dot" id="s3">3</div>
+    </div>
+    <div class="step-label">
+      <span class="active" id="sl1">Ibu Bapa</span>
+      <span id="sl2">Murid</span>
+      <span id="sl3">Pakej</span>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+
+        <!-- STEP 1: IBU BAPA -->
+        <div class="form-step active" id="step1">
+          <div class="form-group">
+            <label for="namaIbu">Nama Ibu/Bapa/Penjaga <span class="req">*</span></label>
+            <input type="text" id="namaIbu" placeholder="Nama penuh seperti dalam IC">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="telefonIbu">No. WhatsApp <span class="req">*</span></label>
+              <input type="tel" id="telefonIbu" placeholder="0123456789">
+            </div>
+            <div class="form-group">
+              <label for="emailIbu">Alamat E-mel <span class="req">*</span></label>
+              <input type="email" id="emailIbu" placeholder="ibu@example.com">
+              <p class="helper">Slip daftar dihantar ke e-mel ini</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="alamatIbu">Alamat Penuh <span class="req">*</span></label>
+            <textarea id="alamatIbu" placeholder="No. Rumah, Jalan, Kawasan, Poskod, Negeri"></textarea>
+          </div>
+          <div class="alert alert-error" id="step1Error">
+            <span class="alert-icon">⚠</span>
+            <span id="step1ErrorMsg">Sila isi semua medan wajib.</span>
+          </div>
+          <button class="btn btn-primary" onclick="nextStep(2)">
+            Seterusnya →
+          </button>
+        </div>
+
+        <!-- STEP 2: MURID -->
+        <div class="form-step" id="step2">
+          <div class="form-group">
+            <label for="namaAnak">Nama Anak (seperti MYKID) <span class="req">*</span></label>
+            <input type="text" id="namaAnak" placeholder="Nama penuh anak">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="noMykid">No. MYKID <span class="req">*</span></label>
+              <input type="text" id="noMykid" placeholder="000000-00-0000" id="noMykid"
+                     oninput="formatMykid(this)">
+            </div>
+            <div class="form-group">
+              <label for="tahapKanak">Tahap Pengajian <span class="req">*</span></label>
+              <select id="tahapKanak">
+                <option value="">— Pilih Tahap —</option>
+                <option>Iqra 1</option>
+                <option>Iqra 2</option>
+                <option>Iqra 3</option>
+                <option>Iqra 4</option>
+                <option>Iqra 5</option>
+                <option>Iqra 6</option>
+                <option>Al-Quran (Asas)</option>
+                <option>Al-Quran (Pertengahan)</option>
+                <option>Al-Quran (Lanjutan)</option>
+                <option>Hafazan</option>
+              </select>
+            </div>
+          </div>
+          <div class="alert alert-error" id="step2Error">
+            <span class="alert-icon">⚠</span>
+            <span id="step2ErrorMsg">Sila isi semua medan wajib.</span>
+          </div>
+          <div style="display:flex; gap:12px; margin-top:20px;">
+            <button class="btn btn-ghost" style="margin-top:0; flex:1;" onclick="prevStep(1)">← Kembali</button>
+            <button class="btn btn-primary" style="flex:2; margin-top:0;" onclick="nextStep(3)">Seterusnya →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: PAKEJ -->
+        <div class="form-step" id="step3">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pilihPakej">Pilihan Pakej <span class="req">*</span></label>
+              <select id="pilihPakej">
+                <option value="">— Pilih Pakej —</option>
+                <option>Pakej Asas (2x seminggu)</option>
+                <option>Pakej Standard (3x seminggu)</option>
+                <option>Pakej Premium (5x seminggu)</option>
+                <option>Pakej Intensif (Harian)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="kaedahPengajian">Kaedah Pengajian <span class="req">*</span></label>
+              <select id="kaedahPengajian">
+                <option value="">— Pilih Kaedah —</option>
+                <option>Bersemuka (Kelas)</option>
+                <option>Dalam Talian (Online)</option>
+                <option>Hibrid</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <div class="checkbox-group">
+              <input type="checkbox" id="sayaFaham">
+              <label for="sayaFaham">Saya faham dan bersetuju dengan syarat-syarat pendaftaran kelas mengaji. Bayaran yuran perlu diselesaikan sebelum kelas bermula.</label>
+            </div>
+          </div>
+          <div class="alert alert-error" id="step3Error">
+            <span class="alert-icon">⚠</span>
+            <span id="step3ErrorMsg">Sila isi semua medan dan tandakan persetujuan.</span>
+          </div>
+          <div style="display:flex; gap:12px; margin-top:20px;">
+            <button class="btn btn-ghost" style="margin-top:0; flex:1;" onclick="prevStep(2)">← Kembali</button>
+            <button class="btn btn-gold" style="flex:2; margin-top:0;" id="submitKanakBtn" onclick="submitKanak()">
+              <span class="btn-text">✓ Hantar Pendaftaran</span>
+              <span class="btn-loader"></span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /card-body -->
+    </div><!-- /card -->
+
+    <!-- SUCCESS -->
+    <div class="card" id="kanakSuccess" style="display:none;">
+      <div class="success-card show">
+        <div class="success-icon">✓</div>
+        <h3>Pendaftaran Berjaya!</h3>
+        <p>Terima kasih. Pendaftaran murid telah diterima.</p>
+        <div class="bil-badge" id="bilBadge">No. Bil: —</div>
+        <p style="margin-top:8px;">Slip pendaftaran akan dihantar ke e-mel anda dalam masa <strong>24 jam</strong>.</p>
+        <button class="btn btn-ghost btn-sm" style="margin-top:24px;" onclick="resetKanakForm()">← Daftar Murid Lain</button>
+      </div>
+    </div>
+
+  </div><!-- /formKanak -->
+
+  <!-- ========== FORM DEWASA ========== -->
+  <div id="formDewasa" style="max-width:700px; margin:0 auto; display:none;">
+    <div class="card">
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="namaDewasa">Nama Penuh <span class="req">*</span></label>
+            <input type="text" id="namaDewasa" placeholder="Nama penuh seperti dalam IC">
+          </div>
+          <div class="form-group">
+            <label for="telefonDewasa">No. WhatsApp <span class="req">*</span></label>
+            <input type="tel" id="telefonDewasa" placeholder="0123456789">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="emailDewasa">Alamat E-mel <span class="req">*</span></label>
+            <input type="email" id="emailDewasa" placeholder="murid@example.com">
+          </div>
+          <div class="form-group">
+            <label for="tahapDewasa">Tahap Pengajian <span class="req">*</span></label>
+            <select id="tahapDewasa">
+              <option value="">— Pilih Tahap —</option>
+              <option>Iqra (Asas)</option>
+              <option>Al-Quran (Asas)</option>
+              <option>Al-Quran (Pertengahan)</option>
+              <option>Al-Quran (Lanjutan)</option>
+              <option>Tajwid</option>
+              <option>Hafazan</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="alamatDewasa">Alamat Penuh <span class="req">*</span></label>
+          <textarea id="alamatDewasa" placeholder="No. Rumah, Jalan, Kawasan, Poskod, Negeri"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="guruPilih">Pilih Guru (jika ada pilihan)</label>
+          <input type="text" id="guruPilih" placeholder="Nama guru (pilihan)">
+        </div>
+        <div class="alert alert-error" id="dewasaError">
+          <span class="alert-icon">⚠</span>
+          <span id="dewasaErrorMsg">Sila isi semua medan wajib.</span>
+        </div>
+        <button class="btn btn-gold" id="submitDewasaBtn" onclick="submitDewasa()">
+          <span class="btn-text">✓ Hantar Pendaftaran</span>
+          <span class="btn-loader"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="dewasaSuccess" style="display:none; margin-top:0;">
+      <div class="success-card show">
+        <div class="success-icon">✓</div>
+        <h3>Pendaftaran Berjaya!</h3>
+        <p>Terima kasih. Maklumat anda telah disimpan.</p>
+        <div class="bil-badge" id="dewasaBilBadge">ID Murid: —</div>
+        <p style="margin-top:8px;">Pihak kami akan menghubungi anda dalam masa terdekat.</p>
+        <button class="btn btn-ghost btn-sm" style="margin-top:24px;" onclick="resetDewasaForm()">← Daftar Lagi</button>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ============================================================ -->
+<!-- PANEL: KEHADIRAN -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-kehadiran">
+
+  <div class="section-heading">
+    <h2>Rekod Kehadiran Murid</h2>
+    <p>Guru merekod kehadiran setiap sesi kelas</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-panel-icon">📋</div>
+    <div>
+      <h3>Log Masuk Diperlukan</h3>
+      <p>Fungsi rekod kehadiran hanya boleh diakses oleh guru yang telah log masuk. Sila log masuk di Laman Utama terlebih dahulu.</p>
+    </div>
+  </div>
+
+  <div class="kehadiran-form" id="kehadiranGuestMsg" style="display:block;">
+    <div style="text-align:center; padding:20px 0;">
+      <button class="btn btn-primary" style="width:auto; padding:12px 32px;" onclick="showPanel('home')">
+        🔒 Log Masuk Sekarang
+      </button>
+    </div>
+  </div>
+
+  <div class="kehadiran-form" id="kehadiranForm" style="display:none;">
+    <div class="card">
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="khdTarikh">Tarikh Kelas <span class="req">*</span></label>
+            <input type="text" id="khdTarikh" readonly
+                   style="background:var(--cream); color:var(--text-muted);">
+          </div>
+          <div class="form-group">
+            <label for="khdGuru">Nama Guru <span class="req">*</span></label>
+            <input type="text" id="khdGuru" readonly style="background:var(--cream); color:var(--text-muted);">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="khdMurid">Nama Murid <span class="req">*</span></label>
+          <input type="text" id="khdMurid" placeholder="Nama penuh murid">
+        </div>
+        <div class="form-group">
+          <label for="khdStatus">Status Kehadiran <span class="req">*</span></label>
+          <select id="khdStatus">
+            <option value="">— Pilih Status —</option>
+            <option value="Hadir">✅ Hadir</option>
+            <option value="Tidak Hadir">❌ Tidak Hadir</option>
+            <option value="Cuti">📅 Cuti (Dengan Sebab)</option>
+            <option value="Lambat">⏰ Lambat</option>
+          </select>
+        </div>
+        <div class="alert alert-error" id="khdError">
+          <span class="alert-icon">⚠</span>
+          <span id="khdErrorMsg">Sila isi semua medan wajib.</span>
+        </div>
+        <div class="alert alert-success" id="khdSuccess">
+          <span class="alert-icon">✓</span>
+          Kehadiran berjaya direkod!
+        </div>
+        <button class="btn btn-primary" id="submitKhdBtn" onclick="submitKehadiran()">
+          <span class="btn-text">✓ Simpan Kehadiran</span>
+          <span class="btn-loader"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <p>© 2026 Sistem Pengurusan Kelas Mengaji &nbsp;·&nbsp; Dikuasakan oleh <span>Google Apps Script</span></p>
+  <p style="margin-top:4px;">Data disimpan dalam <span>Google Sheets</span> · Slip dijana oleh <span>Autocrat</span></p>
+</footer>
+
+<!-- ============================================================ -->
+<!-- SCRIPT -->
+<!-- ============================================================ -->
+<script>
+  // === CONFIG ===
+  // Gantikan URL ini dengan URL Web App Google Apps Script anda selepas deploy
+  const GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+
+  let currentStep = 1;
+  let loggedInGuru = null;
+
+  // =====================
+  // NAVIGATION
+  // =====================
+  function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    const tabs = document.querySelectorAll('.nav-tab');
+    const map = { home: 0, daftar: 1, kehadiran: 2 };
+    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showDaftar(type) {
+    showPanel('daftar');
+    switchRegTab(type);
+  }
+
+  // =====================
+  // TAB REG SWITCHER
+  // =====================
+  function switchRegTab(type) {
+    document.getElementById('tabKanak').classList.toggle('active', type === 'kanak');
+    document.getElementById('tabDewasa').classList.toggle('active', type === 'dewasa');
+    document.getElementById('formKanak').style.display = type === 'kanak' ? 'block' : 'none';
+    document.getElementById('formDewasa').style.display = type === 'dewasa' ? 'block' : 'none';
+  }
+
+  // =====================
+  // STEP NAVIGATION (KANAK)
+  // =====================
+  function updateStepUI(step) {
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById('s' + i);
+      const lbl = document.getElementById('sl' + i);
+      dot.classList.remove('active', 'done');
+      lbl.classList.remove('active');
+      if (i < step) { dot.classList.add('done'); dot.textContent = '✓'; }
+      else if (i === step) { dot.classList.add('active'); dot.textContent = i; lbl.classList.add('active'); }
+      else { dot.textContent = i; }
+      if (i < 3) {
+        const line = document.getElementById('l' + i);
+        line.classList.toggle('done', i < step);
+      }
+    }
+    document.querySelectorAll('.form-step').forEach((s, idx) => {
+      s.classList.toggle('active', idx + 1 === step);
+    });
+    currentStep = step;
+  }
+
+  function nextStep(to) {
+    if (to === 2 && !validateStep1()) return;
+    if (to === 3 && !validateStep2()) return;
+    updateStepUI(to);
+  }
+  function prevStep(to) { updateStepUI(to); }
+
+  // =====================
+  // VALIDATION
+  // =====================
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    const msgEl = document.getElementById(id + 'Msg');
+    if (msgEl && msg) msgEl.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 4000);
+  }
+  function hideAlert(id) { document.getElementById(id).classList.remove('show'); }
+
+  function isEmpty(id) { return !document.getElementById(id).value.trim(); }
+
+  function validateStep1() {
+    if (isEmpty('namaIbu') || isEmpty('telefonIbu') || isEmpty('emailIbu') || isEmpty('alamatIbu')) {
+      showErr('step1Error', 'Sila isi semua medan wajib.');
+      return false;
+    }
+    const email = document.getElementById('emailIbu').value;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showErr('step1Error', 'Format e-mel tidak sah.');
+      return false;
+    }
+    return true;
+  }
+
+  function validateStep2() {
+    if (isEmpty('namaAnak') || isEmpty('noMykid') || isEmpty('tahapKanak')) {
+      showErr('step2Error', 'Sila isi semua medan wajib.');
+      return false;
+    }
+    return true;
+  }
+
+  function validateStep3() {
+    if (isEmpty('pilihPakej') || isEmpty('kaedahPengajian')) {
+      showErr('step3Error', 'Sila pilih pakej dan kaedah pengajian.');
+      return false;
+    }
+    if (!document.getElementById('sayaFaham').checked) {
+      showErr('step3Error', 'Sila tandakan persetujuan sebelum menghantar.');
+      return false;
+    }
+    return true;
+  }
+
+  // =====================
+  // FORMAT MYKID
+  // =====================
+  function formatMykid(input) {
+    let v = input.value.replace(/\D/g, '').substring(0, 12);
+    if (v.length > 6) v = v.substring(0,6) + '-' + v.substring(6);
+    if (v.length > 9) v = v.substring(0,9) + '-' + v.substring(9);
+    input.value = v;
+  }
+
+  // =====================
+  // API CALL HELPER
+  // =====================
+  async function callGAS(action, payload) {
+    const body = { action, ...payload };
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
+  }
+
+  // =====================
+  // LOGIN
+  // =====================
+  async function handleLogin() {
+    hideAlert('loginError'); hideAlert('loginSuccess');
+    const email = document.getElementById('loginEmail').value.trim();
+    const phone = document.getElementById('loginPhone').value.trim();
+    if (!email || !phone) { showErr('loginError', 'Sila isi e-mel dan nombor telefon.'); return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    try {
+      const data = await callGAS('login', { email, phone });
+      if (data.success) {
+        loggedInGuru = data.user;
+        document.getElementById('guruName').textContent = data.user;
+        document.getElementById('loginFormWrapper').style.display = 'none';
+        document.getElementById('dashboardPreview').style.display = 'block';
+        // Enable kehadiran
+        document.getElementById('kehadiranGuestMsg').style.display = 'none';
+        document.getElementById('kehadiranForm').style.display = 'block';
+        document.getElementById('khdGuru').value = data.user;
+        document.getElementById('khdTarikh').value = new Date().toLocaleDateString('ms-MY');
+      } else {
+        showErr('loginError', data.message || 'E-mel atau nombor tidak sepadan.');
+      }
+    } catch (e) {
+      showErr('loginError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
+  function handleLogout() {
+    loggedInGuru = null;
+    document.getElementById('loginFormWrapper').style.display = 'block';
+    document.getElementById('dashboardPreview').style.display = 'none';
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('kehadiranGuestMsg').style.display = 'block';
+    document.getElementById('kehadiranForm').style.display = 'none';
+  }
+
+  // =====================
+  // SUBMIT KANAK-KANAK
+  // =====================
+  async function submitKanak() {
+    if (!validateStep3()) return;
+    const btn = document.getElementById('submitKanakBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    const payload = {
+      namaIbu: document.getElementById('namaIbu').value.trim(),
+      telefon: document.getElementById('telefonIbu').value.trim(),
+      email: document.getElementById('emailIbu').value.trim(),
+      alamat: document.getElementById('alamatIbu').value.trim(),
+      namaAnak: document.getElementById('namaAnak').value.trim(),
+      mykid: document.getElementById('noMykid').value.trim(),
+      tahap: document.getElementById('tahapKanak').value,
+      faham: document.getElementById('sayaFaham').checked ? 'Ya' : 'Tidak',
+      pakej: document.getElementById('pilihPakej').value,
+      kaedah: document.getElementById('kaedahPengajian').value
+    };
+
+    try {
+      const data = await callGAS('registerKanak', payload);
+      if (data.success) {
+        document.getElementById('bilBadge').textContent = 'No. Bil: ' + (data.bil || '—');
+        document.querySelector('#formKanak .card').style.display = 'none';
+        document.getElementById('kanakSuccess').style.display = 'block';
+      } else {
+        showErr('step3Error', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+      }
+    } catch (e) {
+      showErr('step3Error', 'Ralat sambungan. Sila cuba sebentar lagi.');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
+  function resetKanakForm() {
+    document.querySelector('#formKanak .card').style.display = 'block';
+    document.getElementById('kanakSuccess').style.display = 'none';
+    ['namaIbu','telefonIbu','emailIbu','alamatIbu','namaAnak','noMykid'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('tahapKanak').value = '';
+    document.getElementById('pilihPakej').value = '';
+    document.getElementById('kaedahPengajian').value = '';
+    document.getElementById('sayaFaham').checked = false;
+    updateStepUI(1);
+  }
+
+  // =====================
+  // SUBMIT DEWASA
+  // =====================
+  async function submitDewasa() {
+    const fields = ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa'];
+    for (const f of fields) {
+      if (isEmpty(f)) { showErr('dewasaError', 'Sila isi semua medan wajib.'); return; }
+    }
+    const btn = document.getElementById('submitDewasaBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    const payload = {
+      nama: document.getElementById('namaDewasa').value.trim(),
+      telefon: document.getElementById('telefonDewasa').value.trim(),
+      email: document.getElementById('emailDewasa').value.trim(),
+      alamat: document.getElementById('alamatDewasa').value.trim(),
+      tahap: document.getElementById('tahapDewasa').value,
+      guru: document.getElementById('guruPilih').value.trim()
+    };
+
+    try {
+      const data = await callGAS('registerDewasa', payload);
+      if (data.success) {
+        document.getElementById('dewasaBilBadge').textContent = 'ID Murid: ' + (data.id || '—');
+        document.querySelector('#formDewasa .card').style.display = 'none';
+        document.getElementById('dewasaSuccess').style.display = 'block';
+      } else {
+        showErr('dewasaError', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+      }
+    } catch (e) {
+      showErr('dewasaError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
+  function resetDewasaForm() {
+    document.querySelector('#formDewasa .card').style.display = 'block';
+    document.getElementById('dewasaSuccess').style.display = 'none';
+    ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','guruPilih'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('tahapDewasa').value = '';
+  }
+
+  // =====================
+  // SUBMIT KEHADIRAN
+  // =====================
+  async function submitKehadiran() {
+    if (isEmpty('khdMurid') || isEmpty('khdStatus')) {
+      showErr('khdError', 'Sila isi nama murid dan status kehadiran.'); return;
+    }
+    if (!loggedInGuru) { showErr('khdError', 'Sila log masuk terlebih dahulu.'); return; }
+
+    const btn = document.getElementById('submitKhdBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    hideAlert('khdSuccess');
+
+    const payload = {
+      guru: loggedInGuru,
+      murid: document.getElementById('khdMurid').value.trim(),
+      status: document.getElementById('khdStatus').value,
+      tarikh: document.getElementById('khdTarikh').value
+    };
+
+    try {
+      const data = await callGAS('attendance', payload);
+      if (data.success) {
+        document.getElementById('khdSuccess').classList.add('show');
+        document.getElementById('khdMurid').value = '';
+        document.getElementById('khdStatus').value = '';
+        setTimeout(() => document.getElementById('khdSuccess').classList.remove('show'), 4000);
+      } else {
+        showErr('khdError', data.message || 'Ralat merekod. Sila cuba semula.');
+      }
+    } catch (e) {
+      showErr('khdError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
+  // =====================
+  // INIT
+  // =====================
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('khdTarikh').value = new Date().toLocaleDateString('ms-MY');
+    updateStepUI(1);
+  });
+</script>
+
+</body>
+</html>
