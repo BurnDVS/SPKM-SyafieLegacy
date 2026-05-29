@@ -1134,7 +1134,7 @@
 <!-- SCRIPT -->
 <!-- ============================================================ -->
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxUfBT0J6vPo3cBKcsjO9CsddvFYvcJ65rDHavE5l_ssOG3a7Adv9AImKtbbCAmWDOA/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec';
 
   let currentStep    = 1;
   let loggedInGuru   = null;
@@ -1274,9 +1274,10 @@
   // =====================
   async function callGAS(action, payload) {
     const res = await fetch(GAS_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ action, ...payload })
+      method:      'POST',
+      headers:     { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body:        JSON.stringify({ action, ...payload }),
+      redirect:    'follow'
     });
     return res.json();
   }
