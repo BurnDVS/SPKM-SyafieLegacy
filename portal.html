@@ -1134,7 +1134,7 @@
 <!-- SCRIPT -->
 <!-- ============================================================ -->
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec';
+  // GAS_URL removed — portal diservis oleh GAS, gunakan google.script.run
 
   let currentStep    = 1;
   let loggedInGuru   = null;
@@ -1272,20 +1272,17 @@
   // =====================
   // API CALL HELPER
   // =====================
-  async function callGAS(action, payload) {
-    const res = await fetch(GAS_URL, {
-      method:      'POST',
-      headers:     { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body:        JSON.stringify({ action, ...payload }),
-      redirect:    'follow'
-    });
-    return res.json();
+  function callGAS(action, payload, onSuccess, onError) {
+    google.script.run
+      .withSuccessHandler(onSuccess || function() {})
+      .withFailureHandler(onError  || function(err) { console.error('GAS error:', err); })
+      .doAction(action, payload);
   }
 
   // =====================
   // LOGIN / LOGOUT
   // =====================
-  async function handleLogin() {
+  function handleLogin() {
     hideAlert('loginError'); hideAlert('loginSuccess');
     const email = document.getElementById('loginEmail').value.trim();
     const phone = document.getElementById('loginPhone').value.trim();
@@ -1294,25 +1291,27 @@
     const btn = document.getElementById('loginBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    try {
-      const data = await callGAS('login', { email, phone });
-      if (data.success) {
-        loggedInGuru = data.user;
-        document.getElementById('guruName').textContent = data.user;
-        document.getElementById('loginFormWrapper').style.display  = 'none';
-        document.getElementById('dashboardPreview').style.display  = 'block';
-        setLoginState(true);
-        loadDashboardStats();
-        const gEl = document.getElementById('hadirGuru');
-        if (gEl) gEl.value = data.user;
-      } else {
-        showErr('loginError', data.message || 'E-mel atau nombor tidak sepadan.');
+    callGAS('login', { email, phone },
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          loggedInGuru = data.user;
+          document.getElementById('guruName').textContent = data.user;
+          document.getElementById('loginFormWrapper').style.display = 'none';
+          document.getElementById('dashboardPreview').style.display = 'block';
+          setLoginState(true);
+          loadDashboardStats();
+          const gEl = document.getElementById('hadirGuru');
+          if (gEl) gEl.value = data.user;
+        } else {
+          showErr('loginError', data.message || 'E-mel atau nombor tidak sepadan.');
+        }
+      },
+      function(err) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('loginError', 'Ralat sambungan. Sila cuba sebentar lagi.');
       }
-    } catch (e) {
-      showErr('loginError', 'Ralat sambungan. Sila cuba sebentar lagi.');
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
+    );
   }
 
   function handleLogout() {
@@ -1330,21 +1329,22 @@
   // =====================
   // DASHBOARD STATS
   // =====================
-  async function loadDashboardStats() {
-    try {
-      const data = await callGAS('getDashboardStats', {});
-      if (data.success) {
-        document.getElementById('statKanak').textContent  = data.totalKanak;
-        document.getElementById('statDewasa').textContent = data.totalDewasa;
-        document.getElementById('statHadir').textContent  = data.hadirHariIni;
+  function loadDashboardStats() {
+    callGAS('getDashboardStats', {},
+      function(data) {
+        if (data.success) {
+          document.getElementById('statKanak').textContent  = data.totalKanak;
+          document.getElementById('statDewasa').textContent = data.totalDewasa;
+          document.getElementById('statHadir').textContent  = data.hadirHariIni;
+        }
       }
-    } catch (e) { /* biar kekal — */ }
+    );
   }
 
   // =====================
   // SUBMIT KANAK-KANAK
   // =====================
-  async function submitKanak() {
+  function submitKanak() {
     if (!validateStep3()) return;
     const btn = document.getElementById('submitKanakBtn');
     btn.classList.add('loading'); btn.disabled = true;
@@ -1362,20 +1362,22 @@
       kaedah:   document.getElementById('kaedahPengajian').value
     };
 
-    try {
-      const data = await callGAS('registerKanak', payload);
-      if (data.success) {
-        document.getElementById('bilBadge').textContent = 'No. Bil: ' + (data.bil || '—');
-        document.querySelector('#formKanak .card').style.display = 'none';
-        document.getElementById('kanakSuccess').style.display   = 'block';
-      } else {
-        showErr('step3Error', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+    callGAS('registerKanak', payload,
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          document.getElementById('bilBadge').textContent = 'No. Bil: ' + (data.bil || '—');
+          document.querySelector('#formKanak .card').style.display = 'none';
+          document.getElementById('kanakSuccess').style.display   = 'block';
+        } else {
+          showErr('step3Error', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+        }
+      },
+      function(err) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('step3Error', 'Ralat sambungan. Sila cuba sebentar lagi.');
       }
-    } catch (e) {
-      showErr('step3Error', 'Ralat sambungan. Sila cuba sebentar lagi.');
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
+    );
   }
 
   function resetKanakForm() {
@@ -1394,7 +1396,7 @@
   // =====================
   // SUBMIT DEWASA
   // =====================
-  async function submitDewasa() {
+  function submitDewasa() {
     for (const f of ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa']) {
       if (isEmpty(f)) { showErr('dewasaError', 'Sila isi semua medan wajib.'); return; }
     }
@@ -1410,20 +1412,22 @@
       guru:    document.getElementById('guruPilih').value.trim()
     };
 
-    try {
-      const data = await callGAS('registerDewasa', payload);
-      if (data.success) {
-        document.getElementById('dewasaBilBadge').textContent       = 'ID Murid: ' + (data.id || '—');
-        document.querySelector('#formDewasa .card').style.display   = 'none';
-        document.getElementById('dewasaSuccess').style.display      = 'block';
-      } else {
-        showErr('dewasaError', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+    callGAS('registerDewasa', payload,
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          document.getElementById('dewasaBilBadge').textContent     = 'ID Murid: ' + (data.id || '—');
+          document.querySelector('#formDewasa .card').style.display = 'none';
+          document.getElementById('dewasaSuccess').style.display    = 'block';
+        } else {
+          showErr('dewasaError', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+        }
+      },
+      function(err) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('dewasaError', 'Ralat sambungan. Sila cuba sebentar lagi.');
       }
-    } catch (e) {
-      showErr('dewasaError', 'Ralat sambungan. Sila cuba sebentar lagi.');
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
+    );
   }
 
   function resetDewasaForm() {
@@ -1438,7 +1442,7 @@
   // =====================
   // KEHADIRAN
   // =====================
-  async function submitKehadiran() {
+  function submitKehadiran() {
     hideAlert('hadirError'); hideAlert('hadirSuccess');
     if (isEmpty('hadirMurid') || isEmpty('hadirStatus') || isEmpty('hadirTarikh')) {
       showErr('hadirError', 'Sila isi semua medan wajib.'); return;
@@ -1446,8 +1450,8 @@
     const btn = document.getElementById('submitHadirBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    const raw = document.getElementById('hadirTarikh').value;           // YYYY-MM-DD
-    const tarikhFmt = raw.split('-').reverse().join('/');                // dd/MM/yyyy
+    const raw = document.getElementById('hadirTarikh').value;
+    const tarikhFmt = raw.split('-').reverse().join('/');
 
     const payload = {
       guru:   document.getElementById('hadirGuru').value.trim(),
@@ -1456,62 +1460,66 @@
       tarikh: tarikhFmt
     };
 
-    try {
-      const data = await callGAS('attendance', payload);
-      if (data.success) {
-        document.getElementById('hadirSuccess').classList.add('show');
-        document.getElementById('hadirMurid').value  = '';
-        document.getElementById('hadirStatus').value = '';
-        setTimeout(() => document.getElementById('hadirSuccess').classList.remove('show'), 3000);
-        loadKehadiranHariIni();
-        loadDashboardStats();
-      } else {
-        showErr('hadirError', data.message || 'Ralat merekod kehadiran.');
+    callGAS('attendance', payload,
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          document.getElementById('hadirSuccess').classList.add('show');
+          document.getElementById('hadirMurid').value  = '';
+          document.getElementById('hadirStatus').value = '';
+          setTimeout(() => document.getElementById('hadirSuccess').classList.remove('show'), 3000);
+          loadKehadiranHariIni();
+          loadDashboardStats();
+        } else {
+          showErr('hadirError', data.message || 'Ralat merekod kehadiran.');
+        }
+      },
+      function(err) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('hadirError', 'Ralat sambungan. Sila cuba sebentar lagi.');
       }
-    } catch (e) {
-      showErr('hadirError', 'Ralat sambungan. Sila cuba sebentar lagi.');
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
+    );
   }
 
-  async function loadKehadiranHariIni() {
-    try {
-      const data  = await callGAS('getKehadiranHariIni', {});
-      const tbody = document.getElementById('kehadiranBody');
-      const label = document.getElementById('kehadiranTarikhLabel');
-      if (label) label.textContent = new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
+  function loadKehadiranHariIni() {
+    callGAS('getKehadiranHariIni', {},
+      function(data) {
+        const tbody = document.getElementById('kehadiranBody');
+        const label = document.getElementById('kehadiranTarikhLabel');
+        if (label) label.textContent = new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
 
-      if (!data.success || !data.rows || data.rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod hari ini.</td></tr>';
-        return;
+        if (!data.success || !data.rows || data.rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod hari ini.</td></tr>';
+          return;
+        }
+        const cls = { 'Hadir': 'status-hadir', 'Tidak Hadir': 'status-tidak-hadir', 'Cuti': 'status-cuti', 'Lambat': 'status-lambat' };
+        tbody.innerHTML = data.rows.map(r =>
+          `<tr>
+            <td>${escHtml(r.guru)}</td>
+            <td>${escHtml(r.murid)}</td>
+            <td><span class="badge ${cls[r.status] || ''}">${escHtml(r.status)}</span></td>
+            <td>${escHtml(r.tarikh)}</td>
+          </tr>`
+        ).join('');
       }
-      const cls = { 'Hadir': 'status-hadir', 'Tidak Hadir': 'status-tidak-hadir', 'Cuti': 'status-cuti', 'Lambat': 'status-lambat' };
-      tbody.innerHTML = data.rows.map(r =>
-        `<tr>
-          <td>${escHtml(r.guru)}</td>
-          <td>${escHtml(r.murid)}</td>
-          <td><span class="badge ${cls[r.status] || ''}">${escHtml(r.status)}</span></td>
-          <td>${escHtml(r.tarikh)}</td>
-        </tr>`
-      ).join('');
-    } catch (e) { /* senyap */ }
+    );
   }
 
   // =====================
   // SENARAI MURID
   // =====================
-  async function loadMuridList() {
+  function loadMuridList() {
     document.getElementById('muridKanakBody').innerHTML  = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
     document.getElementById('muridDewasaBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
-    try {
-      const data = await callGAS('getMuridList', {});
-      if (!data.success) return;
-      allMuridKanak  = data.kanak  || [];
-      allMuridDewasa = data.dewasa || [];
-      renderMuridKanak(allMuridKanak);
-      renderMuridDewasa(allMuridDewasa);
-    } catch (e) { /* senyap */ }
+    callGAS('getMuridList', {},
+      function(data) {
+        if (!data.success) return;
+        allMuridKanak  = data.kanak  || [];
+        allMuridDewasa = data.dewasa || [];
+        renderMuridKanak(allMuridKanak);
+        renderMuridDewasa(allMuridDewasa);
+      }
+    );
   }
 
   function renderMuridKanak(rows) {

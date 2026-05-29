@@ -116,6 +116,18 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// Dipanggil oleh google.script.run dari portal.html
+function doAction(action, payload) {
+  if      (action === 'login')               return loginGuru(payload);
+  else if (action === 'registerKanak')       return registerKanak(payload);
+  else if (action === 'registerDewasa')      return registerDewasa(payload);
+  else if (action === 'attendance')          return attendance(payload);
+  else if (action === 'getDashboardStats')   return getDashboardStats();
+  else if (action === 'getKehadiranHariIni') return getKehadiranHariIni();
+  else if (action === 'getMuridList')        return getMuridList();
+  else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
+}
+
 // ============================================================
 // 1. loginGuru
 // Semak email + telefon dari tab Maklumat Guru
