@@ -14,34 +14,32 @@ var TAB = {
   KEHADIRAN:   'Kehadiran'
 };
 
-// Kolum tab PendaftaranBaru! (0-indexed)
+// Kolum tab PendaftaranBaru (0-indexed) — disahkan dari sheet sebenar
 var COL_KANAK = {
-  BIL:          0,   // A
-  TIMESTAMP:    1,   // B
-  NAMA_IBU:     2,   // C
-  TELEFON:      3,   // D
-  NAMA_ANAK:    4,   // E
-  NO_MYKID:     5,   // F
-  EMAIL:        6,   // G
-  ALAMAT:       7,   // H
-  TAHAP:        8,   // I
-  SAYA_FAHAM:   9,   // J
-  PAKEJ:        10,  // K
-  KAEDAH:       11,  // L
-  MERGED_ID:    12,  // M — diisi oleh Autocrat / trigger
-  MERGED_URL:   13   // N — diisi oleh Autocrat / trigger
+  BIL:       0,  // A — Bil
+  TIMESTAMP: 1,  // B — Timestamp
+  EMAIL:     2,  // C — Email Address
+  NAMA:      3,  // D — Nama (Murid/Ibu)
+  TELEFON:   4,  // E — Nombor Telefon
+  NO_MYKID:  5,  // F — No.MYKID
+  PAKEJ:     6,  // G — Pilihan Pakej
+  TAHAP:     7,  // H — Tahap Pengajian
+  ALAMAT:    8,  // I — Alamat
+  KAEDAH:    9   // J — Kaedah Pengajian
 };
 
-// Kolum tab KelasDewasa! (0-indexed)
+// Kolum tab KelasDewasa (0-indexed) — disahkan dari sheet sebenar
 var COL_DEWASA = {
-  NAMA:     0,  // A
-  TELEFON:  1,  // B
-  EMAIL:    2,  // C
-  ALAMAT:   3,  // D
-  TAHAP:    4,  // E
-  GURU:     5,  // F
-  SLIP:     6,  // G
-  DOKUMEN:  7   // H
+  BIL:       0,  // A — Bil
+  TIMESTAMP: 1,  // B — Timestamp
+  EMAIL:     2,  // C — Email Address
+  NAMA:      3,  // D — Nama
+  TELEFON:   4,  // E — Nombor Telefon
+  NO_MYKID:  5,  // F — (kosong untuk dewasa)
+  PAKEJ:     6,  // G — (kosong untuk dewasa)
+  TAHAP:     7,  // H — Tahap Pengajian
+  ALAMAT:    8,  // I — Alamat
+  GURU:      9   // J — Nama Guru
 };
 
 // Kolum tab Maklumat Guru (0-indexed)
@@ -118,6 +116,7 @@ function doGet(e) {
 
 // Dipanggil oleh google.script.run dari portal.html
 function doAction(action, payload) {
+  payload = payload || {};
   if      (action === 'login')               return loginGuru(payload);
   else if (action === 'registerKanak')       return registerKanak(payload);
   else if (action === 'registerDewasa')      return registerDewasa(payload);
@@ -135,6 +134,7 @@ function doAction(action, payload) {
 // Output: { success, user } atau { success: false, message }
 // ============================================================
 function loginGuru(params) {
+  params = params || {};
   try {
     var email = (params.email || '').trim().toLowerCase();
     var phone = normalizePhone(params.phone || '').slice(-6);
@@ -187,11 +187,12 @@ function loginGuru(params) {
 // Output: { success, bil } atau { success: false, message }
 // ============================================================
 function registerKanak(params) {
+  params = params || {};
   try {
     ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','faham','pakej','kaedah'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
     });
-    var required = ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','pakej','kaedah'];
+    var required = ['telefon','namaAnak','mykid','email','alamat','tahap','pakej','kaedah'];
     for (var r = 0; r < required.length; r++) {
       if (!params[required[r]] || !params[required[r]].toString().trim()) {
         return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
@@ -206,21 +207,18 @@ function registerKanak(params) {
     var nextBil   = Math.max(1, lastRow - 1); // tolak baris header
     var timestamp = new Date();
 
-    // Bina row mengikut susunan kolum COL_KANAK
-    var newRow = new Array(14).fill('');
-    newRow[COL_KANAK.BIL]        = nextBil;
-    newRow[COL_KANAK.TIMESTAMP]  = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.NAMA_IBU]   = params.namaIbu.trim();
-    newRow[COL_KANAK.TELEFON]    = params.telefon.trim();
-    newRow[COL_KANAK.NAMA_ANAK]  = params.namaAnak.trim();
-    newRow[COL_KANAK.NO_MYKID]   = params.mykid.trim();
-    newRow[COL_KANAK.EMAIL]      = params.email.trim();
-    newRow[COL_KANAK.ALAMAT]     = params.alamat.trim();
-    newRow[COL_KANAK.TAHAP]      = params.tahap.trim();
-    newRow[COL_KANAK.SAYA_FAHAM] = params.faham || 'Ya';
-    newRow[COL_KANAK.PAKEJ]      = params.pakej.trim();
-    newRow[COL_KANAK.KAEDAH]     = params.kaedah.trim();
-    // COL_KANAK.MERGED_ID & MERGED_URL akan diisi oleh generateSlipKanak()
+    // Bina row mengikut susunan kolum COL_KANAK (A-J = 10 kolum)
+    var newRow = new Array(10).fill('');
+    newRow[COL_KANAK.BIL]       = nextBil;
+    newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_KANAK.EMAIL]     = params.email.trim();
+    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();   // D = Nama (Murid)
+    newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
+    newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
+    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
+    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
+    newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
+    newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
@@ -246,6 +244,7 @@ function registerKanak(params) {
 // Output: { success, id } atau { success: false, message }
 // ============================================================
 function registerDewasa(params) {
+  params = params || {};
   try {
     ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
@@ -261,14 +260,20 @@ function registerDewasa(params) {
     var sheet = ss.getSheetByName(TAB.DEWASA);
     if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
 
-    var newRow = new Array(8).fill('');
-    newRow[COL_DEWASA.NAMA]    = params.nama.trim();
-    newRow[COL_DEWASA.TELEFON] = params.telefon.trim();
-    newRow[COL_DEWASA.EMAIL]   = params.email.trim();
-    newRow[COL_DEWASA.ALAMAT]  = params.alamat.trim();
-    newRow[COL_DEWASA.TAHAP]   = params.tahap.trim();
-    newRow[COL_DEWASA.GURU]    = (params.guru || '').trim();
-    // COL_DEWASA.SLIP & DOKUMEN dikosongkan buat masa ini
+    var lastRow   = sheet.getLastRow();
+    var nextBil   = Math.max(1, lastRow - 1);
+    var timestamp = new Date();
+
+    // Bina row mengikut susunan kolum COL_DEWASA (A-J = 10 kolum)
+    var newRow = new Array(10).fill('');
+    newRow[COL_DEWASA.BIL]       = nextBil;
+    newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_DEWASA.EMAIL]     = params.email.trim();
+    newRow[COL_DEWASA.NAMA]      = params.nama.trim();
+    newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
+    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
+    newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
+    newRow[COL_DEWASA.GURU]      = (params.guru || '').trim();
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
@@ -293,6 +298,7 @@ function registerDewasa(params) {
 // Output: { success } atau { success: false, message }
 // ============================================================
 function attendance(params) {
+  params = params || {};
   try {
     ['guru','murid','status','tarikh'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
@@ -644,8 +650,8 @@ function getMuridList() {
       kanak = kData.map(function(r) {
         return {
           bil:      r[COL_KANAK.BIL],
-          namaAnak: r[COL_KANAK.NAMA_ANAK],
-          namaIbu:  r[COL_KANAK.NAMA_IBU],
+          namaAnak: r[COL_KANAK.NAMA],
+          namaIbu:  '',
           telefon:  r[COL_KANAK.TELEFON],
           tahap:    r[COL_KANAK.TAHAP],
           pakej:    r[COL_KANAK.PAKEJ]
@@ -662,7 +668,7 @@ function getMuridList() {
           telefon: r[COL_DEWASA.TELEFON],
           email:   r[COL_DEWASA.EMAIL],
           tahap:   r[COL_DEWASA.TAHAP],
-          guru:    r[COL_DEWASA.GURU]
+          guru:    r[COL_DEWASA.GURU] || ''
         };
       });
     }
@@ -791,6 +797,16 @@ function createWhatsAppTriggers() {
 // ============================================================
 // TEST FUNCTIONS (jalankan dari editor untuk ujian)
 // ============================================================
+
+function logHeaders() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  [TAB.KANAK, TAB.DEWASA, TAB.GURU, TAB.KEHADIRAN].forEach(function(name) {
+    var sheet = ss.getSheetByName(name);
+    if (!sheet) { Logger.log(name + ': TAB TIDAK DIJUMPAI'); return; }
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    Logger.log(name + ' → ' + JSON.stringify(headers));
+  });
+}
 
 function testLogin() {
   var result = loginGuru({ email: 'guru@example.com', phone: '0123456789' });
