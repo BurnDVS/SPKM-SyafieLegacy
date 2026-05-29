@@ -125,7 +125,7 @@ function doGet(e) {
 function loginGuru(params) {
   try {
     var email = (params.email || '').trim().toLowerCase();
-    var phone = normalizePhone(params.phone || '');
+    var phone = normalizePhone(params.phone || '').slice(-6);
 
     if (!email || !phone) {
       return { success: false, message: 'E-mel dan nombor telefon diperlukan.' };
@@ -146,7 +146,7 @@ function loginGuru(params) {
     // Row 0 = header, semak dari row 1
     for (var i = 1; i < data.length; i++) {
       var rowEmail  = (data[i][COL_GURU.EMAIL]   || '').toString().trim().toLowerCase();
-      var rowPhone  = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString());
+      var rowPhone  = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString()).slice(-6);
       var rowNama   = (data[i][COL_GURU.NAMA]    || '').toString().trim();
 
       if (rowEmail === email && rowPhone === phone) {
