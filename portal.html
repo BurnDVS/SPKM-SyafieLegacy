@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co; connect-src https://script.google.com;">
 <title>Sistem Pengurusan Kelas Mengaji</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -547,12 +548,55 @@
   }
   .info-panel p { font-size: 13px; opacity: 0.8; line-height: 1.6; }
 
-  /* kehadiran panel */
-  .kehadiran-form { max-width: 500px; margin: 0 auto; }
-
   /* helper text */
   .helper { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
   .req { color: var(--error); margin-left: 2px; }
+
+  /* === DATA TABLE === */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    background: var(--cream);
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dark);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover { background: var(--cream); }
+
+  /* === STATUS BADGES === */
+  .status-hadir      { background: var(--green-light); color: var(--green); }
+  .status-tidak-hadir{ background: #FDECEA; color: var(--error); }
+  .status-cuti       { background: var(--gold-light); color: var(--gold-dark); }
+  .status-lambat     { background: #FFF3E0; color: #E65100; }
+
+  /* === STAT CARDS === */
+  .stat-card {
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-card .stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .stat-card .stat-val {
+    font-size: 22px;
+    font-weight: 500;
+  }
 
   /* === FOOTER === */
   footer {
@@ -582,9 +626,10 @@
 
 <!-- NAV -->
 <nav class="nav-bar" role="navigation" aria-label="Menu utama">
-  <button class="nav-tab active" onclick="showPanel('home')" aria-selected="true">🏠 Laman Utama</button>
-  <button class="nav-tab" onclick="showPanel('daftar')" aria-selected="false">📋 Daftar Murid</button>
-  <button class="nav-tab" onclick="showPanel('kehadiran')" aria-selected="false">✅ Kehadiran</button>
+  <button class="nav-tab active" id="nav-home"      onclick="showPanel('home')">🏠 Laman Utama</button>
+  <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📝 Daftar Murid</button>
+  <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
+  <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -639,22 +684,29 @@
           Belum ada akaun guru? Hubungi pentadbir sistem.
         </p>
       </div>
-      <!-- Dashboard placeholder (post-login) -->
+      <!-- Dashboard (post-login) -->
       <div class="card-body" id="dashboardPreview" style="display:none;">
-        <div style="padding:10px 0;">
-          <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Selamat datang, <strong id="guruName"></strong> 👋</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-            <div style="background:var(--green-light); border-radius:10px; padding:14px; text-align:center;">
-              <p style="font-size:11px; color:var(--green); font-weight:500; margin-bottom:4px;">MURID AKTIF</p>
-              <p style="font-size:24px; font-weight:500; color:var(--green);">—</p>
-            </div>
-            <div style="background:var(--gold-light); border-radius:10px; padding:14px; text-align:center;">
-              <p style="font-size:11px; color:var(--gold-dark); font-weight:500; margin-bottom:4px;">KEHADIRAN</p>
-              <p style="font-size:24px; font-weight:500; color:var(--gold-dark);">—</p>
-            </div>
+        <p style="font-size:14px; color:var(--text-mid); margin-bottom:14px;">Selamat datang, <strong id="guruName"></strong> 👋</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px;">
+          <div class="stat-card" style="background:var(--green-light);">
+            <p class="stat-label" style="color:var(--green);">Kanak</p>
+            <p class="stat-val" style="color:var(--green);" id="statKanak">—</p>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="width:100%; margin-top:0;">Log Keluar</button>
+          <div class="stat-card" style="background:var(--gold-light);">
+            <p class="stat-label" style="color:var(--gold-dark);">Dewasa</p>
+            <p class="stat-val" style="color:var(--gold-dark);" id="statDewasa">—</p>
+          </div>
+          <div class="stat-card" style="background:#EEF2FF;">
+            <p class="stat-label" style="color:#4F46E5;">Hadir</p>
+            <p class="stat-val" style="color:#4F46E5;" id="statHadir">—</p>
+          </div>
         </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
+          <button class="btn btn-primary btn-sm" style="width:100%; margin-top:0;" onclick="showPanel('kehadiran')">✅ Rekod Kehadiran</button>
+          <button class="btn btn-ghost btn-sm"   style="width:100%; margin-top:0;" onclick="showPanel('murid')">📋 Lihat Senarai Murid</button>
+          <button class="btn btn-gold btn-sm"    style="width:100%; margin-top:0;" onclick="showDaftar('kanak')">➕ Daftar Murid Baru</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="width:100%; margin-top:0; color:var(--error); border-color:#F5C6C2;">Log Keluar</button>
       </div>
     </div>
 
@@ -781,7 +833,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="noMykid">No. MYKID <span class="req">*</span></label>
-              <input type="text" id="noMykid" placeholder="000000-00-0000" id="noMykid"
+              <input type="text" id="noMykid" placeholder="000000-00-0000"
                      oninput="formatMykid(this)">
             </div>
             <div class="form-group">
@@ -936,77 +988,139 @@
 </section>
 
 
+
 <!-- ============================================================ -->
-<!-- PANEL: KEHADIRAN -->
+<!-- PANEL: KEHADIRAN (login required) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-kehadiran">
-
   <div class="section-heading">
-    <h2>Rekod Kehadiran Murid</h2>
-    <p>Guru merekod kehadiran setiap sesi kelas</p>
+    <h2>Rekod Kehadiran</h2>
+    <p>Rekod kehadiran murid untuk hari ini</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
-  <div class="info-panel">
-    <div class="info-panel-icon">📋</div>
-    <div>
-      <h3>Log Masuk Diperlukan</h3>
-      <p>Fungsi rekod kehadiran hanya boleh diakses oleh guru yang telah log masuk. Sila log masuk di Laman Utama terlebih dahulu.</p>
-    </div>
-  </div>
-
-  <div class="kehadiran-form" id="kehadiranGuestMsg" style="display:block;">
-    <div style="text-align:center; padding:20px 0;">
-      <button class="btn btn-primary" style="width:auto; padding:12px 32px;" onclick="showPanel('home')">
-        🔒 Log Masuk Sekarang
-      </button>
-    </div>
-  </div>
-
-  <div class="kehadiran-form" id="kehadiranForm" style="display:none;">
-    <div class="card">
+  <div style="max-width:700px; margin:0 auto;">
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <div class="card-icon green">✅</div>
+        <div class="card-header-text">
+          <h3>Tambah Rekod Kehadiran</h3>
+          <p>Isi maklumat kehadiran murid</p>
+        </div>
+      </div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group">
-            <label for="khdTarikh">Tarikh Kelas <span class="req">*</span></label>
-            <input type="text" id="khdTarikh" readonly
-                   style="background:var(--cream); color:var(--text-muted);">
+            <label for="hadirGuru">Nama Guru <span class="req">*</span></label>
+            <input type="text" id="hadirGuru" placeholder="Nama guru" readonly>
           </div>
           <div class="form-group">
-            <label for="khdGuru">Nama Guru <span class="req">*</span></label>
-            <input type="text" id="khdGuru" readonly style="background:var(--cream); color:var(--text-muted);">
+            <label for="hadirTarikh">Tarikh <span class="req">*</span></label>
+            <input type="date" id="hadirTarikh">
           </div>
         </div>
-        <div class="form-group">
-          <label for="khdMurid">Nama Murid <span class="req">*</span></label>
-          <input type="text" id="khdMurid" placeholder="Nama penuh murid">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="hadirMurid">Nama Murid <span class="req">*</span></label>
+            <input type="text" id="hadirMurid" placeholder="Nama penuh murid">
+          </div>
+          <div class="form-group">
+            <label for="hadirStatus">Status <span class="req">*</span></label>
+            <select id="hadirStatus">
+              <option value="">— Pilih Status —</option>
+              <option>Hadir</option>
+              <option>Tidak Hadir</option>
+              <option>Cuti</option>
+              <option>Lambat</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="khdStatus">Status Kehadiran <span class="req">*</span></label>
-          <select id="khdStatus">
-            <option value="">— Pilih Status —</option>
-            <option value="Hadir">✅ Hadir</option>
-            <option value="Tidak Hadir">❌ Tidak Hadir</option>
-            <option value="Cuti">📅 Cuti (Dengan Sebab)</option>
-            <option value="Lambat">⏰ Lambat</option>
-          </select>
-        </div>
-        <div class="alert alert-error" id="khdError">
+        <div class="alert alert-error" id="hadirError">
           <span class="alert-icon">⚠</span>
-          <span id="khdErrorMsg">Sila isi semua medan wajib.</span>
+          <span id="hadirErrorMsg">Sila isi semua medan wajib.</span>
         </div>
-        <div class="alert alert-success" id="khdSuccess">
+        <div class="alert alert-success" id="hadirSuccess">
           <span class="alert-icon">✓</span>
-          Kehadiran berjaya direkod!
+          <span>Kehadiran berjaya direkod.</span>
         </div>
-        <button class="btn btn-primary" id="submitKhdBtn" onclick="submitKehadiran()">
-          <span class="btn-text">✓ Simpan Kehadiran</span>
+        <button class="btn btn-primary" id="submitHadirBtn" onclick="submitKehadiran()">
+          <span class="btn-text">✓ Rekod Kehadiran</span>
           <span class="btn-loader"></span>
         </button>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon gold">📋</div>
+        <div class="card-header-text">
+          <h3>Rekod Hari Ini</h3>
+          <p id="kehadiranTarikhLabel">—</p>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0; overflow-x:auto;">
+        <table class="data-table" id="kehadiranTable">
+          <thead>
+            <tr><th>Guru</th><th>Murid</th><th>Status</th><th>Tarikh</th></tr>
+          </thead>
+          <tbody id="kehadiranBody">
+            <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Tiada rekod hari ini.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- PANEL: MURID (login required) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-murid">
+  <div class="section-heading">
+    <h2>Senarai Murid</h2>
+    <p>Semua murid berdaftar dalam sistem</p>
+    <div class="divider-ornament"><span>✦</span></div>
   </div>
 
+  <div style="margin-bottom:18px; max-width:380px;">
+    <input type="text" id="muridSearch" placeholder="🔍 Cari nama, telefon..." oninput="filterMurid()">
+  </div>
+
+  <div class="tab-switcher" style="max-width:380px; margin-bottom:24px;">
+    <button class="tab-btn active" id="tabMuridKanak"  onclick="switchMuridTab('kanak')">👦 Kanak-kanak</button>
+    <button class="tab-btn"        id="tabMuridDewasa" onclick="switchMuridTab('dewasa')">🧑 Dewasa</button>
+  </div>
+
+  <div id="muridKanakPanel">
+    <div class="card">
+      <div class="card-body" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Bil</th><th>Nama Murid</th><th>Nama Ibu/Bapa</th><th>Telefon</th><th>Tahap</th><th>Pakej</th></tr>
+          </thead>
+          <tbody id="muridKanakBody">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="muridDewasaPanel" style="display:none;">
+    <div class="card">
+      <div class="card-body" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Nama</th><th>Telefon</th><th>E-mel</th><th>Tahap</th><th>Guru</th></tr>
+          </thead>
+          <tbody id="muridDewasaBody">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </section>
 
 </main>
@@ -1020,12 +1134,22 @@
 <!-- SCRIPT -->
 <!-- ============================================================ -->
 <script>
-  // === CONFIG ===
-  // Gantikan URL ini dengan URL Web App Google Apps Script anda selepas deploy
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxUfBT0J6vPo3cBKcsjO9CsddvFYvcJ65rDHavE5l_ssOG3a7Adv9AImKtbbCAmWDOA/exec';
 
-  let currentStep = 1;
-  let loggedInGuru = null;
+  let currentStep    = 1;
+  let loggedInGuru   = null;
+  let allMuridKanak  = [];
+  let allMuridDewasa = [];
+  let currentMuridTab = 'kanak';
+
+  // =====================
+  // ESCAPE HTML (security)
+  // =====================
+  function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
 
   // =====================
   // NAVIGATION
@@ -1033,11 +1157,13 @@
   function showPanel(name) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    const tabs = document.querySelectorAll('.nav-tab');
-    const map = { home: 0, daftar: 1, kehadiran: 2 };
-    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    const panel = document.getElementById('panel-' + name);
+    if (panel) panel.classList.add('active');
+    const tab = document.getElementById('nav-' + name);
+    if (tab) tab.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (name === 'kehadiran') loadKehadiranHariIni();
+    if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
   }
 
   function showDaftar(type) {
@@ -1045,14 +1171,30 @@
     switchRegTab(type);
   }
 
+  function setLoginState(loggedIn) {
+    ['kehadiran', 'murid'].forEach(n => {
+      const el = document.getElementById('nav-' + n);
+      if (el) el.style.display = loggedIn ? '' : 'none';
+    });
+  }
+
   // =====================
-  // TAB REG SWITCHER
+  // TAB SWITCHERS
   // =====================
   function switchRegTab(type) {
     document.getElementById('tabKanak').classList.toggle('active', type === 'kanak');
     document.getElementById('tabDewasa').classList.toggle('active', type === 'dewasa');
     document.getElementById('formKanak').style.display = type === 'kanak' ? 'block' : 'none';
     document.getElementById('formDewasa').style.display = type === 'dewasa' ? 'block' : 'none';
+  }
+
+  function switchMuridTab(type) {
+    currentMuridTab = type;
+    document.getElementById('tabMuridKanak').classList.toggle('active', type === 'kanak');
+    document.getElementById('tabMuridDewasa').classList.toggle('active', type === 'dewasa');
+    document.getElementById('muridKanakPanel').style.display  = type === 'kanak'  ? 'block' : 'none';
+    document.getElementById('muridDewasaPanel').style.display = type === 'dewasa' ? 'block' : 'none';
+    filterMurid();
   }
 
   // =====================
@@ -1064,13 +1206,10 @@
       const lbl = document.getElementById('sl' + i);
       dot.classList.remove('active', 'done');
       lbl.classList.remove('active');
-      if (i < step) { dot.classList.add('done'); dot.textContent = '✓'; }
-      else if (i === step) { dot.classList.add('active'); dot.textContent = i; lbl.classList.add('active'); }
-      else { dot.textContent = i; }
-      if (i < 3) {
-        const line = document.getElementById('l' + i);
-        line.classList.toggle('done', i < step);
-      }
+      if (i < step)      { dot.classList.add('done');   dot.textContent = '✓'; }
+      else if (i === step){ dot.classList.add('active'); dot.textContent = i; lbl.classList.add('active'); }
+      else               { dot.textContent = i; }
+      if (i < 3) document.getElementById('l' + i).classList.toggle('done', i < step);
     }
     document.querySelectorAll('.form-step').forEach((s, idx) => {
       s.classList.toggle('active', idx + 1 === step);
@@ -1086,55 +1225,43 @@
   function prevStep(to) { updateStepUI(to); }
 
   // =====================
-  // VALIDATION
+  // VALIDATION HELPERS
   // =====================
   function showErr(id, msg) {
-    const el = document.getElementById(id);
+    const el    = document.getElementById(id);
     const msgEl = document.getElementById(id + 'Msg');
     if (msgEl && msg) msgEl.textContent = msg;
     el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 4000);
   }
   function hideAlert(id) { document.getElementById(id).classList.remove('show'); }
-
-  function isEmpty(id) { return !document.getElementById(id).value.trim(); }
+  function isEmpty(id)   { return !document.getElementById(id).value.trim(); }
 
   function validateStep1() {
     if (isEmpty('namaIbu') || isEmpty('telefonIbu') || isEmpty('emailIbu') || isEmpty('alamatIbu')) {
-      showErr('step1Error', 'Sila isi semua medan wajib.');
-      return false;
+      showErr('step1Error', 'Sila isi semua medan wajib.'); return false;
     }
-    const email = document.getElementById('emailIbu').value;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showErr('step1Error', 'Format e-mel tidak sah.');
-      return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('emailIbu').value)) {
+      showErr('step1Error', 'Format e-mel tidak sah.'); return false;
     }
     return true;
   }
-
   function validateStep2() {
     if (isEmpty('namaAnak') || isEmpty('noMykid') || isEmpty('tahapKanak')) {
-      showErr('step2Error', 'Sila isi semua medan wajib.');
-      return false;
+      showErr('step2Error', 'Sila isi semua medan wajib.'); return false;
     }
     return true;
   }
-
   function validateStep3() {
     if (isEmpty('pilihPakej') || isEmpty('kaedahPengajian')) {
-      showErr('step3Error', 'Sila pilih pakej dan kaedah pengajian.');
-      return false;
+      showErr('step3Error', 'Sila pilih pakej dan kaedah pengajian.'); return false;
     }
     if (!document.getElementById('sayaFaham').checked) {
-      showErr('step3Error', 'Sila tandakan persetujuan sebelum menghantar.');
-      return false;
+      showErr('step3Error', 'Sila tandakan persetujuan sebelum menghantar.'); return false;
     }
     return true;
   }
 
-  // =====================
-  // FORMAT MYKID
-  // =====================
   function formatMykid(input) {
     let v = input.value.replace(/\D/g, '').substring(0, 12);
     if (v.length > 6) v = v.substring(0,6) + '-' + v.substring(6);
@@ -1146,17 +1273,16 @@
   // API CALL HELPER
   // =====================
   async function callGAS(action, payload) {
-    const body = { action, ...payload };
     const res = await fetch(GAS_URL, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body:    JSON.stringify({ action, ...payload })
     });
     return res.json();
   }
 
   // =====================
-  // LOGIN
+  // LOGIN / LOGOUT
   // =====================
   async function handleLogin() {
     hideAlert('loginError'); hideAlert('loginSuccess');
@@ -1172,13 +1298,12 @@
       if (data.success) {
         loggedInGuru = data.user;
         document.getElementById('guruName').textContent = data.user;
-        document.getElementById('loginFormWrapper').style.display = 'none';
-        document.getElementById('dashboardPreview').style.display = 'block';
-        // Enable kehadiran
-        document.getElementById('kehadiranGuestMsg').style.display = 'none';
-        document.getElementById('kehadiranForm').style.display = 'block';
-        document.getElementById('khdGuru').value = data.user;
-        document.getElementById('khdTarikh').value = new Date().toLocaleDateString('ms-MY');
+        document.getElementById('loginFormWrapper').style.display  = 'none';
+        document.getElementById('dashboardPreview').style.display  = 'block';
+        setLoginState(true);
+        loadDashboardStats();
+        const gEl = document.getElementById('hadirGuru');
+        if (gEl) gEl.value = data.user;
       } else {
         showErr('loginError', data.message || 'E-mel atau nombor tidak sepadan.');
       }
@@ -1190,13 +1315,29 @@
   }
 
   function handleLogout() {
-    loggedInGuru = null;
+    loggedInGuru   = null;
+    allMuridKanak  = [];
+    allMuridDewasa = [];
     document.getElementById('loginFormWrapper').style.display = 'block';
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
     document.getElementById('loginPhone').value = '';
-    document.getElementById('kehadiranGuestMsg').style.display = 'block';
-    document.getElementById('kehadiranForm').style.display = 'none';
+    setLoginState(false);
+    showPanel('home');
+  }
+
+  // =====================
+  // DASHBOARD STATS
+  // =====================
+  async function loadDashboardStats() {
+    try {
+      const data = await callGAS('getDashboardStats', {});
+      if (data.success) {
+        document.getElementById('statKanak').textContent  = data.totalKanak;
+        document.getElementById('statDewasa').textContent = data.totalDewasa;
+        document.getElementById('statHadir').textContent  = data.hadirHariIni;
+      }
+    } catch (e) { /* biar kekal — */ }
   }
 
   // =====================
@@ -1208,16 +1349,16 @@
     btn.classList.add('loading'); btn.disabled = true;
 
     const payload = {
-      namaIbu: document.getElementById('namaIbu').value.trim(),
-      telefon: document.getElementById('telefonIbu').value.trim(),
-      email: document.getElementById('emailIbu').value.trim(),
-      alamat: document.getElementById('alamatIbu').value.trim(),
+      namaIbu:  document.getElementById('namaIbu').value.trim(),
+      telefon:  document.getElementById('telefonIbu').value.trim(),
+      email:    document.getElementById('emailIbu').value.trim(),
+      alamat:   document.getElementById('alamatIbu').value.trim(),
       namaAnak: document.getElementById('namaAnak').value.trim(),
-      mykid: document.getElementById('noMykid').value.trim(),
-      tahap: document.getElementById('tahapKanak').value,
-      faham: document.getElementById('sayaFaham').checked ? 'Ya' : 'Tidak',
-      pakej: document.getElementById('pilihPakej').value,
-      kaedah: document.getElementById('kaedahPengajian').value
+      mykid:    document.getElementById('noMykid').value.trim(),
+      tahap:    document.getElementById('tahapKanak').value,
+      faham:    document.getElementById('sayaFaham').checked ? 'Ya' : 'Tidak',
+      pakej:    document.getElementById('pilihPakej').value,
+      kaedah:   document.getElementById('kaedahPengajian').value
     };
 
     try {
@@ -1225,7 +1366,7 @@
       if (data.success) {
         document.getElementById('bilBadge').textContent = 'No. Bil: ' + (data.bil || '—');
         document.querySelector('#formKanak .card').style.display = 'none';
-        document.getElementById('kanakSuccess').style.display = 'block';
+        document.getElementById('kanakSuccess').style.display   = 'block';
       } else {
         showErr('step3Error', data.message || 'Ralat pendaftaran. Sila cuba semula.');
       }
@@ -1238,14 +1379,14 @@
 
   function resetKanakForm() {
     document.querySelector('#formKanak .card').style.display = 'block';
-    document.getElementById('kanakSuccess').style.display = 'none';
+    document.getElementById('kanakSuccess').style.display   = 'none';
     ['namaIbu','telefonIbu','emailIbu','alamatIbu','namaAnak','noMykid'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('tahapKanak').value = '';
-    document.getElementById('pilihPakej').value = '';
+    document.getElementById('tahapKanak').value      = '';
+    document.getElementById('pilihPakej').value      = '';
     document.getElementById('kaedahPengajian').value = '';
-    document.getElementById('sayaFaham').checked = false;
+    document.getElementById('sayaFaham').checked     = false;
     updateStepUI(1);
   }
 
@@ -1253,28 +1394,27 @@
   // SUBMIT DEWASA
   // =====================
   async function submitDewasa() {
-    const fields = ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa'];
-    for (const f of fields) {
+    for (const f of ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa']) {
       if (isEmpty(f)) { showErr('dewasaError', 'Sila isi semua medan wajib.'); return; }
     }
     const btn = document.getElementById('submitDewasaBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
     const payload = {
-      nama: document.getElementById('namaDewasa').value.trim(),
+      nama:    document.getElementById('namaDewasa').value.trim(),
       telefon: document.getElementById('telefonDewasa').value.trim(),
-      email: document.getElementById('emailDewasa').value.trim(),
-      alamat: document.getElementById('alamatDewasa').value.trim(),
-      tahap: document.getElementById('tahapDewasa').value,
-      guru: document.getElementById('guruPilih').value.trim()
+      email:   document.getElementById('emailDewasa').value.trim(),
+      alamat:  document.getElementById('alamatDewasa').value.trim(),
+      tahap:   document.getElementById('tahapDewasa').value,
+      guru:    document.getElementById('guruPilih').value.trim()
     };
 
     try {
       const data = await callGAS('registerDewasa', payload);
       if (data.success) {
-        document.getElementById('dewasaBilBadge').textContent = 'ID Murid: ' + (data.id || '—');
-        document.querySelector('#formDewasa .card').style.display = 'none';
-        document.getElementById('dewasaSuccess').style.display = 'block';
+        document.getElementById('dewasaBilBadge').textContent       = 'ID Murid: ' + (data.id || '—');
+        document.querySelector('#formDewasa .card').style.display   = 'none';
+        document.getElementById('dewasaSuccess').style.display      = 'block';
       } else {
         showErr('dewasaError', data.message || 'Ralat pendaftaran. Sila cuba semula.');
       }
@@ -1287,7 +1427,7 @@
 
   function resetDewasaForm() {
     document.querySelector('#formDewasa .card').style.display = 'block';
-    document.getElementById('dewasaSuccess').style.display = 'none';
+    document.getElementById('dewasaSuccess').style.display   = 'none';
     ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','guruPilih'].forEach(id => {
       document.getElementById(id).value = '';
     });
@@ -1295,39 +1435,133 @@
   }
 
   // =====================
-  // SUBMIT KEHADIRAN
+  // KEHADIRAN
   // =====================
   async function submitKehadiran() {
-    if (isEmpty('khdMurid') || isEmpty('khdStatus')) {
-      showErr('khdError', 'Sila isi nama murid dan status kehadiran.'); return;
+    hideAlert('hadirError'); hideAlert('hadirSuccess');
+    if (isEmpty('hadirMurid') || isEmpty('hadirStatus') || isEmpty('hadirTarikh')) {
+      showErr('hadirError', 'Sila isi semua medan wajib.'); return;
     }
-    if (!loggedInGuru) { showErr('khdError', 'Sila log masuk terlebih dahulu.'); return; }
-
-    const btn = document.getElementById('submitKhdBtn');
+    const btn = document.getElementById('submitHadirBtn');
     btn.classList.add('loading'); btn.disabled = true;
-    hideAlert('khdSuccess');
+
+    const raw = document.getElementById('hadirTarikh').value;           // YYYY-MM-DD
+    const tarikhFmt = raw.split('-').reverse().join('/');                // dd/MM/yyyy
 
     const payload = {
-      guru: loggedInGuru,
-      murid: document.getElementById('khdMurid').value.trim(),
-      status: document.getElementById('khdStatus').value,
-      tarikh: document.getElementById('khdTarikh').value
+      guru:   document.getElementById('hadirGuru').value.trim(),
+      murid:  document.getElementById('hadirMurid').value.trim(),
+      status: document.getElementById('hadirStatus').value,
+      tarikh: tarikhFmt
     };
 
     try {
       const data = await callGAS('attendance', payload);
       if (data.success) {
-        document.getElementById('khdSuccess').classList.add('show');
-        document.getElementById('khdMurid').value = '';
-        document.getElementById('khdStatus').value = '';
-        setTimeout(() => document.getElementById('khdSuccess').classList.remove('show'), 4000);
+        document.getElementById('hadirSuccess').classList.add('show');
+        document.getElementById('hadirMurid').value  = '';
+        document.getElementById('hadirStatus').value = '';
+        setTimeout(() => document.getElementById('hadirSuccess').classList.remove('show'), 3000);
+        loadKehadiranHariIni();
+        loadDashboardStats();
       } else {
-        showErr('khdError', data.message || 'Ralat merekod. Sila cuba semula.');
+        showErr('hadirError', data.message || 'Ralat merekod kehadiran.');
       }
     } catch (e) {
-      showErr('khdError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+      showErr('hadirError', 'Ralat sambungan. Sila cuba sebentar lagi.');
     } finally {
       btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
+  async function loadKehadiranHariIni() {
+    try {
+      const data  = await callGAS('getKehadiranHariIni', {});
+      const tbody = document.getElementById('kehadiranBody');
+      const label = document.getElementById('kehadiranTarikhLabel');
+      if (label) label.textContent = new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      if (!data.success || !data.rows || data.rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod hari ini.</td></tr>';
+        return;
+      }
+      const cls = { 'Hadir': 'status-hadir', 'Tidak Hadir': 'status-tidak-hadir', 'Cuti': 'status-cuti', 'Lambat': 'status-lambat' };
+      tbody.innerHTML = data.rows.map(r =>
+        `<tr>
+          <td>${escHtml(r.guru)}</td>
+          <td>${escHtml(r.murid)}</td>
+          <td><span class="badge ${cls[r.status] || ''}">${escHtml(r.status)}</span></td>
+          <td>${escHtml(r.tarikh)}</td>
+        </tr>`
+      ).join('');
+    } catch (e) { /* senyap */ }
+  }
+
+  // =====================
+  // SENARAI MURID
+  // =====================
+  async function loadMuridList() {
+    document.getElementById('muridKanakBody').innerHTML  = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    document.getElementById('muridDewasaBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    try {
+      const data = await callGAS('getMuridList', {});
+      if (!data.success) return;
+      allMuridKanak  = data.kanak  || [];
+      allMuridDewasa = data.dewasa || [];
+      renderMuridKanak(allMuridKanak);
+      renderMuridDewasa(allMuridDewasa);
+    } catch (e) { /* senyap */ }
+  }
+
+  function renderMuridKanak(rows) {
+    const tbody = document.getElementById('muridKanakBody');
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid kanak-kanak.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r =>
+      `<tr>
+        <td>${escHtml(r.bil)}</td>
+        <td>${escHtml(r.namaAnak)}</td>
+        <td>${escHtml(r.namaIbu)}</td>
+        <td>${escHtml(r.telefon)}</td>
+        <td>${escHtml(r.tahap)}</td>
+        <td>${escHtml(r.pakej)}</td>
+      </tr>`
+    ).join('');
+  }
+
+  function renderMuridDewasa(rows) {
+    const tbody = document.getElementById('muridDewasaBody');
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid dewasa.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r =>
+      `<tr>
+        <td>${escHtml(r.nama)}</td>
+        <td>${escHtml(r.telefon)}</td>
+        <td>${escHtml(r.email)}</td>
+        <td>${escHtml(r.tahap)}</td>
+        <td>${escHtml(r.guru)}</td>
+      </tr>`
+    ).join('');
+  }
+
+  function filterMurid() {
+    const q = (document.getElementById('muridSearch').value || '').toLowerCase().trim();
+    if (currentMuridTab === 'kanak') {
+      renderMuridKanak(q ? allMuridKanak.filter(r =>
+        (r.namaAnak || '').toLowerCase().includes(q) ||
+        (r.namaIbu  || '').toLowerCase().includes(q) ||
+        (r.telefon  || '').includes(q)
+      ) : allMuridKanak);
+    } else {
+      renderMuridDewasa(q ? allMuridDewasa.filter(r =>
+        (r.nama    || '').toLowerCase().includes(q) ||
+        (r.telefon || '').includes(q) ||
+        (r.email   || '').toLowerCase().includes(q)
+      ) : allMuridDewasa);
     }
   }
 
@@ -1335,8 +1569,10 @@
   // INIT
   // =====================
   document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('khdTarikh').value = new Date().toLocaleDateString('ms-MY');
     updateStepUI(1);
+    setLoginState(false);
+    const tEl = document.getElementById('hadirTarikh');
+    if (tEl) tEl.value = new Date().toISOString().split('T')[0];
   });
 </script>
 
