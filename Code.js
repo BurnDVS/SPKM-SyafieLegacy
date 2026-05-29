@@ -9,8 +9,8 @@ var SPREADSHEET_ID = '1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU';
 // Nama tab dalam spreadsheet
 var TAB = {
   GURU:        'Maklumat Guru',
-  KANAK:       'PendaftaranBaru!',
-  DEWASA:      'KelasDewasa!',
+  KANAK:       'PendaftaranBaru',
+  DEWASA:      'KelasDewasa',
   KEHADIRAN:   'Kehadiran'
 };
 
@@ -149,6 +149,8 @@ function loginGuru(params) {
       var rowPhone  = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString()).slice(-6);
       var rowNama   = (data[i][COL_GURU.NAMA]    || '').toString().trim();
 
+      Logger.log('Baris ' + i + ': rowPhone="' + rowPhone + '" vs input phone="' + phone + '" | rowEmail="' + rowEmail + '" vs input email="' + email + '"');
+
       if (rowEmail === email && rowPhone === phone) {
         cache.remove(cacheKey);
         Logger.log('Login berjaya: ' + rowNama);
@@ -186,7 +188,7 @@ function registerKanak(params) {
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.KANAK);
-    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru! tidak dijumpai.' };
+    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
 
     var lastRow   = sheet.getLastRow();
     var nextBil   = Math.max(1, lastRow - 1); // tolak baris header
@@ -245,7 +247,7 @@ function registerDewasa(params) {
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.DEWASA);
-    if (!sheet) return { success: false, message: 'Tab KelasDewasa! tidak dijumpai.' };
+    if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
 
     var newRow = new Array(8).fill('');
     newRow[COL_DEWASA.NAMA]    = params.nama.trim();
@@ -781,6 +783,13 @@ function createWhatsAppTriggers() {
 function testLogin() {
   var result = loginGuru({ email: 'guru@example.com', phone: '0123456789' });
   Logger.log(JSON.stringify(result));
+}
+
+function testLoginDirect() {
+  // Test dengan telefon sebenar dari Sheets: kolum E = "0196929415", last 6 = "929415"
+  // Ganti email di bawah dengan email guru yang ada dalam Sheets
+  var result = loginGuru({ email: 'burn.kajang@gmail.com', phone: '929415' });
+  Logger.log('testLoginDirect result: ' + JSON.stringify(result));
 }
 
 function testRegisterKanak() {
