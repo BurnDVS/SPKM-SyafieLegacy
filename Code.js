@@ -993,9 +993,8 @@ function getYuranStats(params) {
     var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
     var sheet   = yuranSS.getSheetByName(bulan);
 
-    if (!sheet || sheet.getLastRow() < 2) {
-      return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [] };
-    }
+    if (!sheet) return { success: false, message: 'Tab tidak dijumpai' };
+    if (sheet.getLastRow() < 2) return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [] };
 
     var data         = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
     var sudahBayar   = data.length;
@@ -1035,20 +1034,18 @@ function recordCash(params) {
       return { success: false, message: 'Nama, bulan, dan tarikh diperlukan.' };
     }
 
-    var tahun   = bulan.replace(/[^0-9]/g, '') || new Date().getFullYear().toString();
-    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
-    var sheet   = yuranSS.getSheetByName(bulan);
+    var bulanText = bulan.replace(/[0-9]/g, '');
+    var tahun     = bulan.replace(/[^0-9]/g, '') || new Date().getFullYear().toString();
+    var yuranSS   = SpreadsheetApp.openById(YURAN_SS_ID);
+    var sheet     = yuranSS.getSheetByName(bulan);
 
-    if (!sheet) {
-      sheet = yuranSS.insertSheet(bulan);
-      sheet.appendRow(['Timestamp','Email','Nama Penuh Murid','Bayaran Yuran Bagi Bulan','Tahun','Tarikh Bayaran','Jumlah Bayaran(RM)','Muat Naik Resit','No Resit','Status']);
-    }
+    if (!sheet) return { success: false, message: 'Tab tidak dijumpai' };
 
     var existingRows = Math.max(0, sheet.getLastRow() - 1);
     var noResit      = String(existingRows + 1).padStart(3, '0');
     var timestamp    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
 
-    sheet.appendRow([timestamp, '', nama, bulan, tahun, tarikh, jumlah, 'CASH', noResit, 'SELESAI', '', '', '', '']);
+    sheet.appendRow([timestamp, '', nama, bulanText, tahun, tarikh, jumlah, 'CASH', noResit, 'SELESAI']);
     SpreadsheetApp.flush();
 
     Logger.log('recordCash: ' + nama + ' ' + bulan + ' RM' + jumlah + ' Resit: ' + noResit);
