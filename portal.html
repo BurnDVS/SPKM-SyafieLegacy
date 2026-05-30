@@ -872,6 +872,23 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     line-height: 1.2;
   }
 
+  /* === YURAN 2-COLUMN GRID === */
+  .yuran-senarai-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 700px) {
+    .yuran-senarai-grid { grid-template-columns: 1fr; }
+  }
+  .yuran-senarai-grid .card-body {
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
+  }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -1591,11 +1608,11 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   <!-- B) STATS BAR -->
   <div class="yuran-stats">
     <div class="yuran-stat-card">
-      <p class="stat-label" style="color:var(--green);">Jumlah Dah Bayar</p>
+      <p class="stat-label" style="color:var(--green);">Sudah Kemaskini</p>
       <p class="stat-val" style="color:var(--green);" id="statDahBayar">—</p>
     </div>
     <div class="yuran-stat-card">
-      <p class="stat-label" style="color:var(--error);">Jumlah Belum Bayar</p>
+      <p class="stat-label" style="color:var(--error);">Belum Kemaskini</p>
       <p class="stat-val" style="color:var(--error);" id="statBelumBayar">—</p>
     </div>
     <div class="yuran-stat-card">
@@ -1604,28 +1621,54 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     </div>
   </div>
 
-  <!-- C) SENARAI BELUM BAYAR -->
-  <div class="card" style="margin-bottom:24px;">
-    <div class="card-header">
-      <div class="card-icon" style="background:#FDECEA; color:var(--error);">⚠</div>
-      <div class="card-header-text">
-        <h3>Senarai Belum Bayar</h3>
-        <p id="belumBayarLabel">Murid yang belum kemaskini yuran</p>
+  <!-- C) SENARAI 2 KOLUM -->
+  <div class="yuran-senarai-grid">
+
+    <!-- LEFT: Sudah Kemaskini -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#E8F5E9; color:#2E7D32;">✅</div>
+        <div class="card-header-text">
+          <h3>Sudah Kemaskini</h3>
+          <p id="sudahKemaskiniLabel">0 murid sudah kemaskini yuran</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <table class="data-table" id="sudahBayarTable">
+          <thead>
+            <tr><th>Nama Murid</th></tr>
+          </thead>
+          <tbody id="sudahBayarBody">
+            <tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div class="card-body" style="padding:0; overflow-x:auto;">
-      <table class="data-table" id="belumBayarTable">
-        <thead>
-          <tr><th>#</th><th>Nama Murid</th><th>No. Telefon</th></tr>
-        </thead>
-        <tbody id="belumBayarBody">
-          <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
-        </tbody>
-      </table>
+
+    <!-- RIGHT: Belum Kemaskini -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#FDECEA; color:var(--error);">⚠</div>
+        <div class="card-header-text">
+          <h3>Belum Kemaskini</h3>
+          <p id="belumBayarLabel">0 murid belum kemaskini yuran</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <table class="data-table" id="belumBayarTable">
+          <thead>
+            <tr><th>Nama Murid</th><th>No. Telefon</th></tr>
+          </thead>
+          <tbody id="belumBayarBody">
+            <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:16px 24px; border-top:1px solid var(--border);">
+        <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
+      </div>
     </div>
-    <div style="padding:16px 24px; border-top:1px solid var(--border);">
-      <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
-    </div>
+
   </div>
 
   <!-- D) REKOD CASH PAYMENT -->
@@ -2479,17 +2522,21 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     ['statDahBayar','statBelumBayar','statKutipan'].forEach(id => {
       document.getElementById(id).textContent = '...';
     });
+    document.getElementById('sudahBayarBody').innerHTML =
+      '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
     document.getElementById('belumBayarBody').innerHTML =
-      '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
+      '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
 
     callGAS('getYuranStats', { bulan: bulan },
       function(data) {
         if (!data.success) {
-          document.getElementById('statDahBayar').textContent    = '—';
-          document.getElementById('statBelumBayar').textContent  = '—';
-          document.getElementById('statKutipan').textContent     = '—';
-          document.getElementById('belumBayarBody').innerHTML    =
-            '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
+          document.getElementById('statDahBayar').textContent   = '—';
+          document.getElementById('statBelumBayar').textContent = '—';
+          document.getElementById('statKutipan').textContent    = '—';
+          document.getElementById('sudahBayarBody').innerHTML =
+            '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
+          document.getElementById('belumBayarBody').innerHTML =
+            '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
           return;
         }
         const totalMurid = yuranMuridList.length;
@@ -2502,8 +2549,13 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
         const noticeSel = document.getElementById('yuranEmptyNotice');
         if (noticeSel) noticeSel.style.display = (sudahBayar === 0 && (!data.listNamaBayar || data.listNamaBayar.length === 0)) ? '' : 'none';
 
+        const sudahList = (data.listNamaBayar || []).slice().sort();
+        renderSudahKemaskini(sudahList);
+
         const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
-        currentBelumBayar  = yuranMuridList.filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()));
+        currentBelumBayar = yuranMuridList
+          .filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()))
+          .sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
         renderBelumBayar(currentBelumBayar);
       }
     );
@@ -2536,20 +2588,29 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     );
   }
 
+  function renderSudahKemaskini(list) {
+    const tbody = document.getElementById('sudahBayarBody');
+    const label = document.getElementById('sudahKemaskiniLabel');
+    if (label) label.textContent = list.length + ' murid sudah kemaskini yuran';
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod lagi.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(nama =>
+      `<tr><td>${escHtml(nama)}</td></tr>`
+    ).join('');
+  }
+
   function renderBelumBayar(list) {
     const tbody = document.getElementById('belumBayarBody');
     const label = document.getElementById('belumBayarLabel');
     if (label) label.textContent = list.length + ' murid belum kemaskini yuran';
     if (!list || list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Semua murid telah membayar yuran. 🎉</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Semua murid telah kemaskini yuran. 🎉</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map((m, i) =>
-      `<tr>
-        <td>${i + 1}</td>
-        <td>${escHtml(m.nama)}</td>
-        <td>${escHtml(m.telefon || '—')}</td>
-      </tr>`
+    tbody.innerHTML = list.map(m =>
+      `<tr><td>${escHtml(m.nama)}</td><td>${escHtml(m.telefon || '—')}</td></tr>`
     ).join('');
   }
 
