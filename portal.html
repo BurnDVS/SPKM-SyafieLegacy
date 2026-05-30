@@ -1405,9 +1405,10 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   </div>
 
   <!-- Tab switcher -->
-  <div class="tab-switcher" style="max-width:380px; margin:0 auto 28px;">
-    <button class="tab-btn active" id="tabKehadiranStats" onclick="switchKehadiranTab('stats')">📊 Statistik</button>
-    <button class="tab-btn"        id="tabKehadiranRekod" onclick="switchKehadiranTab('rekod')">📋 Rekod Individu</button>
+  <div class="tab-switcher" style="max-width:560px; margin:0 auto 28px;">
+    <button class="tab-btn active" id="tabKehadiranStats"    onclick="switchKehadiranTab('stats')">📊 Statistik</button>
+    <button class="tab-btn"        id="tabKehadiranRekod"    onclick="switchKehadiranTab('rekod')">📋 Rekod Individu</button>
+    <button class="tab-btn"        id="tabBtnRekodKehadiran" onclick="switchKehadiranTab('rekodGuru')" style="display:none;">✅ Rekod Kehadiran</button>
   </div>
 
   <!-- TAB A: STATISTIK -->
@@ -1472,6 +1473,69 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     </div>
     <div id="kehadiranRekodResult"></div>
   </div>
+
+  <!-- TAB C: REKOD KEHADIRAN (guru login) -->
+  <div id="kehadiranRekodGuruPanel" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon green">✅</div>
+        <div class="card-header-text">
+          <h3>Rekod Kehadiran — <span id="rekodGuruNama"></span></h3>
+          <p>Rekod kehadiran murid anda</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="max-width:560px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rekodTarikh">Tarikh</label>
+              <input type="date" id="rekodTarikh">
+            </div>
+            <div class="form-group">
+              <label for="rekodWaktuTamat">Waktu Tamat</label>
+              <input type="time" id="rekodWaktuTamat">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="rekodKaedah">Kaedah Pengajian</label>
+            <select id="rekodKaedah">
+              <option value="ONLINE">ONLINE</option>
+              <option value="BERSEMUKA">BERSEMUKA</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <span style="font-weight:500; font-size:14px;">Senarai Murid <span id="rekodMuridCount" style="color:var(--text-muted);">(memuatkan...)</span></span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-ghost btn-sm" style="margin-top:0;" onclick="pilihSemuaMurid(true)">Pilih Semua</button>
+              <button class="btn btn-ghost btn-sm" style="margin-top:0;" onclick="pilihSemuaMurid(false)">Nyahpilih Semua</button>
+            </div>
+          </div>
+          <div id="rekodMuridList" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:12px; background:var(--cream);">
+            <p style="color:var(--text-muted); text-align:center; padding:20px 0;">Memuatkan senarai murid...</p>
+          </div>
+          <p id="rekodPilihCount" style="font-size:13px; color:var(--text-muted); margin-top:8px;">0 / 0 murid dipilih</p>
+        </div>
+
+        <div class="alert alert-error" id="rekodError" style="margin-top:16px;">
+          <span class="alert-icon">⚠</span>
+          <span id="rekodErrorMsg">Sila pilih sekurang-kurangnya 1 murid.</span>
+        </div>
+        <div class="alert alert-success" id="rekodSuccess" style="margin-top:16px;">
+          <span class="alert-icon">✓</span>
+          <span id="rekodSuccessMsg"></span>
+        </div>
+
+        <button class="btn btn-primary" id="simpanKehadiranBtn" onclick="simpanKehadiranGuru()" style="margin-top:20px;">
+          <span class="btn-text">💾 Simpan Kehadiran</span>
+          <span class="btn-loader"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 
@@ -1636,10 +1700,10 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       <div class="card-body">
         <table class="data-table" id="sudahBayarTable">
           <thead>
-            <tr><th>Nama Murid</th></tr>
+            <tr><th>Nama Murid</th><th>Resit</th></tr>
           </thead>
           <tbody id="sudahBayarBody">
-            <tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
+            <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
           </tbody>
         </table>
       </div>
@@ -1744,6 +1808,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   // Kehadiran state
   let kehadiranStatsData  = [];
   let currentKehadiranTab = 'stats';
+  let guruMuridList       = [];
   const BULAN_LIST = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
 
   // OTP flow state
@@ -1801,6 +1866,8 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     if (cardKutipan) cardKutipan.style.display = isAdmin ? '' : 'none';
     if (sectionCash) sectionCash.style.display = isAdmin ? '' : 'none';
     if (btnSync)     btnSync.style.display     = isAdmin ? '' : 'none';
+    const tabRekodGuru = document.getElementById('tabBtnRekodKehadiran');
+    if (tabRekodGuru)  tabRekodGuru.style.display = loggedIn ? '' : 'none';
   }
 
   // =====================
@@ -1955,6 +2022,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     allMuridKanak  = [];
     allMuridDewasa = [];
     yuranMuridList = [];
+    guruMuridList  = [];
     document.getElementById('loginFormWrapper').style.display = 'block';
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
@@ -2531,7 +2599,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       document.getElementById(id).textContent = '...';
     });
     document.getElementById('sudahBayarBody').innerHTML =
-      '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
+      '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
     document.getElementById('belumBayarBody').innerHTML =
       '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
 
@@ -2542,7 +2610,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
           document.getElementById('statBelumBayar').textContent = '—';
           document.getElementById('statKutipan').textContent    = '—';
           document.getElementById('sudahBayarBody').innerHTML =
-            '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
+            '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
           document.getElementById('belumBayarBody').innerHTML =
             '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
           return;
@@ -2558,7 +2626,9 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
         if (noticeSel) noticeSel.style.display = (sudahBayar === 0 && (!data.listNamaBayar || data.listNamaBayar.length === 0)) ? '' : 'none';
 
         const sudahList = (data.listNamaBayar || []).slice().sort();
-        renderSudahKemaskini(sudahList);
+        const resitMap  = {};
+        (data.listResit || []).forEach(r => { resitMap[r.nama.toUpperCase().trim()] = r.resitUrl; });
+        renderSudahKemaskini(sudahList, resitMap);
 
         const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
         currentBelumBayar = yuranMuridList
@@ -2596,17 +2666,22 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     );
   }
 
-  function renderSudahKemaskini(list) {
+  function renderSudahKemaskini(list, resitMap) {
+    resitMap = resitMap || {};
     const tbody = document.getElementById('sudahBayarBody');
     const label = document.getElementById('sudahKemaskiniLabel');
     if (label) label.textContent = list.length + ' murid sudah kemaskini yuran';
     if (!list || list.length === 0) {
-      tbody.innerHTML = '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod lagi.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod lagi.</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map(nama =>
-      `<tr><td>${escHtml(nama)}</td></tr>`
-    ).join('');
+    tbody.innerHTML = list.map(nama => {
+      const url = resitMap[nama.toUpperCase().trim()] || '';
+      const resitCell = url
+        ? `<a href="${escHtml(url)}" target="_blank" class="btn btn-ghost btn-sm" style="margin:0; padding:4px 10px; font-size:12px;">📄 Resit</a>`
+        : '—';
+      return `<tr><td>${escHtml(nama)}</td><td>${resitCell}</td></tr>`;
+    }).join('');
   }
 
   function renderBelumBayar(list) {
@@ -2695,10 +2770,13 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   // =====================
   function switchKehadiranTab(tab) {
     currentKehadiranTab = tab;
-    document.getElementById('tabKehadiranStats').classList.toggle('active', tab === 'stats');
-    document.getElementById('tabKehadiranRekod').classList.toggle('active', tab === 'rekod');
-    document.getElementById('kehadiranStatsPanel').style.display = tab === 'stats' ? 'block' : 'none';
-    document.getElementById('kehadiranRekodPanel').style.display = tab === 'rekod' ? 'block' : 'none';
+    document.getElementById('tabKehadiranStats').classList.toggle('active',    tab === 'stats');
+    document.getElementById('tabKehadiranRekod').classList.toggle('active',    tab === 'rekod');
+    document.getElementById('tabBtnRekodKehadiran').classList.toggle('active', tab === 'rekodGuru');
+    document.getElementById('kehadiranStatsPanel').style.display        = tab === 'stats'     ? 'block' : 'none';
+    document.getElementById('kehadiranRekodPanel').style.display        = tab === 'rekod'     ? 'block' : 'none';
+    document.getElementById('kehadiranRekodGuruPanel').style.display    = tab === 'rekodGuru' ? 'block' : 'none';
+    if (tab === 'rekodGuru') loadRekodGuruPanel();
   }
 
   function loadKehadiranPanel() {
@@ -2803,6 +2881,103 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       },
       function() {
         resultEl.innerHTML = '<p style="color:var(--error);font-size:14px;padding:8px 0;">Ralat sambungan. Sila cuba sebentar lagi.</p>';
+      }
+    );
+  }
+
+  // =====================
+  // REKOD KEHADIRAN GURU (Tab C)
+  // =====================
+  function loadRekodGuruPanel() {
+    const namaEl = document.getElementById('rekodGuruNama');
+    if (namaEl) namaEl.textContent = loggedInGuru || '';
+    const tarikhEl = document.getElementById('rekodTarikh');
+    if (tarikhEl && !tarikhEl.value) tarikhEl.value = new Date().toISOString().split('T')[0];
+
+    if (guruMuridList.length > 0) { renderGuruMuridChecklist(guruMuridList); return; }
+
+    document.getElementById('rekodMuridList').innerHTML =
+      '<p style="color:var(--text-muted); text-align:center; padding:20px 0;">Memuatkan senarai murid...</p>';
+    document.getElementById('rekodMuridCount').textContent = '(memuatkan...)';
+
+    callGAS('getMuridByGuru', { namaGuru: loggedInGuru },
+      function(data) {
+        if (!data.success) {
+          document.getElementById('rekodMuridList').innerHTML =
+            '<p style="color:var(--error); text-align:center; padding:20px 0;">' + escHtml(data.message || 'Ralat memuatkan murid.') + '</p>';
+          return;
+        }
+        guruMuridList = data.murid || [];
+        if (guruMuridList.length === 0) {
+          document.getElementById('rekodMuridList').innerHTML =
+            '<p style="color:var(--text-muted); text-align:center; padding:20px 0;">Tiada murid dijumpai untuk guru ini.</p>';
+          document.getElementById('rekodMuridCount').textContent = '(0 murid)';
+          return;
+        }
+        renderGuruMuridChecklist(guruMuridList);
+      },
+      function() {
+        document.getElementById('rekodMuridList').innerHTML =
+          '<p style="color:var(--error); text-align:center; padding:20px 0;">Ralat sambungan. Sila cuba semula.</p>';
+      }
+    );
+  }
+
+  function renderGuruMuridChecklist(list) {
+    const countEl = document.getElementById('rekodMuridCount');
+    if (countEl) countEl.textContent = '(' + list.length + ' murid)';
+    document.getElementById('rekodMuridList').innerHTML = list.map((nama, i) =>
+      `<div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border);">
+        <input type="checkbox" id="muridChk_${i}" class="murid-chk" value="${escHtml(nama)}" onchange="updateMuridCount()">
+        <label for="muridChk_${i}" style="flex:1; cursor:pointer; font-size:14px;">${escHtml(nama)}</label>
+      </div>`
+    ).join('');
+    updateMuridCount();
+  }
+
+  function updateMuridCount() {
+    const checked = document.querySelectorAll('.murid-chk:checked').length;
+    const total   = document.querySelectorAll('.murid-chk').length;
+    const el = document.getElementById('rekodPilihCount');
+    if (el) el.textContent = checked + ' / ' + total + ' murid dipilih';
+  }
+
+  function pilihSemuaMurid(check) {
+    document.querySelectorAll('.murid-chk').forEach(cb => { cb.checked = check; });
+    updateMuridCount();
+  }
+
+  function simpanKehadiranGuru() {
+    hideAlert('rekodError'); hideAlert('rekodSuccess');
+    const tarikh     = document.getElementById('rekodTarikh').value;
+    const kaedah     = document.getElementById('rekodKaedah').value;
+    const waktuTamat = document.getElementById('rekodWaktuTamat').value;
+    const emailEl    = document.getElementById('loginEmail');
+    const emailGuru  = emailEl ? emailEl.value.trim() : '';
+    const selected   = Array.from(document.querySelectorAll('.murid-chk:checked')).map(cb => cb.value);
+
+    if (!waktuTamat) { showErr('rekodError', 'Sila isi waktu tamat.'); return; }
+    if (selected.length === 0) { showErr('rekodError', 'Sila pilih sekurang-kurangnya 1 murid.'); return; }
+
+    const btn = document.getElementById('simpanKehadiranBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    callGAS('simpanKehadiran', { namaGuru: loggedInGuru, emailGuru, muridHadir: selected, kaedah, waktuTamat, tarikh },
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          const msg = '✅ Kehadiran berjaya disimpan! ' + data.jumlahRekod + ' murid direkodkan.';
+          document.getElementById('rekodSuccessMsg').textContent = msg;
+          document.getElementById('rekodSuccess').classList.add('show');
+          setTimeout(() => document.getElementById('rekodSuccess').classList.remove('show'), 5000);
+          pilihSemuaMurid(false);
+        } else {
+          showErr('rekodError', data.message || 'Ralat menyimpan kehadiran.');
+        }
+      },
+      function() {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('rekodError', 'Ralat sambungan. Sila cuba semula.');
       }
     );
   }

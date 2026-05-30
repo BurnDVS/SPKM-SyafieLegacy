@@ -118,6 +118,8 @@ function doPost(e) {
     else if (action === 'getMuridListAll')         result = getMuridListAll();
     else if (action === 'getKehadiranStats')       result = getKehadiranStats(body);
     else if (action === 'getKehadiranRekod')       result = getKehadiranRekod(body);
+    else if (action === 'getMuridByGuru')          result = getMuridByGuru(body);
+    else if (action === 'simpanKehadiran')         result = simpanKehadiran(body);
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -161,6 +163,8 @@ function doAction(action, payload) {
   else if (action === 'getMuridListAll')        return getMuridListAll();
   else if (action === 'getKehadiranStats')      return getKehadiranStats(payload);
   else if (action === 'getKehadiranRekod')      return getKehadiranRekod(payload);
+  else if (action === 'getMuridByGuru')         return getMuridByGuru(payload);
+  else if (action === 'simpanKehadiran')        return simpanKehadiran(payload);
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -999,23 +1003,32 @@ function getYuranStats(params) {
     var sheet   = yuranSS.getSheetByName(bulan);
 
     if (!sheet) return { success: false, message: 'Tab tidak dijumpai' };
-    if (sheet.getLastRow() < 2) return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [] };
+    if (sheet.getLastRow() < 2) return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [], listResit: [] };
 
-    var data          = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
-    var sudahBayar    = 0;
+    var data          = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
     var totalKutipan  = 0;
+    var seenNames     = {};
     var listNamaBayar = [];
+    var listResit     = [];
 
     data.forEach(function(r) {
-      var nama = (r[2] || '').toString().trim().toUpperCase(); // Col C
-      if (!nama) return;
-      sudahBayar++;
-      var jumlah = parseFloat(r[6]); // Col G
+      var rawNama  = (r[2]  || '').toString().trim(); // Col C
+      if (!rawNama) return;
+      var jumlah   = parseFloat(r[6]);                // Col G
       if (!isNaN(jumlah)) totalKutipan += jumlah;
-      listNamaBayar.push(nama);
+      var resitUrl = (r[11] || '').toString().trim(); // Col L
+
+      rawNama.split(',').forEach(function(n) {
+        var nama = n.trim().toUpperCase();
+        if (!nama || seenNames[nama]) return;
+        seenNames[nama] = true;
+        listNamaBayar.push(nama);
+        listResit.push({ nama: nama, resitUrl: resitUrl });
+      });
     });
 
-    return { success: true, sudahBayar: sudahBayar, totalKutipan: totalKutipan, listNamaBayar: listNamaBayar };
+    var sudahBayar = listNamaBayar.length;
+    return { success: true, sudahBayar: sudahBayar, totalKutipan: totalKutipan, listNamaBayar: listNamaBayar, listResit: listResit };
 
   } catch (err) {
     Logger.log('getYuranStats error: ' + err.message);
@@ -1291,6 +1304,104 @@ function getKehadiranRekod(params) {
 
   } catch (err) {
     Logger.log('getKehadiranRekod error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 31. getMuridByGuru
+// Ambil senarai murid yang ditugaskan kepada guru tertentu
+// Input:  { namaGuru }
+// Output: { success, murid: [nama, ...] }
+// ============================================================
+function getMuridByGuru(params) {
+  params = params || {};
+  try {
+    var namaGuru = (params.namaGuru || '').toString().trim();
+    if (!namaGuru) return { success: false, message: 'namaGuru diperlukan.' };
+
+    var namaGuruLower = namaGuru.toLowerCase();
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var names = [];
+
+    // PendaftaranBaru — col Q (index 16) = Guru Utama, col E (index 4) = Nama Murid
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 17).getValues();
+      kData.forEach(function(r) {
+        var guru = (r[16] || '').toString().trim().toLowerCase();
+        if (guru === namaGuruLower) {
+          var nama = (r[4] || '').toString().trim();
+          if (nama) names.push(nama.toUpperCase());
+        }
+      });
+    }
+
+    // KelasDewasa — col R (index 17) = Guru, col D (index 3) = Nama
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 18).getValues();
+      dData.forEach(function(r) {
+        var guru = (r[COL_DEWASA.GURU] || '').toString().trim().toLowerCase();
+        if (guru === namaGuruLower) {
+          var nama = (r[3] || '').toString().trim();
+          if (nama) names.push(nama.toUpperCase());
+        }
+      });
+    }
+
+    // Remove duplicates, sort A-Z
+    var unique = {};
+    names.forEach(function(n) { unique[n] = true; });
+    var sorted = Object.keys(unique).sort();
+
+    return { success: true, murid: sorted };
+
+  } catch (err) {
+    Logger.log('getMuridByGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 32. simpanKehadiran
+// Simpan rekod kehadiran murid ke spreadsheet Kehadiran
+// Input:  { namaGuru, emailGuru, muridHadir: [...], kaedah, waktuTamat, tarikh }
+// Output: { success, jumlahRekod }
+// ============================================================
+function simpanKehadiran(params) {
+  params = params || {};
+  try {
+    var namaGuru   = (params.namaGuru   || '').toString().trim();
+    var emailGuru  = (params.emailGuru  || '').toString().trim();
+    var muridHadir = params.muridHadir  || [];
+    var kaedah     = (params.kaedah     || '').toString().trim();
+    var waktuTamat = (params.waktuTamat || '').toString().trim();
+
+    if (!namaGuru || !muridHadir.length) {
+      return { success: false, message: 'namaGuru dan muridHadir diperlukan.' };
+    }
+
+    var ss    = SpreadsheetApp.openById(KEHADIRAN_SS_ID);
+    var sheet = ss.getSheetByName(namaGuru);
+    if (!sheet) {
+      sheet = ss.insertSheet(namaGuru);
+      sheet.getRange(1, 1, 1, 6).setValues([['Timestamp','Email','Nama Guru','Nama Murid','Kaedah','Waktu Tamat']]);
+    }
+
+    var timestamp = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    var rows = muridHadir.map(function(nama) {
+      return [timestamp, emailGuru, namaGuru, nama, kaedah, waktuTamat];
+    });
+
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 6).setValues(rows);
+    SpreadsheetApp.flush();
+
+    Logger.log('simpanKehadiran: ' + namaGuru + ' — ' + muridHadir.length + ' murid');
+    return { success: true, jumlahRekod: muridHadir.length };
+
+  } catch (err) {
+    Logger.log('simpanKehadiran error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
