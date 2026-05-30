@@ -222,16 +222,15 @@ function registerKanak(params) {
     if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
 
     var lastRow   = sheet.getLastRow();
-    var nextBil   = lastRow; // header = baris 1, data mula baris 2; bil seterusnya = lastRow
+    var nextBil   = lastRow;
     var timestamp = new Date();
 
-    // Bina row mengikut susunan kolum COL_KANAK (A-L = 12 kolum)
+    // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
     var newRow = new Array(12).fill('');
-    newRow[COL_KANAK.BIL]       = nextBil;
     newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim();
+    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
     newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
-    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();
+    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim().toUpperCase();
     newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
     newRow[COL_KANAK.EMAIL]     = params.email.trim();
     newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
@@ -266,10 +265,10 @@ function registerKanak(params) {
 function registerDewasa(params) {
   params = params || {};
   try {
-    ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
+    ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
     });
-    var required = ['nama','telefon','email','alamat','tahap'];
+    var required = ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'];
     for (var r = 0; r < required.length; r++) {
       if (!params[required[r]] || !params[required[r]].toString().trim()) {
         return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
@@ -284,16 +283,18 @@ function registerDewasa(params) {
     var nextBil   = lastRow;
     var timestamp = new Date();
 
-    // Bina row mengikut susunan kolum COL_DEWASA (A-R = 18 kolum)
+    // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
     var newRow = new Array(18).fill('');
-    newRow[COL_DEWASA.BIL]       = nextBil;
     newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_DEWASA.EMAIL]     = params.email.trim();
-    newRow[COL_DEWASA.NAMA]      = params.nama.trim();
+    newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
     newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
+    newRow[COL_DEWASA.NO_MYKAD]  = (params.mykad  || '').trim();
+    newRow[COL_DEWASA.PAKEJ]     = (params.pakej   || '').trim();
+    newRow[COL_DEWASA.KAEDAH]    = (params.kaedah  || '').trim();
     newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
     newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
-    newRow[COL_DEWASA.GURU]      = (params.guru || '').trim();
+    newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
@@ -1021,10 +1022,10 @@ function sendOTPKanak(params) {
 function sendOTPDewasa(params) {
   params = params || {};
   try {
-    ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
+    ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
     });
-    var required = ['nama','telefon','email','alamat','tahap'];
+    var required = ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'];
     for (var r = 0; r < required.length; r++) {
       if (!params[required[r]] || !params[required[r]].toString().trim()) {
         return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
@@ -1062,11 +1063,10 @@ function confirmRegisterKanak(params) {
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
     var newRow    = new Array(12).fill('');
-    newRow[COL_KANAK.BIL]       = nextBil;
     newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim();
+    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
     newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
-    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();
+    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim().toUpperCase();
     newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
     newRow[COL_KANAK.EMAIL]     = params.email.trim();
     newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
@@ -1102,7 +1102,7 @@ function confirmRegisterDewasa(params) {
     var verify = verifyOTP_(email, otp);
     if (!verify.valid) return { success: false, expired: verify.expired || false, message: verify.message, attemptsLeft: verify.attemptsLeft };
 
-    ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
+    ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
     });
 
@@ -1113,14 +1113,16 @@ function confirmRegisterDewasa(params) {
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
     var newRow    = new Array(18).fill('');
-    newRow[COL_DEWASA.BIL]       = nextBil;
     newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_DEWASA.EMAIL]     = params.email.trim();
-    newRow[COL_DEWASA.NAMA]      = params.nama.trim();
+    newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
     newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
+    newRow[COL_DEWASA.NO_MYKAD]  = (params.mykad  || '').trim();
+    newRow[COL_DEWASA.PAKEJ]     = (params.pakej   || '').trim();
+    newRow[COL_DEWASA.KAEDAH]    = (params.kaedah  || '').trim();
     newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
     newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
-    newRow[COL_DEWASA.GURU]      = (params.guru || '').trim();
+    newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 

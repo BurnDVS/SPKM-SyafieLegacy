@@ -8,20 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --gold: #C9A84C;
-    --gold-light: #F5EDD5;
-    --gold-dark: #8B6914;
-    --green: #1A5C3A;
-    --green-mid: #2D7A52;
-    --green-light: #E8F4EE;
-    --cream: #FAF7F0;
+    --gold: #FFD700;
+    --gold-light: #FFF9CC;
+    --gold-dark: #B8860B;
+    --green: #0A1F44;
+    --green-mid: #1A3A6B;
+    --green-light: #E8EEF7;
+    --cream: #F8F8F8;
     --text-dark: #1C1C1C;
     --text-mid: #4A4A4A;
     --text-muted: #888;
-    --border: #E2D9C5;
+    --border: #D8DCE8;
     --white: #FFFFFF;
     --error: #C0392B;
-    --success: #1A5C3A;
+    --success: #0A1F44;
     --radius: 14px;
     --shadow: 0 4px 24px rgba(0,0,0,0.08);
   }
@@ -665,6 +665,146 @@
   }
   .otp-expired-msg.show { display: block; }
 
+  /* === LANDING PAGE === */
+  .landing-top {
+    text-align: center;
+    padding: 40px 24px 16px;
+  }
+  .landing-bismillah {
+    font-family: 'Lora', serif;
+    font-size: 30px;
+    color: var(--gold-dark);
+    display: block;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .landing-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--gold);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .landing-divider::before,
+  .landing-divider::after {
+    content: '';
+    width: 80px;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.5;
+  }
+  .landing-hero {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    display: flex;
+    align-items: flex-start;
+    gap: 48px;
+  }
+  .landing-hero-content { flex: 1; padding-top: 16px; }
+  .landing-hero-img {
+    width: 300px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .landing-ustaz-full {
+    width: 100%;
+    border-radius: var(--radius);
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 8px 32px rgba(10,31,68,0.18);
+  }
+  .landing-tagline {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold-dark);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+  .landing-title {
+    font-family: 'Lora', serif;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--green);
+    line-height: 1.25;
+    margin-bottom: 28px;
+  }
+  .ustaz-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  .ustaz-photo {
+    width: 88px;
+    height: 110px;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    flex-shrink: 0;
+  }
+  .ustaz-name {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green);
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .ustaz-role {
+    font-size: 12px;
+    color: var(--gold-dark);
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .ustaz-since {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .ustaz-credentials {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  .ustaz-credentials li {
+    font-size: 12px;
+    color: var(--text-mid);
+    padding: 3px 0 3px 16px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .ustaz-credentials li::before {
+    content: '•';
+    color: var(--gold);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .landing-cta {
+    display: flex;
+    gap: 12px;
+  }
+  .landing-cta .btn { margin-top: 0; flex: 1; }
+  @media (max-width: 768px) {
+    .landing-hero { flex-direction: column; gap: 32px; }
+    .landing-hero-img { width: 100%; max-width: 260px; margin: 0 auto; order: -1; }
+    .landing-title { font-size: 26px; }
+    .ustaz-card { flex-direction: column; }
+  }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -693,7 +833,8 @@
 
 <!-- NAV -->
 <nav class="nav-bar" role="navigation" aria-label="Menu utama">
-  <button class="nav-tab active" id="nav-home"      onclick="showPanel('home')">🏠 Laman Utama</button>
+  <button class="nav-tab active" id="nav-utama"     onclick="showPanel('utama')">🏠 Utama</button>
+  <button class="nav-tab"        id="nav-home"      onclick="showPanel('home')">🔒 Log Masuk</button>
   <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📝 Daftar Murid</button>
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
@@ -705,7 +846,53 @@
 <!-- ============================================================ -->
 <main class="main" id="mainContent">
 
-<section class="panel active" id="panel-home">
+<!-- ============================================================ -->
+<!-- PANEL: UTAMA (LANDING PAGE) -->
+<!-- ============================================================ -->
+<section class="panel active" id="panel-utama">
+
+  <div class="landing-top">
+    <span class="landing-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+    <div class="landing-divider"><span>✦</span></div>
+  </div>
+
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <p class="landing-tagline">Portal Rasmi</p>
+      <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
+
+      <div class="ustaz-card">
+        <img src="https://i.ibb.co/PZZ2t6vq/ustaz-shafie-half.png" alt="Ustaz Muhammad Shafie" class="ustaz-photo">
+        <div>
+          <p class="ustaz-name">USTAZ MUHAMMAD SHAFIE BIN BAHARI</p>
+          <p class="ustaz-role">Pengasas Kelas Pengajian Syafie Legacy</p>
+          <p class="ustaz-since">Berpengalaman Sejak 2018</p>
+          <ul class="ustaz-credentials">
+            <li>Pemegang Tauliah Agama Kawasan Seluruh Negeri Melaka</li>
+            <li>Guru Halaqah JAIM bagi Institusi Penjara dan Kebajikan Masyarakat</li>
+            <li>Guru Pembimbing Muallaf Negeri Melaka</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="landing-cta">
+        <button class="btn btn-primary" onclick="showPanel('home')">🔒 Log Masuk Guru</button>
+        <button class="btn btn-gold"    onclick="showPanel('daftar')">📝 Daftar Murid Baru</button>
+      </div>
+    </div>
+
+    <div class="landing-hero-img">
+      <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full">
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ============================================================ -->
+<!-- PANEL: HOME (LOGIN + DASHBOARD) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-home">
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
     <h2>Selamat Datang ke Portal Mengaji</h2>
@@ -820,7 +1007,7 @@
         <div class="form-step active" id="step1">
           <div class="form-group">
             <label for="namaIbu">Nama Ibu/Bapa/Penjaga <span class="req">*</span></label>
-            <input type="text" id="namaIbu" placeholder="Nama penuh seperti dalam IC">
+            <input type="text" id="namaIbu" placeholder="Nama penuh seperti dalam IC" oninput="this.value=this.value.toUpperCase()">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -850,7 +1037,7 @@
         <div class="form-step" id="step2">
           <div class="form-group">
             <label for="namaAnak">Nama Anak (seperti MYKID) <span class="req">*</span></label>
-            <input type="text" id="namaAnak" placeholder="Nama penuh anak">
+            <input type="text" id="namaAnak" placeholder="Nama penuh anak" oninput="this.value=this.value.toUpperCase()">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -993,7 +1180,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="namaDewasa">Nama Penuh <span class="req">*</span></label>
-            <input type="text" id="namaDewasa" placeholder="Nama penuh seperti dalam IC">
+            <input type="text" id="namaDewasa" placeholder="Nama penuh seperti dalam IC" oninput="this.value=this.value.toUpperCase()">
           </div>
           <div class="form-group">
             <label for="telefonDewasa">No. WhatsApp <span class="req">*</span></label>
@@ -1006,6 +1193,13 @@
             <input type="email" id="emailDewasa" placeholder="murid@example.com">
           </div>
           <div class="form-group">
+            <label for="noMykadDewasa">No. Kad Pengenalan <span class="req">*</span></label>
+            <input type="text" id="noMykadDewasa" placeholder="000000-00-0000"
+                   oninput="formatMyKad(this)">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label for="tahapDewasa">Tahap Pengajian <span class="req">*</span></label>
             <select id="tahapDewasa">
               <option value="">— Pilih Tahap —</option>
@@ -1017,14 +1211,34 @@
               <option>Hafazan</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="kaedahDewasa">Kaedah Pengajian <span class="req">*</span></label>
+            <select id="kaedahDewasa">
+              <option value="">— Pilih Kaedah —</option>
+              <option>Bersemuka</option>
+              <option>Online</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="pilihPakejDewasa">Pilihan Pakej <span class="req">*</span></label>
+          <select id="pilihPakejDewasa">
+            <option value="">— Pilih Pakej —</option>
+            <option>Pakej 2 Hari (RM30)</option>
+            <option>Pakej 3 Hari (RM45)</option>
+            <option>Pakej 4 Hari (RM60) - Online Sahaja</option>
+            <option>Pakej 6 Hari (RM90) - Online Sahaja</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="alamatDewasa">Alamat Penuh <span class="req">*</span></label>
           <textarea id="alamatDewasa" placeholder="No. Rumah, Jalan, Kawasan, Poskod, Negeri"></textarea>
         </div>
-        <div class="form-group">
-          <label for="guruPilih">Pilih Guru (jika ada pilihan)</label>
-          <input type="text" id="guruPilih" placeholder="Nama guru (pilihan)">
+        <div class="form-group" style="margin-top:8px;">
+          <div class="checkbox-group">
+            <input type="checkbox" id="sayaFahamDewasa">
+            <label for="sayaFahamDewasa">Saya faham dan bersetuju dengan syarat-syarat pendaftaran kelas mengaji. Bayaran yuran perlu diselesaikan sebelum kelas bermula.</label>
+          </div>
         </div>
         <div class="alert alert-error" id="dewasaError">
           <span class="alert-icon">⚠</span>
@@ -1408,6 +1622,13 @@
     input.value = v;
   }
 
+  function formatMyKad(input) {
+    let v = input.value.replace(/\D/g, '').substring(0, 12);
+    if (v.length > 6) v = v.substring(0,6) + '-' + v.substring(6);
+    if (v.length > 9) v = v.substring(0,9) + '-' + v.substring(9);
+    input.value = v;
+  }
+
   // =====================
   // API CALL HELPER
   // =====================
@@ -1474,7 +1695,6 @@
         if (data.success) {
           document.getElementById('statKanak').textContent  = data.totalKanak;
           document.getElementById('statDewasa').textContent = data.totalDewasa;
-          document.getElementById('statHadir').textContent  = data.hadirHariIni;
         }
       }
     );
@@ -1539,8 +1759,11 @@
   // SUBMIT DEWASA → send OTP
   // =====================
   function submitDewasa() {
-    for (const f of ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa']) {
+    for (const f of ['namaDewasa','telefonDewasa','emailDewasa','noMykadDewasa','tahapDewasa','kaedahDewasa','pilihPakejDewasa','alamatDewasa']) {
       if (isEmpty(f)) { showErr('dewasaError', 'Sila isi semua medan wajib.'); return; }
+    }
+    if (!document.getElementById('sayaFahamDewasa').checked) {
+      showErr('dewasaError', 'Sila tandakan persetujuan sebelum menghantar.'); return;
     }
     const btn = document.getElementById('submitDewasaBtn');
     btn.classList.add('loading'); btn.disabled = true;
@@ -1549,9 +1772,12 @@
       nama:    document.getElementById('namaDewasa').value.trim(),
       telefon: document.getElementById('telefonDewasa').value.trim(),
       email:   document.getElementById('emailDewasa').value.trim(),
-      alamat:  document.getElementById('alamatDewasa').value.trim(),
+      mykad:   document.getElementById('noMykadDewasa').value.trim(),
       tahap:   document.getElementById('tahapDewasa').value,
-      guru:    document.getElementById('guruPilih').value.trim()
+      kaedah:  document.getElementById('kaedahDewasa').value,
+      pakej:   document.getElementById('pilihPakejDewasa').value,
+      alamat:  document.getElementById('alamatDewasa').value.trim(),
+      faham:   document.getElementById('sayaFahamDewasa').checked ? 'Ya' : 'Tidak'
     };
 
     callGAS('sendOTPDewasa', pendingDewasaPayload,
@@ -1576,10 +1802,13 @@
     document.getElementById('dewasaOtpPanel').style.display   = 'none';
     document.getElementById('dewasaSuccess').style.display    = 'none';
     document.querySelector('#formDewasa .card').style.display = 'block';
-    ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','guruPilih'].forEach(id => {
+    ['namaDewasa','telefonDewasa','emailDewasa','noMykadDewasa','alamatDewasa'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('tahapDewasa').value = '';
+    document.getElementById('tahapDewasa').value       = '';
+    document.getElementById('kaedahDewasa').value      = '';
+    document.getElementById('pilihPakejDewasa').value  = '';
+    document.getElementById('sayaFahamDewasa').checked = false;
   }
 
   // =====================
@@ -1944,6 +2173,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     updateStepUI(1);
     setLoginState(false);
+    showPanel('utama');
     const tEl = document.getElementById('hadirTarikh');
     if (tEl) tEl.value = new Date().toISOString().split('T')[0];
     ['loginEmail', 'loginPhone'].forEach(id => {
