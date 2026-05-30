@@ -261,6 +261,7 @@
   input[type="text"],
   input[type="email"],
   input[type="tel"],
+  input[type="number"],
   select,
   textarea {
     width: 100%;
@@ -805,6 +806,37 @@
     .ustaz-card { flex-direction: column; }
   }
 
+  /* === YURAN PANEL === */
+  .yuran-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 600px) {
+    .yuran-stats { grid-template-columns: 1fr; }
+  }
+  .yuran-stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .yuran-stat-card .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .yuran-stat-card .stat-val {
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -839,6 +871,7 @@
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
   <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
+  <button class="nav-tab"        id="nav-yuran"     onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -1469,6 +1502,120 @@
 </section>
 
 
+<!-- ============================================================ -->
+<!-- PANEL: YURAN (login required) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-yuran">
+  <div class="section-heading">
+    <h2>Dashboard Yuran</h2>
+    <p>Semak dan rekod bayaran yuran murid</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <!-- A) BULAN SELECTOR -->
+  <div style="max-width:280px; margin-bottom:24px;">
+    <label for="yuranBulan">Pilih Bulan</label>
+    <select id="yuranBulan" onchange="loadYuranStats()">
+      <option value="JAN2026">Januari 2026</option>
+      <option value="FEB2026">Februari 2026</option>
+      <option value="MAC2026">Mac 2026</option>
+      <option value="APRIL2026">April 2026</option>
+      <option value="MEI2026">Mei 2026</option>
+      <option value="JUN2026">Jun 2026</option>
+      <option value="JULAI2026">Julai 2026</option>
+      <option value="OGOS2026">Ogos 2026</option>
+      <option value="SEPT2026">September 2026</option>
+      <option value="OKT2026">Oktober 2026</option>
+      <option value="NOV2026">November 2026</option>
+      <option value="DIS2026">Disember 2026</option>
+    </select>
+  </div>
+
+  <!-- B) STATS BAR -->
+  <div class="yuran-stats">
+    <div class="yuran-stat-card">
+      <p class="stat-label" style="color:var(--green);">Jumlah Dah Bayar</p>
+      <p class="stat-val" style="color:var(--green);" id="statDahBayar">—</p>
+    </div>
+    <div class="yuran-stat-card">
+      <p class="stat-label" style="color:var(--error);">Jumlah Belum Bayar</p>
+      <p class="stat-val" style="color:var(--error);" id="statBelumBayar">—</p>
+    </div>
+    <div class="yuran-stat-card">
+      <p class="stat-label" style="color:var(--gold-dark);">Total Kutipan (RM)</p>
+      <p class="stat-val" style="color:var(--gold-dark);" id="statKutipan">—</p>
+    </div>
+  </div>
+
+  <!-- C) SENARAI BELUM BAYAR -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-icon" style="background:#FDECEA; color:var(--error);">⚠</div>
+      <div class="card-header-text">
+        <h3>Senarai Belum Bayar</h3>
+        <p id="belumBayarLabel">Murid yang belum kemaskini yuran</p>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+      <table class="data-table" id="belumBayarTable">
+        <thead>
+          <tr><th>#</th><th>Nama Murid</th><th>No. Telefon</th></tr>
+        </thead>
+        <tbody id="belumBayarBody">
+          <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan untuk semak.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:16px 24px; border-top:1px solid var(--border);">
+      <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
+    </div>
+  </div>
+
+  <!-- D) REKOD CASH PAYMENT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon gold">💵</div>
+      <div class="card-header-text">
+        <h3>Rekod Cash Payment</h3>
+        <p>Tambah rekod bayaran tunai murid</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="max-width:560px;">
+        <div class="form-group">
+          <label for="cashNamaMurid">Nama Murid <span class="req">*</span></label>
+          <select id="cashNamaMurid">
+            <option value="">— Pilih Murid —</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cashJumlah">Jumlah Bayaran (RM) <span class="req">*</span></label>
+            <input type="number" id="cashJumlah" placeholder="0.00" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label for="cashTarikh">Tarikh Bayaran <span class="req">*</span></label>
+            <input type="date" id="cashTarikh">
+          </div>
+        </div>
+        <div class="alert alert-error" id="cashError">
+          <span class="alert-icon">⚠</span>
+          <span id="cashErrorMsg">Sila isi semua medan.</span>
+        </div>
+        <div class="alert alert-success" id="cashSuccess">
+          <span class="alert-icon">✓</span>
+          <span id="cashSuccessMsg">Bayaran berjaya direkod.</span>
+        </div>
+        <button class="btn btn-gold" id="submitCashBtn" onclick="submitCashPayment()">
+          <span class="btn-text">💵 Simpan Cash</span>
+          <span class="btn-loader"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 </main>
 
 <footer>
@@ -1487,6 +1634,11 @@
   let allMuridKanak  = [];
   let allMuridDewasa = [];
   let currentMuridTab = 'kanak';
+
+  // Yuran state
+  let yuranMuridList   = [];
+  let currentBelumBayar = [];
+  const BULAN_LIST = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
 
   // OTP flow state
   let pendingKanakPayload  = null;
@@ -1517,6 +1669,7 @@
     if (name === 'kehadiran') loadKehadiranHariIni();
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
     if (name === 'guru') loadGuruList();
+    if (name === 'yuran') loadYuranPanel();
   }
 
   function showDaftar(type) {
@@ -1525,7 +1678,7 @@
   }
 
   function setLoginState(loggedIn) {
-    ['kehadiran', 'murid', 'guru'].forEach(n => {
+    ['kehadiran', 'murid', 'guru', 'yuran'].forEach(n => {
       const el = document.getElementById('nav-' + n);
       if (el) el.style.display = loggedIn ? '' : 'none';
     });
@@ -2168,6 +2321,148 @@
   }
 
   // =====================
+  // YURAN PANEL
+  // =====================
+  function loadYuranPanel() {
+    if (yuranMuridList.length === 0) {
+      callGAS('getMuridList', {},
+        function(data) {
+          if (data.success && data.murid) {
+            yuranMuridList = data.murid;
+            populateCashMuridDropdown();
+          }
+          loadYuranStats();
+        }
+      );
+    } else {
+      populateCashMuridDropdown();
+      loadYuranStats();
+    }
+  }
+
+  function populateCashMuridDropdown() {
+    const sel = document.getElementById('cashNamaMurid');
+    sel.innerHTML = '<option value="">— Pilih Murid —</option>' +
+      yuranMuridList.map(m => `<option value="${escHtml(m.nama)}">${escHtml(m.nama)}</option>`).join('');
+  }
+
+  function loadYuranStats() {
+    const bulan = document.getElementById('yuranBulan').value;
+    ['statDahBayar','statBelumBayar','statKutipan'].forEach(id => {
+      document.getElementById(id).textContent = '...';
+    });
+    document.getElementById('belumBayarBody').innerHTML =
+      '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
+
+    callGAS('getYuranStats', { bulan: bulan },
+      function(data) {
+        if (!data.success) {
+          document.getElementById('statDahBayar').textContent    = '—';
+          document.getElementById('statBelumBayar').textContent  = '—';
+          document.getElementById('statKutipan').textContent     = '—';
+          document.getElementById('belumBayarBody').innerHTML    =
+            '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
+          return;
+        }
+        const totalMurid = yuranMuridList.length;
+        const belumCount = Math.max(0, totalMurid - data.sudahBayar);
+        document.getElementById('statDahBayar').textContent   = data.sudahBayar;
+        document.getElementById('statBelumBayar').textContent = belumCount;
+        document.getElementById('statKutipan').textContent    = 'RM ' + (parseFloat(data.totalKutipan) || 0).toFixed(2);
+
+        const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
+        currentBelumBayar  = yuranMuridList.filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()));
+        renderBelumBayar(currentBelumBayar);
+      }
+    );
+  }
+
+  function renderBelumBayar(list) {
+    const tbody = document.getElementById('belumBayarBody');
+    const label = document.getElementById('belumBayarLabel');
+    if (label) label.textContent = list.length + ' murid belum kemaskini yuran';
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Semua murid telah membayar yuran. 🎉</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((m, i) =>
+      `<tr>
+        <td>${i + 1}</td>
+        <td>${escHtml(m.nama)}</td>
+        <td>${escHtml(m.telefon || '—')}</td>
+      </tr>`
+    ).join('');
+  }
+
+  function copyWaList() {
+    const bulan = document.getElementById('yuranBulan').value;
+    const url   = window.location.href.split('?')[0];
+    const lines = [
+      'Assalamualaikum, yuran ' + bulan + ' belum dikemaskini.',
+      'Sila kemaskini bayaran di: ' + url
+    ];
+    currentBelumBayar.forEach(function(m, i) {
+      lines.push((i + 1) + '. ' + m.nama + ' - ' + (m.telefon || '-'));
+    });
+    const text = lines.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        alert('Senarai WA berjaya disalin! (' + currentBelumBayar.length + ' murid)');
+      }).catch(function() { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity  = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Senarai WA berjaya disalin! (' + currentBelumBayar.length + ' murid)');
+  }
+
+  function submitCashPayment() {
+    hideAlert('cashError'); hideAlert('cashSuccess');
+    const nama   = document.getElementById('cashNamaMurid').value;
+    const jumlah = document.getElementById('cashJumlah').value;
+    const tarikh = document.getElementById('cashTarikh').value;
+    const bulan  = document.getElementById('yuranBulan').value;
+
+    if (!nama || !jumlah || !tarikh) {
+      showErr('cashError', 'Sila isi semua medan wajib.'); return;
+    }
+
+    const btn = document.getElementById('submitCashBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    callGAS('recordCash', { nama, jumlah: parseFloat(jumlah), tarikh, bulan },
+      function(data) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (data.success) {
+          const msgEl = document.getElementById('cashSuccessMsg');
+          if (msgEl) msgEl.textContent = 'Bayaran berjaya direkod. No. Resit: ' + data.noResit;
+          document.getElementById('cashSuccess').classList.add('show');
+          document.getElementById('cashNamaMurid').value = '';
+          document.getElementById('cashJumlah').value    = '';
+          setTimeout(() => document.getElementById('cashSuccess').classList.remove('show'), 5000);
+          loadYuranStats();
+        } else {
+          showErr('cashError', data.message || 'Ralat merekod bayaran.');
+        }
+      },
+      function() {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showErr('cashError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+      }
+    );
+  }
+
+  // =====================
   // INIT
   // =====================
   document.addEventListener('DOMContentLoaded', () => {
@@ -2176,6 +2471,12 @@
     showPanel('utama');
     const tEl = document.getElementById('hadirTarikh');
     if (tEl) tEl.value = new Date().toISOString().split('T')[0];
+    // Set default bulan dropdown to current month
+    const bulanEl = document.getElementById('yuranBulan');
+    if (bulanEl) bulanEl.value = BULAN_LIST[new Date().getMonth()];
+    // Set default tarikh bayaran to today
+    const cashTarikhEl = document.getElementById('cashTarikh');
+    if (cashTarikhEl) cashTarikhEl.value = new Date().toISOString().split('T')[0];
     ['loginEmail', 'loginPhone'].forEach(id => {
       document.getElementById(id).addEventListener('keydown', e => {
         if (e.key === 'Enter') handleLogin();

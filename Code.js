@@ -106,6 +106,9 @@ function doPost(e) {
     else if (action === 'getKehadiranHariIni')    result = getKehadiranHariIni();
     else if (action === 'getMuridList')           result = getMuridList();
     else if (action === 'getGuru')                result = getGuru();
+    else if (action === 'getYuranStats')          result = getYuranStats(body);
+    else if (action === 'recordCash')             result = recordCash(body);
+    else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -142,6 +145,9 @@ function doAction(action, payload) {
   else if (action === 'getKehadiranHariIni')   return getKehadiranHariIni();
   else if (action === 'getMuridList')          return getMuridList();
   else if (action === 'getGuru')               return getGuru();
+  else if (action === 'getYuranStats')         return getYuranStats(payload);
+  else if (action === 'recordCash')            return recordCash(payload);
+  else if (action === 'syncForms')             return syncNamaMuridToAllForms();
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -571,7 +577,20 @@ function removeTriggers() {
 function setScriptProperties() {
   PropertiesService.getScriptProperties().setProperties({
     'SLIP_TEMPLATE_ID': 'GANTI_DENGAN_TEMPLATE_DOC_ID',
-    'SLIP_FOLDER_ID':   'GANTI_DENGAN_OUTPUT_FOLDER_ID'
+    'SLIP_FOLDER_ID':   'GANTI_DENGAN_OUTPUT_FOLDER_ID',
+    // Form IDs untuk eBayar (12 bulan 2026)
+    'FORM_JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
+    'FORM_FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+    'FORM_MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
+    'FORM_APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
+    'FORM_MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
+    'FORM_JUN2026':   '1bEbRSaDbZbcpmGoFOeABoLElOX1lhYkQSB7Cuj0GIYM',
+    'FORM_JULAI2026': '1U4Ecr40vB7_HssJxVPwCzq6lElCxjEGWDJGZqXOMKXw',
+    'FORM_OGOS2026':  '1wT-UU2ZxOn_tTnDFo-8B5rHI5u07R_sObUaXXdwINMw',
+    'FORM_SEPT2026':  '15xIeRZ4uNzvrjTCQRZHZclgzy8gORtB9A_bPvxZl-Tw',
+    'FORM_OKT2026':   '1goZKtfWL2GpaZFb42TMEdolA8K3_3B0Siyqnn3jCBr0',
+    'FORM_NOV2026':   '1QoV63w2Ecl2lipapwrsvMYXKMtD9M1HeLfJsRN27zFY',
+    'FORM_DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
   });
   Logger.log('Script properties dikemaskini.');
 }
@@ -694,7 +713,19 @@ function getMuridList() {
       });
     }
 
-    return { success: true, kanak: kanak, dewasa: dewasa };
+    // Flat combined list {nama, telefon} — deduplicated by name, sorted A-Z
+    var muridMap = {};
+    kanak.forEach(function(r) {
+      var n = (r.namaAnak || '').toString().trim().toUpperCase();
+      if (n && !muridMap[n]) muridMap[n] = { nama: n, telefon: (r.telefon || '').toString().trim() };
+    });
+    dewasa.forEach(function(r) {
+      var n = (r.nama || '').toString().trim().toUpperCase();
+      if (n && !muridMap[n]) muridMap[n] = { nama: n, telefon: (r.telefon || '').toString().trim() };
+    });
+    var murid = Object.keys(muridMap).sort().map(function(k) { return muridMap[k]; });
+
+    return { success: true, kanak: kanak, dewasa: dewasa, murid: murid };
   } catch (err) {
     Logger.log('getMuridList error: ' + err.message);
     return { success: false, message: err.message };
@@ -839,6 +870,168 @@ function getGuru() {
     return { success: true, rows: rows };
   } catch (err) {
     Logger.log('getGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 24. syncNamaMuridToAllForms
+// Sync nama murid dari SPKM DB ke 12 Google Form eBayar
+// Dipanggil selepas confirmRegisterKanak/Dewasa & doPost 'syncForms'
+// ============================================================
+function syncNamaMuridToAllForms() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    var kanakNames = [];
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, COL_KANAK.NAMA + 1).getValues();
+      kData.forEach(function(r) {
+        var n = (r[COL_KANAK.NAMA] || '').toString().trim().toUpperCase();
+        if (n) kanakNames.push(n);
+      });
+    }
+
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    var dewasaNames = [];
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, COL_DEWASA.NAMA + 1).getValues();
+      dData.forEach(function(r) {
+        var n = (r[COL_DEWASA.NAMA] || '').toString().trim().toUpperCase();
+        if (n) dewasaNames.push(n);
+      });
+    }
+
+    var unique = {};
+    kanakNames.concat(dewasaNames).forEach(function(n) { if (n) unique[n] = true; });
+    var sortedNames = Object.keys(unique).sort();
+
+    var FORM_IDS = {
+      'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
+      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+      'MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
+      'APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
+      'MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
+      'JUN2026':   '1bEbRSaDbZbcpmGoFOeABoLElOX1lhYkQSB7Cuj0GIYM',
+      'JULAI2026': '1U4Ecr40vB7_HssJxVPwCzq6lElCxjEGWDJGZqXOMKXw',
+      'OGOS2026':  '1wT-UU2ZxOn_tTnDFo-8B5rHI5u07R_sObUaXXdwINMw',
+      'SEPT2026':  '15xIeRZ4uNzvrjTCQRZHZclgzy8gORtB9A_bPvxZl-Tw',
+      'OKT2026':   '1goZKtfWL2GpaZFb42TMEdolA8K3_3B0Siyqnn3jCBr0',
+      'NOV2026':   '1QoV63w2Ecl2lipapwrsvMYXKMtD9M1HeLfJsRN27zFY',
+      'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
+    };
+
+    var updated = 0;
+    var errors  = [];
+
+    for (var bulan in FORM_IDS) {
+      try {
+        var form  = FormApp.openById(FORM_IDS[bulan]);
+        var items = form.getItems(FormApp.ItemType.CHECKBOX);
+        for (var j = 0; j < items.length; j++) {
+          if (items[j].getTitle() === 'NAMA PENUH MURID') {
+            items[j].asCheckboxItem().setChoiceValues(sortedNames);
+            updated++;
+            Logger.log('syncNamaMuridToAllForms: ' + bulan + ' dikemaskini (' + sortedNames.length + ' nama)');
+            break;
+          }
+        }
+      } catch (formErr) {
+        errors.push(bulan + ': ' + formErr.message);
+        Logger.log('syncNamaMuridToAllForms ralat ' + bulan + ': ' + formErr.message);
+      }
+    }
+
+    Logger.log('syncNamaMuridToAllForms selesai: ' + updated + '/' + Object.keys(FORM_IDS).length + ' forms, ' + errors.length + ' ralat.');
+    return { success: true, updated: updated, totalNames: sortedNames.length, errors: errors };
+
+  } catch (err) {
+    Logger.log('syncNamaMuridToAllForms error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 25. getYuranStats
+// Ambil statistik yuran untuk bulan tertentu dari Yuran spreadsheet
+// Input:  { bulan } e.g. { bulan: "MEI2026" }
+// Output: { success, sudahBayar, totalKutipan, listNamaBayar }
+// ============================================================
+var YURAN_SS_ID = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
+
+function getYuranStats(params) {
+  params = params || {};
+  try {
+    var bulan = (params.bulan || '').toString().trim().toUpperCase();
+    if (!bulan) return { success: false, message: 'Parameter bulan diperlukan.' };
+
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+    var sheet   = yuranSS.getSheetByName(bulan);
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [] };
+    }
+
+    var data         = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+    var sudahBayar   = data.length;
+    var totalKutipan = 0;
+    var listNamaBayar = [];
+
+    data.forEach(function(r) {
+      var nama   = (r[2] || '').toString().trim().toUpperCase(); // Col C
+      var jumlah = parseFloat(r[6]);                             // Col G
+      if (!isNaN(jumlah)) totalKutipan += jumlah;
+      if (nama) listNamaBayar.push(nama);
+    });
+
+    return { success: true, sudahBayar: sudahBayar, totalKutipan: totalKutipan, listNamaBayar: listNamaBayar };
+
+  } catch (err) {
+    Logger.log('getYuranStats error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 26. recordCash
+// Rekod bayaran tunai ke Yuran spreadsheet
+// Input:  { nama, jumlah, tarikh, bulan }
+// Output: { success, noResit }
+// ============================================================
+function recordCash(params) {
+  params = params || {};
+  try {
+    var nama   = (params.nama   || '').toString().trim().toUpperCase();
+    var jumlah = parseFloat(params.jumlah) || 0;
+    var tarikh = (params.tarikh || '').toString().trim();
+    var bulan  = (params.bulan  || '').toString().trim().toUpperCase();
+
+    if (!nama || !bulan || !tarikh) {
+      return { success: false, message: 'Nama, bulan, dan tarikh diperlukan.' };
+    }
+
+    var tahun   = bulan.replace(/[^0-9]/g, '') || new Date().getFullYear().toString();
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+    var sheet   = yuranSS.getSheetByName(bulan);
+
+    if (!sheet) {
+      sheet = yuranSS.insertSheet(bulan);
+      sheet.appendRow(['Timestamp','Email','Nama Penuh Murid','Bayaran Yuran Bagi Bulan','Tahun','Tarikh Bayaran','Jumlah Bayaran(RM)','Muat Naik Resit','No Resit','Status']);
+    }
+
+    var existingRows = Math.max(0, sheet.getLastRow() - 1);
+    var noResit      = String(existingRows + 1).padStart(3, '0');
+    var timestamp    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+
+    sheet.appendRow([timestamp, '', nama, bulan, tahun, tarikh, jumlah, 'CASH', noResit, 'SELESAI', '', '', '', '']);
+    SpreadsheetApp.flush();
+
+    Logger.log('recordCash: ' + nama + ' ' + bulan + ' RM' + jumlah + ' Resit: ' + noResit);
+    return { success: true, noResit: noResit };
+
+  } catch (err) {
+    Logger.log('recordCash error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
@@ -1081,6 +1274,7 @@ function confirmRegisterKanak(params) {
     try { generateSlipKanak(slipRow); } catch(e) { Logger.log('generateSlipKanak error: ' + e.message); }
 
     Logger.log('confirmRegisterKanak berjaya: Bil ' + nextBil + ' — ' + params.namaAnak);
+    try { syncNamaMuridToAllForms(); } catch(e) { Logger.log('syncForms error: ' + e.message); }
     return { success: true, bil: nextBil };
 
   } catch (err) {
@@ -1130,6 +1324,7 @@ function confirmRegisterDewasa(params) {
     var muridId   = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
 
     Logger.log('confirmRegisterDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
+    try { syncNamaMuridToAllForms(); } catch(e) { Logger.log('syncForms error: ' + e.message); }
     return { success: true, id: muridId };
 
   } catch (err) {
