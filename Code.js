@@ -28,8 +28,10 @@ var COL_KANAK = {
   FAHAM:      9,  // J — Saya Faham
   PAKEJ:     10,  // K — Pilihan Pakej
   KAEDAH:    11,  // L — Kaedah Pengajian
-  MERGED_ID: 12,  // M — Merged Doc ID - Slip Pendaftaran
-  MERGED_URL:13   // N — Merged Doc URL - Slip Pendaftaran
+  MERGED_ID:  12, // M — Merged Doc ID - Slip Pendaftaran
+  MERGED_URL: 13, // N — Merged Doc URL - Slip Pendaftaran
+  GURU_BACKUP:17, // R — Guru Backup
+  STATUS:     18  // S — Status (AKTIF / TIDAK AKTIF)
 };
 
 // Kolum tab KelasDewasa (0-indexed) — disahkan dari sheet sebenar
@@ -47,7 +49,8 @@ var COL_DEWASA = {
   FAHAM:     10,  // K — Saya Faham
   MERGED_ID: 13,  // N — Merged Doc ID
   MERGED_URL:14,  // O — Merged Doc URL
-  GURU:      17   // R — Nama Guru
+  GURU:      17,  // R — Nama Guru
+  STATUS:    18   // S — Status (AKTIF / TIDAK AKTIF)
 };
 
 // Kolum tab Maklumat Guru (0-indexed)
@@ -57,7 +60,9 @@ var COL_GURU = {
   NAMA:       2,
   IC:         3,
   TELEFON:    4,
-  ALAMAT:     5
+  ALAMAT:     5,
+  SAYA_FAHAM: 6,  // G — Saya Faham
+  ROLE:       7   // H — ROLE (GURU / ADMIN)
 };
 
 // Kolum tab Kehadiran (0-indexed)
@@ -109,6 +114,8 @@ function doPost(e) {
     else if (action === 'getYuranStats')          result = getYuranStats(body);
     else if (action === 'recordCash')             result = recordCash(body);
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
+    else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
+    else if (action === 'getMuridListAll')         result = getMuridListAll();
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -148,6 +155,8 @@ function doAction(action, payload) {
   else if (action === 'getYuranStats')         return getYuranStats(payload);
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
+  else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
+  else if (action === 'getMuridListAll')        return getMuridListAll();
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -188,9 +197,10 @@ function loginGuru(params) {
       Logger.log('Baris ' + i + ': rowPhone="' + rowPhone + '" vs input phone="' + phone + '" | rowEmail="' + rowEmail + '" vs input email="' + email + '"');
 
       if (rowEmail === email && rowPhone === phone) {
+        var rowRole = (data[i][COL_GURU.ROLE] || '').toString().trim().toUpperCase() || 'GURU';
         cache.remove(cacheKey);
-        Logger.log('Login berjaya: ' + rowNama);
-        return { success: true, user: rowNama };
+        Logger.log('Login berjaya: ' + rowNama + ' (' + rowRole + ')');
+        return { success: true, user: rowNama, role: rowRole };
       }
     }
 
@@ -232,7 +242,7 @@ function registerKanak(params) {
     var timestamp = new Date();
 
     // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
-    var newRow = new Array(12).fill('');
+    var newRow = new Array(19).fill('');
     newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
     newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
@@ -244,6 +254,7 @@ function registerKanak(params) {
     newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
     newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
     newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
+    newRow[COL_KANAK.STATUS]    = 'AKTIF';
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
@@ -290,7 +301,7 @@ function registerDewasa(params) {
     var timestamp = new Date();
 
     // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
-    var newRow = new Array(18).fill('');
+    var newRow = new Array(19).fill('');
     newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_DEWASA.EMAIL]     = params.email.trim();
     newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
@@ -301,6 +312,7 @@ function registerDewasa(params) {
     newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
     newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
     newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
+    newRow[COL_DEWASA.STATUS]    = 'AKTIF';
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
@@ -687,30 +699,40 @@ function getMuridList() {
     var kanak = [];
     if (kanakSheet && kanakSheet.getLastRow() > 1) {
       var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, kanakSheet.getLastColumn()).getValues();
-      kanak = kData.map(function(r) {
-        return {
-          bil:      r[COL_KANAK.BIL],
-          namaAnak: r[COL_KANAK.NAMA],
-          namaIbu:  r[COL_KANAK.NAMA_IBU] || '',
-          telefon:  r[COL_KANAK.TELEFON],
-          tahap:    r[COL_KANAK.TAHAP],
-          pakej:    r[COL_KANAK.PAKEJ]
-        };
-      });
+      kanak = kData
+        .filter(function(r) {
+          var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+          return !s || s === 'AKTIF';
+        })
+        .map(function(r) {
+          return {
+            bil:      r[COL_KANAK.BIL],
+            namaAnak: r[COL_KANAK.NAMA],
+            namaIbu:  r[COL_KANAK.NAMA_IBU] || '',
+            telefon:  r[COL_KANAK.TELEFON],
+            tahap:    r[COL_KANAK.TAHAP],
+            pakej:    r[COL_KANAK.PAKEJ]
+          };
+        });
     }
 
     var dewasa = [];
     if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
       var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues();
-      dewasa = dData.map(function(r) {
-        return {
-          nama:    r[COL_DEWASA.NAMA],
-          telefon: r[COL_DEWASA.TELEFON],
-          email:   r[COL_DEWASA.EMAIL],
-          tahap:   r[COL_DEWASA.TAHAP],
-          guru:    r[COL_DEWASA.GURU] || ''
-        };
-      });
+      dewasa = dData
+        .filter(function(r) {
+          var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+          return !s || s === 'AKTIF';
+        })
+        .map(function(r) {
+          return {
+            nama:    r[COL_DEWASA.NAMA],
+            telefon: r[COL_DEWASA.TELEFON],
+            email:   r[COL_DEWASA.EMAIL],
+            tahap:   r[COL_DEWASA.TAHAP],
+            guru:    r[COL_DEWASA.GURU] || ''
+          };
+        });
     }
 
     // Flat combined list {nama, telefon} — deduplicated by name, sorted A-Z
@@ -886,20 +908,22 @@ function syncNamaMuridToAllForms() {
     var kanakSheet = ss.getSheetByName(TAB.KANAK);
     var kanakNames = [];
     if (kanakSheet && kanakSheet.getLastRow() > 1) {
-      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, COL_KANAK.NAMA + 1).getValues();
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues();
       kData.forEach(function(r) {
-        var n = (r[COL_KANAK.NAMA] || '').toString().trim().toUpperCase();
-        if (n) kanakNames.push(n);
+        var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+        var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+        if (n && (!s || s === 'AKTIF')) kanakNames.push(n);
       });
     }
 
     var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
     var dewasaNames = [];
     if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
-      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, COL_DEWASA.NAMA + 1).getValues();
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues();
       dData.forEach(function(r) {
-        var n = (r[COL_DEWASA.NAMA] || '').toString().trim().toUpperCase();
-        if (n) dewasaNames.push(n);
+        var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+        var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+        if (n && (!s || s === 'AKTIF')) dewasaNames.push(n);
       });
     }
 
@@ -1032,6 +1056,96 @@ function recordCash(params) {
 
   } catch (err) {
     Logger.log('recordCash error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 27. getMuridListAll
+// Returns ALL murid (semua status) dengan rowIndex & status
+// Digunakan oleh admin panel Senarai Murid
+// ============================================================
+function getMuridListAll() {
+  try {
+    var ss          = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var kanakSheet  = ss.getSheetByName(TAB.KANAK);
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+
+    var kanak = [];
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, kanakSheet.getLastColumn()).getValues();
+      kData.forEach(function(r, idx) {
+        var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase() || 'AKTIF';
+        kanak.push({
+          rowIndex: idx + 2,
+          bil:      r[COL_KANAK.BIL],
+          namaAnak: r[COL_KANAK.NAMA],
+          namaIbu:  r[COL_KANAK.NAMA_IBU] || '',
+          telefon:  r[COL_KANAK.TELEFON],
+          tahap:    r[COL_KANAK.TAHAP],
+          pakej:    r[COL_KANAK.PAKEJ],
+          status:   s
+        });
+      });
+    }
+
+    var dewasa = [];
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues();
+      dData.forEach(function(r, idx) {
+        var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase() || 'AKTIF';
+        dewasa.push({
+          rowIndex: idx + 2,
+          nama:    r[COL_DEWASA.NAMA],
+          telefon: r[COL_DEWASA.TELEFON],
+          email:   r[COL_DEWASA.EMAIL],
+          tahap:   r[COL_DEWASA.TAHAP],
+          guru:    r[COL_DEWASA.GURU] || '',
+          status:  s
+        });
+      });
+    }
+
+    return { success: true, kanak: kanak, dewasa: dewasa };
+  } catch (err) {
+    Logger.log('getMuridListAll error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 28. updateStatusMurid
+// Kemaskini STATUS murid di kolum S (index 18)
+// Input:  { jenis, rowIndex, status }
+// Output: { success: true }
+// ============================================================
+function updateStatusMurid(params) {
+  params = params || {};
+  try {
+    var jenis    = (params.jenis    || '').toString().trim().toLowerCase();
+    var rowIndex = parseInt(params.rowIndex, 10);
+    var status   = (params.status   || '').toString().trim().toUpperCase();
+
+    if (!jenis || !rowIndex || !status) {
+      return { success: false, message: 'Parameter jenis, rowIndex, dan status diperlukan.' };
+    }
+    if (['aktif','tidak aktif'].indexOf(status.toLowerCase()) === -1 && status !== 'AKTIF' && status !== 'TIDAK AKTIF') {
+      return { success: false, message: 'Status mesti AKTIF atau TIDAK AKTIF.' };
+    }
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(jenis === 'kanak' ? TAB.KANAK : TAB.DEWASA);
+    if (!sheet) return { success: false, message: 'Tab tidak dijumpai.' };
+
+    // Column S = index 18 (0-based) = column 19 (1-based)
+    sheet.getRange(rowIndex, 19).setValue(status);
+    SpreadsheetApp.flush();
+
+    Logger.log('updateStatusMurid: ' + jenis + ' baris ' + rowIndex + ' → ' + status);
+    return { success: true };
+
+  } catch (err) {
+    Logger.log('updateStatusMurid error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
@@ -1255,7 +1369,7 @@ function confirmRegisterKanak(params) {
 
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
-    var newRow    = new Array(12).fill('');
+    var newRow    = new Array(19).fill('');
     newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
     newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
@@ -1267,6 +1381,7 @@ function confirmRegisterKanak(params) {
     newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
     newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
     newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
+    newRow[COL_KANAK.STATUS]    = 'AKTIF';
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 
@@ -1306,7 +1421,7 @@ function confirmRegisterDewasa(params) {
 
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
-    var newRow    = new Array(18).fill('');
+    var newRow    = new Array(19).fill('');
     newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_DEWASA.EMAIL]     = params.email.trim();
     newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
@@ -1317,6 +1432,7 @@ function confirmRegisterDewasa(params) {
     newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
     newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
     newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
+    newRow[COL_DEWASA.STATUS]    = 'AKTIF';
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 

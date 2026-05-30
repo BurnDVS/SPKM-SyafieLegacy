@@ -517,6 +517,7 @@
   }
   .badge-green { background: var(--green-light); color: var(--green); }
   .badge-gold { background: var(--gold-light); color: var(--gold-dark); }
+  .badge-red { background: #FDECEA; color: var(--error); }
 
   /* === DASHBOARD INFO PANEL === */
   .info-panel {
@@ -1436,13 +1437,19 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
-  <div style="margin-bottom:18px; max-width:380px;">
-    <input type="text" id="muridSearch" placeholder="🔍 Cari nama, telefon..." oninput="filterMurid()">
-  </div>
-
-  <div class="tab-switcher" style="max-width:380px; margin-bottom:24px;">
-    <button class="tab-btn active" id="tabMuridKanak"  onclick="switchMuridTab('kanak')">👦 Kanak-kanak</button>
-    <button class="tab-btn"        id="tabMuridDewasa" onclick="switchMuridTab('dewasa')">🧑 Dewasa</button>
+  <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; align-items:center;">
+    <div style="flex:1; min-width:180px; max-width:300px;">
+      <input type="text" id="muridSearch" placeholder="🔍 Cari nama, telefon..." oninput="filterMurid()" style="margin:0;">
+    </div>
+    <div class="tab-switcher" style="margin-bottom:0; flex-shrink:0;">
+      <button class="tab-btn active" id="tabMuridKanak"  onclick="switchMuridTab('kanak')">👦 Kanak-kanak</button>
+      <button class="tab-btn"        id="tabMuridDewasa" onclick="switchMuridTab('dewasa')">🧑 Dewasa</button>
+    </div>
+    <div class="tab-switcher" style="margin-bottom:0; flex-shrink:0;">
+      <button class="tab-btn"        id="filterSemua"      onclick="switchMuridStatusFilter('semua')">Semua</button>
+      <button class="tab-btn active" id="filterAktif"      onclick="switchMuridStatusFilter('aktif')">✅ Aktif</button>
+      <button class="tab-btn"        id="filterTidakAktif" onclick="switchMuridStatusFilter('tidak')">🚫 Tidak Aktif</button>
+    </div>
   </div>
 
   <div id="muridKanakPanel">
@@ -1450,10 +1457,10 @@
       <div class="card-body" style="padding:0; overflow-x:auto;">
         <table class="data-table">
           <thead>
-            <tr><th>Bil</th><th>Nama Murid</th><th>Nama Ibu/Bapa</th><th>Telefon</th><th>Tahap</th><th>Pakej</th></tr>
+            <tr><th>Bil</th><th>Nama Murid</th><th>Nama Ibu/Bapa</th><th>Telefon</th><th>Tahap</th><th>Pakej</th><th>Status</th><th>Tindakan</th></tr>
           </thead>
           <tbody id="muridKanakBody">
-            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+            <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1465,10 +1472,10 @@
       <div class="card-body" style="padding:0; overflow-x:auto;">
         <table class="data-table">
           <thead>
-            <tr><th>Nama</th><th>Telefon</th><th>E-mel</th><th>Tahap</th><th>Guru</th></tr>
+            <tr><th>Nama</th><th>Telefon</th><th>E-mel</th><th>Tahap</th><th>Guru</th><th>Status</th><th>Tindakan</th></tr>
           </thead>
           <tbody id="muridDewasaBody">
-            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+            <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1631,9 +1638,11 @@
 
   let currentStep    = 1;
   let loggedInGuru   = null;
+  let currentRole    = null;
   let allMuridKanak  = [];
   let allMuridDewasa = [];
-  let currentMuridTab = 'kanak';
+  let currentMuridTab    = 'kanak';
+  let muridStatusFilter  = 'aktif';
 
   // Yuran state
   let yuranMuridList   = [];
@@ -1678,10 +1687,12 @@
   }
 
   function setLoginState(loggedIn) {
-    ['kehadiran', 'murid', 'guru', 'yuran'].forEach(n => {
+    ['kehadiran', 'murid', 'guru'].forEach(n => {
       const el = document.getElementById('nav-' + n);
       if (el) el.style.display = loggedIn ? '' : 'none';
     });
+    const yuranEl = document.getElementById('nav-yuran');
+    if (yuranEl) yuranEl.style.display = (loggedIn && currentRole === 'ADMIN') ? '' : 'none';
   }
 
   // =====================
@@ -1809,6 +1820,7 @@
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {
           loggedInGuru = data.user;
+          currentRole  = data.role || 'GURU';
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
           document.getElementById('dashboardPreview').style.display = 'block';
@@ -1829,8 +1841,10 @@
 
   function handleLogout() {
     loggedInGuru   = null;
+    currentRole    = null;
     allMuridKanak  = [];
     allMuridDewasa = [];
+    yuranMuridList = [];
     document.getElementById('loginFormWrapper').style.display = 'block';
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
@@ -2034,15 +2048,14 @@
   // SENARAI MURID
   // =====================
   function loadMuridList() {
-    document.getElementById('muridKanakBody').innerHTML  = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
-    document.getElementById('muridDewasaBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
-    callGAS('getMuridList', {},
+    document.getElementById('muridKanakBody').innerHTML  = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    document.getElementById('muridDewasaBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    callGAS('getMuridListAll', {},
       function(data) {
         if (!data.success) return;
         allMuridKanak  = data.kanak  || [];
         allMuridDewasa = data.dewasa || [];
-        renderMuridKanak(allMuridKanak);
-        renderMuridDewasa(allMuridDewasa);
+        filterMurid();
       }
     );
   }
@@ -2050,52 +2063,76 @@
   function renderMuridKanak(rows) {
     const tbody = document.getElementById('muridKanakBody');
     if (!rows || rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid kanak-kanak.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid kanak-kanak.</td></tr>';
       return;
     }
-    tbody.innerHTML = rows.map(r =>
-      `<tr>
+    tbody.innerHTML = rows.map(r => {
+      const isAktif = (r.status || 'AKTIF') === 'AKTIF';
+      const statusBadge = isAktif
+        ? `<span class="badge badge-green">AKTIF</span>`
+        : `<span class="badge badge-red">TIDAK AKTIF</span>`;
+      const actionBtn = isAktif
+        ? `<button class="btn btn-sm" style="margin:0;background:#FDECEA;color:var(--error);border:1px solid #F5C6C2;" onclick="toggleStatusMurid('kanak',${r.rowIndex},'TIDAK AKTIF')">🚫 Tidak Aktif</button>`
+        : `<button class="btn btn-sm" style="margin:0;background:var(--green-light);color:var(--green);border:1px solid rgba(26,58,107,0.2);" onclick="toggleStatusMurid('kanak',${r.rowIndex},'AKTIF')">✅ Aktifkan</button>`;
+      return `<tr>
         <td>${escHtml(r.bil)}</td>
         <td>${escHtml(r.namaAnak)}</td>
         <td>${escHtml(r.namaIbu)}</td>
         <td>${escHtml(r.telefon)}</td>
         <td>${escHtml(r.tahap)}</td>
         <td>${escHtml(r.pakej)}</td>
-      </tr>`
-    ).join('');
+        <td>${statusBadge}</td>
+        <td>${actionBtn}</td>
+      </tr>`;
+    }).join('');
   }
 
   function renderMuridDewasa(rows) {
     const tbody = document.getElementById('muridDewasaBody');
     if (!rows || rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid dewasa.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada murid dewasa.</td></tr>';
       return;
     }
-    tbody.innerHTML = rows.map(r =>
-      `<tr>
+    tbody.innerHTML = rows.map(r => {
+      const isAktif = (r.status || 'AKTIF') === 'AKTIF';
+      const statusBadge = isAktif
+        ? `<span class="badge badge-green">AKTIF</span>`
+        : `<span class="badge badge-red">TIDAK AKTIF</span>`;
+      const actionBtn = isAktif
+        ? `<button class="btn btn-sm" style="margin:0;background:#FDECEA;color:var(--error);border:1px solid #F5C6C2;" onclick="toggleStatusMurid('dewasa',${r.rowIndex},'TIDAK AKTIF')">🚫 Tidak Aktif</button>`
+        : `<button class="btn btn-sm" style="margin:0;background:var(--green-light);color:var(--green);border:1px solid rgba(26,58,107,0.2);" onclick="toggleStatusMurid('dewasa',${r.rowIndex},'AKTIF')">✅ Aktifkan</button>`;
+      return `<tr>
         <td>${escHtml(r.nama)}</td>
         <td>${escHtml(r.telefon)}</td>
         <td>${escHtml(r.email)}</td>
         <td>${escHtml(r.tahap)}</td>
         <td>${escHtml(r.guru)}</td>
-      </tr>`
-    ).join('');
+        <td>${statusBadge}</td>
+        <td>${actionBtn}</td>
+      </tr>`;
+    }).join('');
   }
 
   function filterMurid() {
     const q = (document.getElementById('muridSearch').value || '').toLowerCase().trim();
     if (currentMuridTab === 'kanak') {
-      renderMuridKanak(q ? allMuridKanak.filter(r =>
+      let rows = allMuridKanak;
+      if (muridStatusFilter === 'aktif')  rows = rows.filter(r => (r.status || 'AKTIF') === 'AKTIF');
+      else if (muridStatusFilter === 'tidak') rows = rows.filter(r => r.status === 'TIDAK AKTIF');
+      renderMuridKanak(q ? rows.filter(r =>
         (r.namaAnak || '').toLowerCase().includes(q) ||
         (r.namaIbu  || '').toLowerCase().includes(q) ||
         (r.telefon  || '').includes(q)
-      ) : allMuridKanak);
+      ) : rows);
     } else {
-      renderMuridDewasa(q ? allMuridDewasa.filter(r =>
+      let rows = allMuridDewasa;
+      if (muridStatusFilter === 'aktif')  rows = rows.filter(r => (r.status || 'AKTIF') === 'AKTIF');
+      else if (muridStatusFilter === 'tidak') rows = rows.filter(r => r.status === 'TIDAK AKTIF');
+      renderMuridDewasa(q ? rows.filter(r =>
         (r.nama    || '').toLowerCase().includes(q) ||
         (r.telefon || '').includes(q) ||
         (r.email   || '').toLowerCase().includes(q)
-      ) : allMuridDewasa);
+      ) : rows);
     }
   }
 
@@ -2318,6 +2355,36 @@
       const b = document.getElementById('submitDewasaBtn');
       b.classList.remove('loading'); b.disabled = false;
     }
+  }
+
+  // =====================
+  // MURID STATUS
+  // =====================
+  function switchMuridStatusFilter(filter) {
+    muridStatusFilter = filter;
+    document.getElementById('filterSemua').classList.toggle('active', filter === 'semua');
+    document.getElementById('filterAktif').classList.toggle('active', filter === 'aktif');
+    document.getElementById('filterTidakAktif').classList.toggle('active', filter === 'tidak');
+    filterMurid();
+  }
+
+  function toggleStatusMurid(jenis, rowIndex, newStatus) {
+    callGAS('updateStatusMurid', { jenis, rowIndex, status: newStatus },
+      function(data) {
+        if (data.success) {
+          allMuridKanak  = [];
+          allMuridDewasa = [];
+          yuranMuridList = [];
+          loadMuridList();
+          callGAS('syncForms', {}, function() {}, function() {});
+        } else {
+          alert('Ralat: ' + (data.message || 'Tidak dapat kemaskini status.'));
+        }
+      },
+      function() {
+        alert('Ralat sambungan. Sila cuba sebentar lagi.');
+      }
+    );
   }
 
   // =====================
