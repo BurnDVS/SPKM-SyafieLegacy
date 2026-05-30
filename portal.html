@@ -894,6 +894,10 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       <h1>Sistem Pengurusan Kelas Mengaji</h1>
       <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
     </div>
+    <div id="headerUserInfo" style="display:none; align-items:center; gap:12px; margin-left:auto;">
+      <span style="color:#FFD700; font-size:13px;">👤 <span id="headerUserName"></span></span>
+      <button onclick="handleLogout()" style="background:#FFD700; color:#0A1F44; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">Log Keluar</button>
+    </div>
   </div>
   <div class="header-divider"></div>
 </header>
@@ -901,7 +905,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
 <!-- NAV -->
 <nav class="nav-bar" role="navigation" aria-label="Menu utama">
   <button class="nav-tab active" id="nav-utama"     onclick="showPanel('utama')">🏠 Utama</button>
-  <button class="nav-tab"        id="nav-home"      onclick="showPanel('home')">🔒 Log Masuk</button>
+  <button class="nav-tab"        id="tabLogMasuk"   onclick="showPanel('home')">🔒 Log Masuk</button>
   <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📝 Daftar Murid</button>
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
@@ -943,10 +947,6 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
         </div>
       </div>
 
-      <div class="landing-cta">
-        <button class="btn btn-primary" onclick="showPanel('home')">🔒 Log Masuk Guru</button>
-        <button class="btn btn-gold"    onclick="showPanel('daftar')">📝 Daftar Murid Baru</button>
-      </div>
     </div>
 
     <div class="landing-hero-img">
@@ -1582,6 +1582,12 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     <span>Sync gagal. Sila cuba semula.</span>
   </div>
 
+  <!-- EMPTY NOTICE -->
+  <div id="yuranEmptyNotice" class="alert alert-success" style="display:none; margin-bottom:16px; background:#EAF4FB; border-color:#B3D9F0; color:#1A5C3A;">
+    <span class="alert-icon">ℹ</span>
+    <span>Tiada rekod bayaran untuk bulan ini.</span>
+  </div>
+
   <!-- B) STATS BAR -->
   <div class="yuran-stats">
     <div class="yuran-stat-card">
@@ -1720,7 +1726,8 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     const panel = document.getElementById('panel-' + name);
     if (panel) panel.classList.add('active');
-    const tab = document.getElementById('nav-' + name);
+    const tabId = name === 'home' ? 'tabLogMasuk' : 'nav-' + name;
+    const tab = document.getElementById(tabId);
     if (tab) tab.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (name === 'kehadiran') loadKehadiranPanel();
@@ -1741,6 +1748,8 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     });
     const yuranEl = document.getElementById('nav-yuran');
     if (yuranEl) yuranEl.style.display = (loggedIn && currentRole === 'ADMIN') ? '' : 'none';
+    const loginTab = document.getElementById('tabLogMasuk');
+    if (loginTab) loginTab.style.display = loggedIn ? 'none' : 'block';
   }
 
   // =====================
@@ -1872,6 +1881,8 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
           document.getElementById('dashboardPreview').style.display = 'block';
+          document.getElementById('headerUserName').textContent = data.user;
+          document.getElementById('headerUserInfo').style.display = 'flex';
           setLoginState(true);
           loadDashboardStats();
           const gEl = document.getElementById('hadirGuru');
@@ -1897,6 +1908,8 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
     document.getElementById('loginPhone').value = '';
+    document.getElementById('headerUserInfo').style.display = 'none';
+    document.getElementById('headerUserName').textContent = '';
     setLoginState(false);
     showPanel('home');
   }
@@ -2480,10 +2493,14 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
           return;
         }
         const totalMurid = yuranMuridList.length;
-        const belumCount = Math.max(0, totalMurid - data.sudahBayar);
-        document.getElementById('statDahBayar').textContent   = data.sudahBayar;
+        const sudahBayar = data.sudahBayar || 0;
+        const belumCount = Math.max(0, totalMurid - sudahBayar);
+        document.getElementById('statDahBayar').textContent   = sudahBayar;
         document.getElementById('statBelumBayar').textContent = belumCount;
         document.getElementById('statKutipan').textContent    = 'RM ' + (parseFloat(data.totalKutipan) || 0).toFixed(2);
+
+        const noticeSel = document.getElementById('yuranEmptyNotice');
+        if (noticeSel) noticeSel.style.display = (sudahBayar === 0 && (!data.listNamaBayar || data.listNamaBayar.length === 0)) ? '' : 'none';
 
         const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
         currentBelumBayar  = yuranMuridList.filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()));

@@ -1001,16 +1001,18 @@ function getYuranStats(params) {
     if (!sheet) return { success: false, message: 'Tab tidak dijumpai' };
     if (sheet.getLastRow() < 2) return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [] };
 
-    var data         = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
-    var sudahBayar   = data.length;
-    var totalKutipan = 0;
+    var data          = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+    var sudahBayar    = 0;
+    var totalKutipan  = 0;
     var listNamaBayar = [];
 
     data.forEach(function(r) {
-      var nama   = (r[2] || '').toString().trim().toUpperCase(); // Col C
-      var jumlah = parseFloat(r[6]);                             // Col G
+      var nama = (r[2] || '').toString().trim().toUpperCase(); // Col C
+      if (!nama) return;
+      sudahBayar++;
+      var jumlah = parseFloat(r[6]); // Col G
       if (!isNaN(jumlah)) totalKutipan += jumlah;
-      if (nama) listNamaBayar.push(nama);
+      listNamaBayar.push(nama);
     });
 
     return { success: true, sudahBayar: sudahBayar, totalKutipan: totalKutipan, listNamaBayar: listNamaBayar };
