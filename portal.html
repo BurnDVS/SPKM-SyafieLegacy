@@ -1348,81 +1348,78 @@
 <!-- ============================================================ -->
 <section class="panel" id="panel-kehadiran">
   <div class="section-heading">
-    <h2>Rekod Kehadiran</h2>
-    <p>Rekod kehadiran murid untuk hari ini</p>
+    <h2>Kehadiran</h2>
+    <p>Statistik dan rekod kehadiran murid</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
-  <div style="max-width:700px; margin:0 auto;">
-    <div class="card" style="margin-bottom:24px;">
-      <div class="card-header">
-        <div class="card-icon green">✅</div>
-        <div class="card-header-text">
-          <h3>Tambah Rekod Kehadiran</h3>
-          <p>Isi maklumat kehadiran murid</p>
-        </div>
+  <!-- Tab switcher -->
+  <div class="tab-switcher" style="max-width:380px; margin:0 auto 28px;">
+    <button class="tab-btn active" id="tabKehadiranStats" onclick="switchKehadiranTab('stats')">📊 Statistik</button>
+    <button class="tab-btn"        id="tabKehadiranRekod" onclick="switchKehadiranTab('rekod')">📋 Rekod Individu</button>
+  </div>
+
+  <!-- TAB A: STATISTIK -->
+  <div id="kehadiranStatsPanel">
+    <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; align-items:flex-end;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="kehadiranBulan">Bulan</label>
+        <select id="kehadiranBulan" style="min-width:140px;">
+          <option value="01">Januari</option>
+          <option value="02">Februari</option>
+          <option value="03">Mac</option>
+          <option value="04">April</option>
+          <option value="05">Mei</option>
+          <option value="06">Jun</option>
+          <option value="07">Julai</option>
+          <option value="08">Ogos</option>
+          <option value="09">September</option>
+          <option value="10">Oktober</option>
+          <option value="11">November</option>
+          <option value="12">Disember</option>
+        </select>
       </div>
-      <div class="card-body">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="hadirGuru">Nama Guru <span class="req">*</span></label>
-            <input type="text" id="hadirGuru" placeholder="Nama guru" readonly>
-          </div>
-          <div class="form-group">
-            <label for="hadirTarikh">Tarikh <span class="req">*</span></label>
-            <input type="date" id="hadirTarikh">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="hadirMurid">Nama Murid <span class="req">*</span></label>
-            <input type="text" id="hadirMurid" placeholder="Nama penuh murid">
-          </div>
-          <div class="form-group">
-            <label for="hadirStatus">Status <span class="req">*</span></label>
-            <select id="hadirStatus">
-              <option value="">— Pilih Status —</option>
-              <option>Hadir</option>
-              <option>Tidak Hadir</option>
-              <option>Cuti</option>
-              <option>Lambat</option>
-            </select>
-          </div>
-        </div>
-        <div class="alert alert-error" id="hadirError">
-          <span class="alert-icon">⚠</span>
-          <span id="hadirErrorMsg">Sila isi semua medan wajib.</span>
-        </div>
-        <div class="alert alert-success" id="hadirSuccess">
-          <span class="alert-icon">✓</span>
-          <span>Kehadiran berjaya direkod.</span>
-        </div>
-        <button class="btn btn-primary" id="submitHadirBtn" onclick="submitKehadiran()">
-          <span class="btn-text">✓ Rekod Kehadiran</span>
-          <span class="btn-loader"></span>
-        </button>
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="kehadiranTahun">Tahun</label>
+        <select id="kehadiranTahun" style="min-width:100px;">
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
       </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:0;" onclick="loadKehadiranStats()">Papar</button>
+    </div>
+
+    <p id="kehadiranStatsSummary" style="font-size:14px; color:var(--text-mid); margin-bottom:16px;"></p>
+
+    <div style="max-width:300px; margin-bottom:16px;">
+      <input type="text" id="kehadiranSearch" placeholder="🔍 Cari nama murid..." oninput="filterKehadiranTable()" style="margin:0;">
     </div>
 
     <div class="card">
-      <div class="card-header">
-        <div class="card-icon gold">📋</div>
-        <div class="card-header-text">
-          <h3>Rekod Hari Ini</h3>
-          <p id="kehadiranTarikhLabel">—</p>
-        </div>
-      </div>
       <div class="card-body" style="padding:0; overflow-x:auto;">
-        <table class="data-table" id="kehadiranTable">
+        <table class="data-table">
           <thead>
-            <tr><th>Guru</th><th>Murid</th><th>Status</th><th>Tarikh</th></tr>
+            <tr><th>Bil</th><th>Nama Murid</th><th>Guru</th><th>Jumlah Hadir</th></tr>
           </thead>
-          <tbody id="kehadiranBody">
-            <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Tiada rekod hari ini.</td></tr>
+          <tbody id="kehadiranStatsBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Pilih bulan dan tahun, kemudian klik Papar.</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- TAB B: REKOD INDIVIDU -->
+  <div id="kehadiranRekodPanel" style="display:none;">
+    <div style="max-width:500px; margin-bottom:24px;">
+      <div style="display:flex; gap:12px;">
+        <input type="text" id="kehadiranRekodSearch" placeholder="Cari nama murid..."
+               style="margin:0; flex:1;"
+               onkeydown="if(event.key==='Enter') searchKehadiranRekod()">
+        <button class="btn btn-primary btn-sm" style="margin-top:0;" onclick="searchKehadiranRekod()">Cari</button>
+      </div>
+    </div>
+    <div id="kehadiranRekodResult"></div>
   </div>
 </section>
 
@@ -1645,8 +1642,12 @@
   let muridStatusFilter  = 'aktif';
 
   // Yuran state
-  let yuranMuridList   = [];
+  let yuranMuridList    = [];
   let currentBelumBayar = [];
+
+  // Kehadiran state
+  let kehadiranStatsData  = [];
+  let currentKehadiranTab = 'stats';
   const BULAN_LIST = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
 
   // OTP flow state
@@ -1675,7 +1676,7 @@
     const tab = document.getElementById('nav-' + name);
     if (tab) tab.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (name === 'kehadiran') loadKehadiranHariIni();
+    if (name === 'kehadiran') loadKehadiranPanel();
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
     if (name === 'guru') loadGuruList();
     if (name === 'yuran') loadYuranPanel();
@@ -2525,6 +2526,123 @@
       function() {
         btn.classList.remove('loading'); btn.disabled = false;
         showErr('cashError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+      }
+    );
+  }
+
+  // =====================
+  // KEHADIRAN STATS & REKOD
+  // =====================
+  function switchKehadiranTab(tab) {
+    currentKehadiranTab = tab;
+    document.getElementById('tabKehadiranStats').classList.toggle('active', tab === 'stats');
+    document.getElementById('tabKehadiranRekod').classList.toggle('active', tab === 'rekod');
+    document.getElementById('kehadiranStatsPanel').style.display = tab === 'stats' ? 'block' : 'none';
+    document.getElementById('kehadiranRekodPanel').style.display = tab === 'rekod' ? 'block' : 'none';
+  }
+
+  function loadKehadiranPanel() {
+    const now   = new Date();
+    const bulan = String(now.getMonth() + 1).padStart(2, '0');
+    const tahun = String(now.getFullYear());
+    const bulanEl = document.getElementById('kehadiranBulan');
+    const tahunEl = document.getElementById('kehadiranTahun');
+    if (bulanEl) bulanEl.value = bulan;
+    if (tahunEl) tahunEl.value = tahun;
+    loadKehadiranStats();
+  }
+
+  function loadKehadiranStats() {
+    const bulan   = document.getElementById('kehadiranBulan').value;
+    const tahun   = document.getElementById('kehadiranTahun').value;
+    const tbody   = document.getElementById('kehadiranStatsBody');
+    const summary = document.getElementById('kehadiranStatsSummary');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan...</td></tr>';
+    if (summary) summary.textContent = '';
+    document.getElementById('kehadiranSearch').value = '';
+
+    callGAS('getKehadiranStats', { bulan, tahun },
+      function(data) {
+        if (!data.success) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--error);padding:20px;">' + escHtml(data.message || 'Ralat memuatkan data.') + '</td></tr>';
+          return;
+        }
+        kehadiranStatsData = data.byMurid || [];
+        if (summary) summary.textContent = data.totalMurid + ' murid hadir | ' + data.totalSesi + ' sesi jumlah';
+        renderKehadiranStatsTable(kehadiranStatsData);
+      },
+      function() {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--error);padding:20px;">Ralat sambungan. Sila cuba sebentar lagi.</td></tr>';
+      }
+    );
+  }
+
+  function renderKehadiranStatsTable(rows) {
+    const tbody = document.getElementById('kehadiranStatsBody');
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada rekod dijumpai.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r, i) => `<tr>
+      <td>${i + 1}</td>
+      <td>${escHtml(r.nama)}</td>
+      <td>${escHtml(r.guru || '—')}</td>
+      <td><span class="badge badge-green">${r.jumlahHadir}</span></td>
+    </tr>`).join('');
+  }
+
+  function filterKehadiranTable() {
+    const q = (document.getElementById('kehadiranSearch').value || '').toLowerCase().trim();
+    renderKehadiranStatsTable(q
+      ? kehadiranStatsData.filter(r => (r.nama || '').toLowerCase().includes(q))
+      : kehadiranStatsData
+    );
+  }
+
+  function searchKehadiranRekod() {
+    const nama     = (document.getElementById('kehadiranRekodSearch').value || '').trim();
+    const resultEl = document.getElementById('kehadiranRekodResult');
+    resultEl.innerHTML = '<p style="color:var(--text-muted);font-size:14px;padding:8px 0;">Memuatkan...</p>';
+
+    callGAS('getKehadiranRekod', { nama },
+      function(data) {
+        if (!data.success) {
+          resultEl.innerHTML = '<p style="color:var(--error);font-size:14px;padding:8px 0;">' + escHtml(data.message || 'Ralat.') + '</p>';
+          return;
+        }
+        if (data.totalSesi === 0) {
+          resultEl.innerHTML = '<p style="color:var(--text-muted);font-size:14px;padding:8px 0;">Tiada rekod dijumpai untuk <strong>' + escHtml(data.nama) + '</strong>.</p>';
+          return;
+        }
+        const rows = data.rekod.map(r => `<tr>
+          <td>${escHtml(r.tarikh)}</td>
+          <td>${escHtml(r.guru)}</td>
+          <td>${escHtml(r.kaedah)}</td>
+          <td>${escHtml(r.login)}</td>
+          <td>${escHtml(r.logout || '—')}</td>
+          <td>${escHtml(r.durasi || '—')}</td>
+        </tr>`).join('');
+        resultEl.innerHTML = `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon green">📋</div>
+              <div class="card-header-text">
+                <h3>${escHtml(data.nama)}</h3>
+                <p>Jumlah sesi hadir: <strong>${data.totalSesi}</strong></p>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0; overflow-x:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Tarikh</th><th>Guru</th><th>Kaedah</th><th>Masa Mula</th><th>Masa Tamat</th><th>Durasi</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      },
+      function() {
+        resultEl.innerHTML = '<p style="color:var(--error);font-size:14px;padding:8px 0;">Ralat sambungan. Sila cuba sebentar lagi.</p>';
       }
     );
   }

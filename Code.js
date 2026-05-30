@@ -116,6 +116,8 @@ function doPost(e) {
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
     else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
     else if (action === 'getMuridListAll')         result = getMuridListAll();
+    else if (action === 'getKehadiranStats')       result = getKehadiranStats(body);
+    else if (action === 'getKehadiranRekod')       result = getKehadiranRekod(body);
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -157,6 +159,8 @@ function doAction(action, payload) {
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
   else if (action === 'getMuridListAll')        return getMuridListAll();
+  else if (action === 'getKehadiranStats')      return getKehadiranStats(payload);
+  else if (action === 'getKehadiranRekod')      return getKehadiranRekod(payload);
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -982,7 +986,8 @@ function syncNamaMuridToAllForms() {
 // Input:  { bulan } e.g. { bulan: "MEI2026" }
 // Output: { success, sudahBayar, totalKutipan, listNamaBayar }
 // ============================================================
-var YURAN_SS_ID = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
+var YURAN_SS_ID     = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
+var KEHADIRAN_SS_ID = '1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4';
 
 function getYuranStats(params) {
   params = params || {};
@@ -1143,6 +1148,147 @@ function updateStatusMurid(params) {
 
   } catch (err) {
     Logger.log('updateStatusMurid error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 29. getKehadiranStats
+// Statistik kehadiran dari Kehadiran spreadsheet
+// Input:  { bulan, tahun } — e.g. { bulan:"05", tahun:"2026" }
+// Output: { success, totalMurid, totalSesi, byMurid:[{nama,jumlahHadir,guru}] }
+// ============================================================
+function getKehadiranStats(params) {
+  params = params || {};
+  try {
+    var bulan = (params.bulan || '').toString().trim();
+    var tahun = (params.tahun || '').toString().trim();
+
+    var ss     = SpreadsheetApp.openById(KEHADIRAN_SS_ID);
+    var sheets = ss.getSheets();
+
+    var muridMap  = {};
+    var totalSesi = 0;
+
+    sheets.forEach(function(sheet) {
+      if (sheet.getLastRow() < 2) return;
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+      data.forEach(function(r) {
+        var ts   = r[0];
+        var guru = (r[2] || '').toString().trim();
+        var nama = (r[3] || '').toString().trim();
+        if (!nama) return;
+
+        var d = (ts instanceof Date) ? ts : new Date(ts);
+        if (isNaN(d.getTime())) return;
+
+        var rowMonth = Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'MM');
+        var rowYear  = Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'yyyy');
+        if (bulan && rowMonth !== bulan) return;
+        if (tahun && rowYear  !== tahun) return;
+
+        totalSesi++;
+        var key = nama.toUpperCase();
+        if (!muridMap[key]) muridMap[key] = { nama: nama, jumlahHadir: 0, guru: guru };
+        muridMap[key].jumlahHadir++;
+        muridMap[key].guru = guru;
+      });
+    });
+
+    var byMurid = Object.keys(muridMap).map(function(k) { return muridMap[k]; });
+    byMurid.sort(function(a, b) { return b.jumlahHadir - a.jumlahHadir; });
+
+    return { success: true, totalMurid: byMurid.length, totalSesi: totalSesi, byMurid: byMurid };
+
+  } catch (err) {
+    Logger.log('getKehadiranStats error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 30. getKehadiranRekod
+// Rekod kehadiran individu murid dari Kehadiran spreadsheet
+// Input:  { nama } — minimum 3 huruf
+// Output: { success, nama, totalSesi, rekod:[{tarikh,guru,kaedah,login,logout,durasi}] }
+// ============================================================
+function getKehadiranRekod(params) {
+  params = params || {};
+  try {
+    var nama = (params.nama || '').toString().trim();
+    if (!nama || nama.length < 3) {
+      return { success: false, message: 'Sila masukkan sekurang-kurangnya 3 huruf nama murid' };
+    }
+
+    var namaLower = nama.toLowerCase();
+    var ss        = SpreadsheetApp.openById(KEHADIRAN_SS_ID);
+    var sheets    = ss.getSheets();
+    var rekod     = [];
+
+    sheets.forEach(function(sheet) {
+      if (sheet.getLastRow() < 2) return;
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+      data.forEach(function(r) {
+        var namaMurid = (r[3] || '').toString().trim();
+        if (namaMurid.toLowerCase().indexOf(namaLower) === -1) return;
+
+        var ts       = r[0];
+        var guru     = (r[2] || '').toString().trim();
+        var kaedah   = (r[4] || '').toString().trim();
+        var logoutRaw = r[5];
+
+        var d = (ts instanceof Date) ? ts : new Date(ts);
+        if (isNaN(d.getTime())) return;
+
+        var tarikh = Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy');
+        var login  = Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'HH:mm');
+        var loginMins = parseInt(Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'H'), 10) * 60 +
+                        parseInt(Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'm'), 10);
+
+        var logoutFmt = '';
+        var durasi    = '';
+
+        if (logoutRaw) {
+          var logoutMins = null;
+          if (logoutRaw instanceof Date) {
+            logoutFmt = Utilities.formatDate(logoutRaw, 'Asia/Kuala_Lumpur', 'HH:mm');
+            logoutMins = parseInt(Utilities.formatDate(logoutRaw, 'Asia/Kuala_Lumpur', 'H'), 10) * 60 +
+                         parseInt(Utilities.formatDate(logoutRaw, 'Asia/Kuala_Lumpur', 'm'), 10);
+          } else {
+            var ls = logoutRaw.toString().trim();
+            var lm = ls.match(/(\d{1,2}):(\d{2})/);
+            if (lm) {
+              var lh = parseInt(lm[1], 10);
+              var lmi = parseInt(lm[2], 10);
+              if (/pm/i.test(ls) && lh < 12) lh += 12;
+              if (/am/i.test(ls) && lh === 12) lh = 0;
+              logoutFmt  = String(lh).padStart(2,'0') + ':' + String(lmi).padStart(2,'0');
+              logoutMins = lh * 60 + lmi;
+            }
+          }
+          if (logoutMins !== null) {
+            var diff = logoutMins - loginMins;
+            if (diff > 0) {
+              var jam   = Math.floor(diff / 60);
+              var minit = diff % 60;
+              durasi    = (jam > 0 ? jam + ' jam ' : '') + minit + ' minit';
+            }
+          }
+        }
+
+        rekod.push({ tarikh: tarikh, guru: guru, kaedah: kaedah, login: login, logout: logoutFmt, durasi: durasi, _ts: d.getTime() });
+      });
+    });
+
+    rekod.sort(function(a, b) { return b._ts - a._ts; });
+    var out = rekod.map(function(r) {
+      return { tarikh: r.tarikh, guru: r.guru, kaedah: r.kaedah, login: r.login, logout: r.logout, durasi: r.durasi };
+    });
+
+    return { success: true, nama: nama, totalSesi: out.length, rekod: out };
+
+  } catch (err) {
+    Logger.log('getKehadiranRekod error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
