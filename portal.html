@@ -927,7 +927,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
   <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
-  <button class="nav-tab"        id="nav-yuran"     onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
+  <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -1586,7 +1586,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
         <option value="DIS2026">Disember 2026</option>
       </select>
     </div>
-    <button class="btn btn-ghost btn-sm" id="syncFormBtn" onclick="syncMuridToForms()" style="margin-bottom:2px;">
+    <button class="btn btn-ghost btn-sm" id="btnSyncGF" onclick="syncMuridToForms()" style="display:none; margin-bottom:2px;">
       🔄 Sync Senarai Murid ke Google Form
     </button>
   </div>
@@ -1615,7 +1615,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       <p class="stat-label" style="color:var(--error);">Belum Kemaskini</p>
       <p class="stat-val" style="color:var(--error);" id="statBelumBayar">—</p>
     </div>
-    <div class="yuran-stat-card">
+    <div class="yuran-stat-card" id="cardTotalKutipan" style="display:none;">
       <p class="stat-label" style="color:var(--gold-dark);">Total Kutipan (RM)</p>
       <p class="stat-val" style="color:var(--gold-dark);" id="statKutipan">—</p>
     </div>
@@ -1672,7 +1672,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   </div>
 
   <!-- D) REKOD CASH PAYMENT -->
-  <div class="card">
+  <div class="card" id="sectionCashPayment" style="display:none;">
     <div class="card-header">
       <div class="card-icon gold">💵</div>
       <div class="card-header-text">
@@ -1769,7 +1769,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     const panel = document.getElementById('panel-' + name);
     if (panel) panel.classList.add('active');
-    const tabId = name === 'home' ? 'tabLogMasuk' : 'nav-' + name;
+    const tabId = name === 'home' ? 'tabLogMasuk' : name === 'yuran' ? 'tabYuran' : 'nav-' + name;
     const tab = document.getElementById(tabId);
     if (tab) tab.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1789,10 +1789,18 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
       const el = document.getElementById('nav-' + n);
       if (el) el.style.display = loggedIn ? '' : 'none';
     });
-    const yuranEl = document.getElementById('nav-yuran');
-    if (yuranEl) yuranEl.style.display = (loggedIn && currentRole === 'ADMIN') ? '' : 'none';
+    const yuranEl = document.getElementById('tabYuran');
+    if (yuranEl) yuranEl.style.display = loggedIn ? '' : 'none';
     const loginTab = document.getElementById('tabLogMasuk');
     if (loginTab) loginTab.style.display = loggedIn ? 'none' : 'block';
+
+    const isAdmin = loggedIn && currentRole === 'ADMIN';
+    const cardKutipan = document.getElementById('cardTotalKutipan');
+    const sectionCash = document.getElementById('sectionCashPayment');
+    const btnSync     = document.getElementById('btnSyncGF');
+    if (cardKutipan) cardKutipan.style.display = isAdmin ? '' : 'none';
+    if (sectionCash) sectionCash.style.display = isAdmin ? '' : 'none';
+    if (btnSync)     btnSync.style.display     = isAdmin ? '' : 'none';
   }
 
   // =====================
@@ -2562,7 +2570,7 @@ document.querySelector('link[rel="manifest"]').href = manifestURL;
   }
 
   function syncMuridToForms() {
-    const btn = document.getElementById('syncFormBtn');
+    const btn = document.getElementById('btnSyncGF');
     const ok  = document.getElementById('syncSuccess');
     const err = document.getElementById('syncError');
     ok.style.display = err.style.display = 'none';
