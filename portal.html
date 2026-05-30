@@ -4,7 +4,41 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co; connect-src https://script.google.com;">
+<meta name="application-name" content="SPKM">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SPKM">
+<meta name="theme-color" content="#0A1F44">
+<link rel="apple-touch-icon" href="https://i.ibb.co/93rXrkZq/LOGO-SL.png">
+<link rel="manifest" href="manifest.json">
 <title>Sistem Pengurusan Kelas Mengaji</title>
+<script>
+const manifestData = {
+  "name": "Sistem Pengurusan Kelas Mengaji",
+  "short_name": "SPKM",
+  "description": "Portal Guru & Pendaftaran Murid Kelas Mengaji Syafie Legacy",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F8F8F8",
+  "theme_color": "#0A1F44",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/93rXrkZq/LOGO-SL.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.ibb.co/93rXrkZq/LOGO-SL.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.querySelector('link[rel="manifest"]').href = manifestURL;
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1516,23 +1550,36 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
-  <!-- A) BULAN SELECTOR -->
-  <div style="max-width:280px; margin-bottom:24px;">
-    <label for="yuranBulan">Pilih Bulan</label>
-    <select id="yuranBulan" onchange="loadYuranStats()">
-      <option value="JAN2026">Januari 2026</option>
-      <option value="FEB2026">Februari 2026</option>
-      <option value="MAC2026">Mac 2026</option>
-      <option value="APRIL2026">April 2026</option>
-      <option value="MEI2026">Mei 2026</option>
-      <option value="JUN2026">Jun 2026</option>
-      <option value="JULAI2026">Julai 2026</option>
-      <option value="OGOS2026">Ogos 2026</option>
-      <option value="SEPT2026">September 2026</option>
-      <option value="OKT2026">Oktober 2026</option>
-      <option value="NOV2026">November 2026</option>
-      <option value="DIS2026">Disember 2026</option>
-    </select>
+  <!-- A) BULAN SELECTOR + SYNC BUTTON -->
+  <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+    <div style="min-width:220px;">
+      <label for="yuranBulan">Pilih Bulan</label>
+      <select id="yuranBulan" onchange="loadYuranStats()">
+        <option value="JAN2026">Januari 2026</option>
+        <option value="FEB2026">Februari 2026</option>
+        <option value="MAC2026">Mac 2026</option>
+        <option value="APRIL2026">April 2026</option>
+        <option value="MEI2026">Mei 2026</option>
+        <option value="JUN2026">Jun 2026</option>
+        <option value="JULAI2026">Julai 2026</option>
+        <option value="OGOS2026">Ogos 2026</option>
+        <option value="SEPT2026">September 2026</option>
+        <option value="OKT2026">Oktober 2026</option>
+        <option value="NOV2026">November 2026</option>
+        <option value="DIS2026">Disember 2026</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="syncFormBtn" onclick="syncMuridToForms()" style="margin-bottom:2px;">
+      🔄 Sync Senarai Murid ke Google Form
+    </button>
+  </div>
+  <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
+    <span class="alert-icon">✓</span>
+    <span id="syncSuccessMsg"></span>
+  </div>
+  <div class="alert alert-error" id="syncError" style="display:none; margin-bottom:16px;">
+    <span class="alert-icon">⚠</span>
+    <span>Sync gagal. Sila cuba semula.</span>
   </div>
 
   <!-- B) STATS BAR -->
@@ -2441,6 +2488,33 @@
         const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
         currentBelumBayar  = yuranMuridList.filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()));
         renderBelumBayar(currentBelumBayar);
+      }
+    );
+  }
+
+  function syncMuridToForms() {
+    const btn = document.getElementById('syncFormBtn');
+    const ok  = document.getElementById('syncSuccess');
+    const err = document.getElementById('syncError');
+    ok.style.display = err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Sedang sync...';
+    callGAS('syncForms', {},
+      function(data) {
+        btn.disabled = false;
+        btn.textContent = '🔄 Sync Senarai Murid ke Google Form';
+        if (data && data.success) {
+          document.getElementById('syncSuccessMsg').textContent =
+            '✅ Sync berjaya! ' + (data.totalNames || 0) + ' nama dikemaskini dalam 12 Google Form';
+          ok.style.display = '';
+        } else {
+          err.style.display = '';
+        }
+      },
+      function() {
+        btn.disabled = false;
+        btn.textContent = '🔄 Sync Senarai Murid ke Google Form';
+        err.style.display = '';
       }
     );
   }
