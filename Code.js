@@ -94,14 +94,18 @@ function doPost(e) {
     var action = body.action;
     var result;
 
-    if      (action === 'login')               result = loginGuru(body);
-    else if (action === 'registerKanak')       result = registerKanak(body);
-    else if (action === 'registerDewasa')      result = registerDewasa(body);
-    else if (action === 'attendance')          result = attendance(body);
-    else if (action === 'getDashboardStats')   result = getDashboardStats();
-    else if (action === 'getKehadiranHariIni') result = getKehadiranHariIni();
-    else if (action === 'getMuridList')        result = getMuridList();
-    else if (action === 'getGuru')             result = getGuru();
+    if      (action === 'login')                  result = loginGuru(body);
+    else if (action === 'registerKanak')          result = registerKanak(body);
+    else if (action === 'registerDewasa')         result = registerDewasa(body);
+    else if (action === 'sendOTPKanak')           result = sendOTPKanak(body);
+    else if (action === 'sendOTPDewasa')          result = sendOTPDewasa(body);
+    else if (action === 'confirmRegisterKanak')   result = confirmRegisterKanak(body);
+    else if (action === 'confirmRegisterDewasa')  result = confirmRegisterDewasa(body);
+    else if (action === 'attendance')             result = attendance(body);
+    else if (action === 'getDashboardStats')      result = getDashboardStats();
+    else if (action === 'getKehadiranHariIni')    result = getKehadiranHariIni();
+    else if (action === 'getMuridList')           result = getMuridList();
+    else if (action === 'getGuru')                result = getGuru();
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -126,14 +130,18 @@ function doGet(e) {
 // Dipanggil oleh google.script.run dari portal.html
 function doAction(action, payload) {
   payload = payload || {};
-  if      (action === 'login')               return loginGuru(payload);
-  else if (action === 'registerKanak')       return registerKanak(payload);
-  else if (action === 'registerDewasa')      return registerDewasa(payload);
-  else if (action === 'attendance')          return attendance(payload);
-  else if (action === 'getDashboardStats')   return getDashboardStats();
-  else if (action === 'getKehadiranHariIni') return getKehadiranHariIni();
-  else if (action === 'getMuridList')        return getMuridList();
-  else if (action === 'getGuru')             return getGuru();
+  if      (action === 'login')                 return loginGuru(payload);
+  else if (action === 'registerKanak')         return registerKanak(payload);
+  else if (action === 'registerDewasa')        return registerDewasa(payload);
+  else if (action === 'sendOTPKanak')          return sendOTPKanak(payload);
+  else if (action === 'sendOTPDewasa')         return sendOTPDewasa(payload);
+  else if (action === 'confirmRegisterKanak')  return confirmRegisterKanak(payload);
+  else if (action === 'confirmRegisterDewasa') return confirmRegisterDewasa(payload);
+  else if (action === 'attendance')            return attendance(payload);
+  else if (action === 'getDashboardStats')     return getDashboardStats();
+  else if (action === 'getKehadiranHariIni')   return getKehadiranHariIni();
+  else if (action === 'getMuridList')          return getMuridList();
+  else if (action === 'getGuru')               return getGuru();
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -905,4 +913,225 @@ function testGenerateSlip() {
   var last  = sheet.getLastRow();
   Logger.log('Jana slip untuk baris: ' + last);
   generateSlipKanak(last);
+}
+
+// ============================================================
+// OTP HELPERS
+// ============================================================
+
+// sendOTP_ — jana OTP, simpan dalam PropertiesService, hantar e-mel
+function sendOTP_(email, nama) {
+  var otp      = Math.floor(100000 + Math.random() * 900000).toString();
+  var keyBase  = 'OTP_' + email.replace(/[^a-zA-Z0-9]/g, '_');
+  var props    = PropertiesService.getScriptProperties();
+
+  props.setProperty(keyBase,              otp);
+  props.setProperty(keyBase + '_TIME',    new Date().getTime().toString());
+  props.setProperty(keyBase + '_ATTEMPTS','0');
+
+  var subject = '[Kelas Mengaji] Kod Pengesahan Pendaftaran';
+  var htmlBody =
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">' +
+    '<div style="background:#1A5C3A;padding:24px;text-align:center;">' +
+    '<h2 style="color:#FFFFFF;margin:0;font-size:20px;">Sistem Pengurusan Kelas Mengaji</h2>' +
+    '</div>' +
+    '<div style="padding:32px 24px;background:#FAF7F0;text-align:center;">' +
+    '<p style="font-size:15px;color:#1C1C1C;margin-bottom:8px;">Assalamualaikum <strong>' + nama + '</strong>,</p>' +
+    '<p style="font-size:14px;color:#4A4A4A;margin-bottom:24px;">Kod OTP pengesahan pendaftaran kelas mengaji anda:</p>' +
+    '<div style="background:#1A5C3A;color:#FFFFFF;font-size:38px;font-weight:bold;letter-spacing:14px;' +
+      'padding:20px 32px;border-radius:12px;display:inline-block;margin-bottom:24px;">' + otp + '</div>' +
+    '<p style="font-size:13px;color:#4A4A4A;">Kod ini <strong>sah selama 10 minit</strong>.</p>' +
+    '<p style="font-size:13px;color:#C0392B;margin-top:8px;font-weight:500;">Jangan kongsikan kod ini kepada sesiapa.</p>' +
+    '</div>' +
+    '<div style="background:#C9A84C;padding:12px;text-align:center;">' +
+    '<p style="color:#FFFFFF;font-size:12px;margin:0;">Sistem Pengurusan Kelas Mengaji &nbsp;·&nbsp; Dikuasakan oleh Google Apps Script</p>' +
+    '</div>' +
+    '</div>';
+
+  MailApp.sendEmail({ to: email, subject: subject, htmlBody: htmlBody });
+  Logger.log('OTP dihantar ke: ' + email);
+}
+
+// verifyOTP_ — semak OTP, tamat tempoh (10 min), dan bilangan cubaan (max 3)
+function verifyOTP_(email, otpInput) {
+  var keyBase  = 'OTP_' + email.replace(/[^a-zA-Z0-9]/g, '_');
+  var props    = PropertiesService.getScriptProperties();
+
+  var storedOtp  = props.getProperty(keyBase);
+  var storedTime = props.getProperty(keyBase + '_TIME');
+  var attempts   = parseInt(props.getProperty(keyBase + '_ATTEMPTS') || '0', 10);
+
+  if (!storedOtp || !storedTime) {
+    return { valid: false, message: 'OTP tidak dijumpai. Sila minta OTP baru.' };
+  }
+
+  var elapsed = new Date().getTime() - parseInt(storedTime, 10);
+  if (elapsed > 600000) {
+    props.deleteProperty(keyBase);
+    props.deleteProperty(keyBase + '_TIME');
+    props.deleteProperty(keyBase + '_ATTEMPTS');
+    return { valid: false, expired: true, message: 'OTP tamat tempoh. Sila minta OTP baru.' };
+  }
+
+  if (attempts >= 3) {
+    return { valid: false, message: 'Terlalu banyak cubaan. Sila minta OTP baru.' };
+  }
+
+  if (otpInput.toString().trim() !== storedOtp) {
+    attempts++;
+    props.setProperty(keyBase + '_ATTEMPTS', attempts.toString());
+    var left = 3 - attempts;
+    return { valid: false, message: 'OTP tidak tepat. ' + left + ' cubaan lagi.', attemptsLeft: left };
+  }
+
+  // Betul — padam OTP
+  props.deleteProperty(keyBase);
+  props.deleteProperty(keyBase + '_TIME');
+  props.deleteProperty(keyBase + '_ATTEMPTS');
+  return { valid: true };
+}
+
+// ============================================================
+// 20. sendOTPKanak — validate data, hantar OTP, return step:'otp'
+// ============================================================
+function sendOTPKanak(params) {
+  params = params || {};
+  try {
+    ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','faham','pakej','kaedah'].forEach(function(f) {
+      if (params[f]) params[f] = sanitizeInput(params[f]);
+    });
+    var required = ['telefon','namaAnak','mykid','email','alamat','tahap','pakej','kaedah'];
+    for (var r = 0; r < required.length; r++) {
+      if (!params[required[r]] || !params[required[r]].toString().trim()) {
+        return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
+      }
+    }
+    var nama = ((params.namaIbu || '') + ' (' + (params.namaAnak || '') + ')').trim();
+    sendOTP_(params.email.trim(), nama);
+    return { success: true, step: 'otp' };
+  } catch (err) {
+    Logger.log('sendOTPKanak error: ' + err.message);
+    return { success: false, message: 'Ralat menghantar OTP: ' + err.message };
+  }
+}
+
+// ============================================================
+// 21. sendOTPDewasa — validate data, hantar OTP, return step:'otp'
+// ============================================================
+function sendOTPDewasa(params) {
+  params = params || {};
+  try {
+    ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
+      if (params[f]) params[f] = sanitizeInput(params[f]);
+    });
+    var required = ['nama','telefon','email','alamat','tahap'];
+    for (var r = 0; r < required.length; r++) {
+      if (!params[required[r]] || !params[required[r]].toString().trim()) {
+        return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
+      }
+    }
+    sendOTP_(params.email.trim(), params.nama.trim());
+    return { success: true, step: 'otp' };
+  } catch (err) {
+    Logger.log('sendOTPDewasa error: ' + err.message);
+    return { success: false, message: 'Ralat menghantar OTP: ' + err.message };
+  }
+}
+
+// ============================================================
+// 22. confirmRegisterKanak — verify OTP then save to Sheets
+// ============================================================
+function confirmRegisterKanak(params) {
+  params = params || {};
+  try {
+    var email = (params.email || '').trim();
+    var otp   = (params.otp   || '').toString().trim();
+    if (!email || !otp) return { success: false, message: 'E-mel dan OTP diperlukan.' };
+
+    var verify = verifyOTP_(email, otp);
+    if (!verify.valid) return { success: false, expired: verify.expired || false, message: verify.message, attemptsLeft: verify.attemptsLeft };
+
+    ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','faham','pakej','kaedah'].forEach(function(f) {
+      if (params[f]) params[f] = sanitizeInput(params[f]);
+    });
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.KANAK);
+    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
+
+    var nextBil   = sheet.getLastRow();
+    var timestamp = new Date();
+    var newRow    = new Array(12).fill('');
+    newRow[COL_KANAK.BIL]       = nextBil;
+    newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim();
+    newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
+    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();
+    newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
+    newRow[COL_KANAK.EMAIL]     = params.email.trim();
+    newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
+    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
+    newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
+    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
+    newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
+    sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+
+    var slipRow = sheet.getLastRow();
+    try { generateSlipKanak(slipRow); } catch(e) { Logger.log('generateSlipKanak error: ' + e.message); }
+
+    Logger.log('confirmRegisterKanak berjaya: Bil ' + nextBil + ' — ' + params.namaAnak);
+    return { success: true, bil: nextBil };
+
+  } catch (err) {
+    Logger.log('confirmRegisterKanak error: ' + err.message);
+    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+  }
+}
+
+// ============================================================
+// 23. confirmRegisterDewasa — verify OTP then save to Sheets
+// ============================================================
+function confirmRegisterDewasa(params) {
+  params = params || {};
+  try {
+    var email = (params.email || '').trim();
+    var otp   = (params.otp   || '').toString().trim();
+    if (!email || !otp) return { success: false, message: 'E-mel dan OTP diperlukan.' };
+
+    var verify = verifyOTP_(email, otp);
+    if (!verify.valid) return { success: false, expired: verify.expired || false, message: verify.message, attemptsLeft: verify.attemptsLeft };
+
+    ['nama','telefon','email','alamat','tahap','guru'].forEach(function(f) {
+      if (params[f]) params[f] = sanitizeInput(params[f]);
+    });
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.DEWASA);
+    if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
+
+    var nextBil   = sheet.getLastRow();
+    var timestamp = new Date();
+    var newRow    = new Array(18).fill('');
+    newRow[COL_DEWASA.BIL]       = nextBil;
+    newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_DEWASA.EMAIL]     = params.email.trim();
+    newRow[COL_DEWASA.NAMA]      = params.nama.trim();
+    newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
+    newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
+    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
+    newRow[COL_DEWASA.GURU]      = (params.guru || '').trim();
+    sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+
+    var actualRow = sheet.getLastRow();
+    var muridId   = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
+
+    Logger.log('confirmRegisterDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
+    return { success: true, id: muridId };
+
+  } catch (err) {
+    Logger.log('confirmRegisterDewasa error: ' + err.message);
+    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+  }
 }

@@ -598,6 +598,73 @@
     font-weight: 500;
   }
 
+  /* === OTP PANEL === */
+  .otp-info-box {
+    background: var(--green);
+    border-radius: 10px;
+    padding: 20px 24px;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .otp-info-box .otp-label {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+  }
+  .otp-info-box .otp-email {
+    font-size: 14px;
+    font-weight: 500;
+    word-break: break-all;
+  }
+  .otp-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .otp-timer-wrap { color: var(--text-muted); }
+  .otp-timer {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+  }
+  .otp-timer.expiring { color: var(--error); }
+  .otp-attempts-label { color: var(--text-muted); font-size: 12px; }
+  .otp-input-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+  }
+  .otp-input-wrap input[type="text"] {
+    width: 210px;
+    text-align: center;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 10px;
+    padding: 14px 12px 14px 22px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--cream);
+    color: var(--text-dark);
+  }
+  .otp-input-wrap input[type="text"]:focus {
+    border-color: var(--green-mid);
+    box-shadow: 0 0 0 3px rgba(26,92,58,0.12);
+    background: var(--white);
+  }
+  .otp-expired-msg {
+    text-align: center;
+    color: var(--error);
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+    margin: 6px 0;
+  }
+  .otp-expired-msg.show { display: block; }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -700,7 +767,6 @@
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
           <button class="btn btn-primary btn-sm" style="width:100%; margin-top:0;" onclick="showPanel('kehadiran')">✅ Rekod Kehadiran</button>
           <button class="btn btn-ghost btn-sm"   style="width:100%; margin-top:0;" onclick="showPanel('murid')">📋 Lihat Senarai Murid</button>
-          <button class="btn btn-gold btn-sm"    style="width:100%; margin-top:0;" onclick="showDaftar('kanak')">➕ Daftar Murid Baru</button>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="width:100%; margin-top:0; color:var(--error); border-color:#F5C6C2;">Log Keluar</button>
       </div>
@@ -864,6 +930,48 @@
       </div><!-- /card-body -->
     </div><!-- /card -->
 
+    <!-- OTP VERIFICATION (KANAK) -->
+    <div class="card" id="kanakOtpPanel" style="display:none;">
+      <div class="card-header">
+        <div class="card-icon gold">✉</div>
+        <div class="card-header-text">
+          <h3>Pengesahan E-mel</h3>
+          <p>Masukkan kod OTP 6-digit yang dihantar ke e-mel anda</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="otp-info-box">
+          <p class="otp-label">Kod OTP telah dihantar ke:</p>
+          <p class="otp-email" id="kanakOtpEmail">—</p>
+        </div>
+        <div class="otp-meta">
+          <div class="otp-timer-wrap">⏱ Sah selama: <span class="otp-timer" id="kanakOtpTimer">10:00</span></div>
+          <div class="otp-attempts-label" id="kanakOtpAttempts">3 cubaan berbaki</div>
+        </div>
+        <div class="otp-expired-msg" id="kanakOtpExpired">⚠ OTP telah tamat tempoh. Sila minta OTP baru.</div>
+        <div class="otp-input-wrap">
+          <input type="text" id="kanakOtpInput" maxlength="6" placeholder="······"
+                 inputmode="numeric" autocomplete="one-time-code"
+                 oninput="this.value=this.value.replace(/\D/g,'')"
+                 onkeydown="if(event.key==='Enter')submitOTP('kanak')">
+        </div>
+        <div class="alert alert-error" id="kanakOtpError">
+          <span class="alert-icon">⚠</span>
+          <span id="kanakOtpErrorMsg">OTP tidak tepat.</span>
+        </div>
+        <button class="btn btn-gold" id="kanakOtpBtn" onclick="submitOTP('kanak')" style="margin-top:16px;">
+          <span class="btn-text">✓ Sahkan OTP</span>
+          <span class="btn-loader"></span>
+        </button>
+        <button class="btn btn-ghost" id="kanakResendBtn" onclick="resendOTP('kanak')" disabled style="margin-top:8px; width:100%;">
+          <span id="kanakResendText">Hantar semula (<span id="kanakResendCountdown">60</span>s)</span>
+        </button>
+        <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:14px;">
+          <a href="#" onclick="cancelOTP('kanak');return false;" style="color:var(--text-muted);text-decoration:underline;">← Kembali ke borang</a>
+        </p>
+      </div>
+    </div>
+
     <!-- SUCCESS -->
     <div class="card" id="kanakSuccess" style="display:none;">
       <div class="success-card show">
@@ -926,6 +1034,48 @@
           <span class="btn-text">✓ Hantar Pendaftaran</span>
           <span class="btn-loader"></span>
         </button>
+      </div>
+    </div>
+
+    <!-- OTP VERIFICATION (DEWASA) -->
+    <div class="card" id="dewasaOtpPanel" style="display:none;">
+      <div class="card-header">
+        <div class="card-icon gold">✉</div>
+        <div class="card-header-text">
+          <h3>Pengesahan E-mel</h3>
+          <p>Masukkan kod OTP 6-digit yang dihantar ke e-mel anda</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="otp-info-box">
+          <p class="otp-label">Kod OTP telah dihantar ke:</p>
+          <p class="otp-email" id="dewasaOtpEmail">—</p>
+        </div>
+        <div class="otp-meta">
+          <div class="otp-timer-wrap">⏱ Sah selama: <span class="otp-timer" id="dewasaOtpTimer">10:00</span></div>
+          <div class="otp-attempts-label" id="dewasaOtpAttempts">3 cubaan berbaki</div>
+        </div>
+        <div class="otp-expired-msg" id="dewasaOtpExpired">⚠ OTP telah tamat tempoh. Sila minta OTP baru.</div>
+        <div class="otp-input-wrap">
+          <input type="text" id="dewasaOtpInput" maxlength="6" placeholder="······"
+                 inputmode="numeric" autocomplete="one-time-code"
+                 oninput="this.value=this.value.replace(/\D/g,'')"
+                 onkeydown="if(event.key==='Enter')submitOTP('dewasa')">
+        </div>
+        <div class="alert alert-error" id="dewasaOtpError">
+          <span class="alert-icon">⚠</span>
+          <span id="dewasaOtpErrorMsg">OTP tidak tepat.</span>
+        </div>
+        <button class="btn btn-gold" id="dewasaOtpBtn" onclick="submitOTP('dewasa')" style="margin-top:16px;">
+          <span class="btn-text">✓ Sahkan OTP</span>
+          <span class="btn-loader"></span>
+        </button>
+        <button class="btn btn-ghost" id="dewasaResendBtn" onclick="resendOTP('dewasa')" disabled style="margin-top:8px; width:100%;">
+          <span id="dewasaResendText">Hantar semula (<span id="dewasaResendCountdown">60</span>s)</span>
+        </button>
+        <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:14px;">
+          <a href="#" onclick="cancelOTP('dewasa');return false;" style="color:var(--text-muted);text-decoration:underline;">← Kembali ke borang</a>
+        </p>
       </div>
     </div>
 
@@ -1123,6 +1273,12 @@
   let allMuridKanak  = [];
   let allMuridDewasa = [];
   let currentMuridTab = 'kanak';
+
+  // OTP flow state
+  let pendingKanakPayload  = null;
+  let pendingDewasaPayload = null;
+  const otpTimerInterval   = { kanak: null, dewasa: null };
+  const otpResendInterval  = { kanak: null, dewasa: null };
 
   // =====================
   // ESCAPE HTML (security)
@@ -1325,14 +1481,14 @@
   }
 
   // =====================
-  // SUBMIT KANAK-KANAK
+  // SUBMIT KANAK-KANAK → send OTP
   // =====================
   function submitKanak() {
     if (!validateStep3()) return;
     const btn = document.getElementById('submitKanakBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    const payload = {
+    pendingKanakPayload = {
       namaIbu:  document.getElementById('namaIbu').value.trim(),
       telefon:  document.getElementById('telefonIbu').value.trim(),
       email:    document.getElementById('emailIbu').value.trim(),
@@ -1345,15 +1501,13 @@
       kaedah:   document.getElementById('kaedahPengajian').value
     };
 
-    callGAS('registerKanak', payload,
+    callGAS('sendOTPKanak', pendingKanakPayload,
       function(data) {
         btn.classList.remove('loading'); btn.disabled = false;
-        if (data.success) {
-          document.getElementById('bilBadge').textContent = 'No. Bil: ' + (data.bil || '—');
-          document.querySelector('#formKanak .card').style.display = 'none';
-          document.getElementById('kanakSuccess').style.display   = 'block';
+        if (data.success && data.step === 'otp') {
+          showOtpPanel('kanak', pendingKanakPayload.email);
         } else {
-          showErr('step3Error', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+          showErr('step3Error', data.message || 'Ralat menghantar OTP. Sila cuba semula.');
         }
       },
       function(err) {
@@ -1364,8 +1518,13 @@
   }
 
   function resetKanakForm() {
-    document.querySelector('#formKanak .card').style.display = 'block';
-    document.getElementById('kanakSuccess').style.display   = 'none';
+    clearOtpTimers('kanak');
+    pendingKanakPayload = null;
+    document.getElementById('kanakOtpPanel').style.display    = 'none';
+    document.getElementById('kanakSuccess').style.display     = 'none';
+    document.querySelector('#formKanak .card').style.display  = 'block';
+    document.getElementById('stepIndicator').style.display    = '';
+    document.querySelector('#formKanak .step-label').style.display = '';
     ['namaIbu','telefonIbu','emailIbu','alamatIbu','namaAnak','noMykid'].forEach(id => {
       document.getElementById(id).value = '';
     });
@@ -1377,7 +1536,7 @@
   }
 
   // =====================
-  // SUBMIT DEWASA
+  // SUBMIT DEWASA → send OTP
   // =====================
   function submitDewasa() {
     for (const f of ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','tahapDewasa']) {
@@ -1386,7 +1545,7 @@
     const btn = document.getElementById('submitDewasaBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    const payload = {
+    pendingDewasaPayload = {
       nama:    document.getElementById('namaDewasa').value.trim(),
       telefon: document.getElementById('telefonDewasa').value.trim(),
       email:   document.getElementById('emailDewasa').value.trim(),
@@ -1395,15 +1554,13 @@
       guru:    document.getElementById('guruPilih').value.trim()
     };
 
-    callGAS('registerDewasa', payload,
+    callGAS('sendOTPDewasa', pendingDewasaPayload,
       function(data) {
         btn.classList.remove('loading'); btn.disabled = false;
-        if (data.success) {
-          document.getElementById('dewasaBilBadge').textContent     = 'ID Murid: ' + (data.id || '—');
-          document.querySelector('#formDewasa .card').style.display = 'none';
-          document.getElementById('dewasaSuccess').style.display    = 'block';
+        if (data.success && data.step === 'otp') {
+          showOtpPanel('dewasa', pendingDewasaPayload.email);
         } else {
-          showErr('dewasaError', data.message || 'Ralat pendaftaran. Sila cuba semula.');
+          showErr('dewasaError', data.message || 'Ralat menghantar OTP. Sila cuba semula.');
         }
       },
       function(err) {
@@ -1414,8 +1571,11 @@
   }
 
   function resetDewasaForm() {
+    clearOtpTimers('dewasa');
+    pendingDewasaPayload = null;
+    document.getElementById('dewasaOtpPanel').style.display   = 'none';
+    document.getElementById('dewasaSuccess').style.display    = 'none';
     document.querySelector('#formDewasa .card').style.display = 'block';
-    document.getElementById('dewasaSuccess').style.display   = 'none';
     ['namaDewasa','telefonDewasa','emailDewasa','alamatDewasa','guruPilih'].forEach(id => {
       document.getElementById(id).value = '';
     });
@@ -1579,6 +1739,203 @@
         ).join('');
       }
     );
+  }
+
+  // =====================
+  // OTP FLOW
+  // =====================
+  function showOtpPanel(type, email) {
+    // hide form card (and step indicator for kanak)
+    if (type === 'kanak') {
+      document.querySelector('#formKanak .card').style.display = 'none';
+      document.getElementById('stepIndicator').style.display  = 'none';
+      document.querySelector('#formKanak .step-label').style.display = 'none';
+    } else {
+      document.querySelector('#formDewasa .card').style.display = 'none';
+    }
+    const p = type;
+    document.getElementById(p + 'OtpPanel').style.display   = 'block';
+    document.getElementById(p + 'OtpEmail').textContent      = email;
+    document.getElementById(p + 'OtpInput').value            = '';
+    document.getElementById(p + 'OtpInput').disabled         = false;
+    document.getElementById(p + 'OtpBtn').disabled           = false;
+    document.getElementById(p + 'OtpExpired').classList.remove('show');
+    document.getElementById(p + 'OtpError').classList.remove('show');
+    document.getElementById(p + 'OtpAttempts').textContent   = '3 cubaan berbaki';
+    // restore resend button html in case it was changed
+    document.getElementById(p + 'ResendText').innerHTML =
+      'Hantar semula (<span id="' + p + 'ResendCountdown">60</span>s)';
+    startOtpCountdown(type);
+    startResendCooldown(type);
+    setTimeout(() => document.getElementById(p + 'OtpInput').focus(), 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startOtpCountdown(type) {
+    if (otpTimerInterval[type]) clearInterval(otpTimerInterval[type]);
+    const timerEl   = document.getElementById(type + 'OtpTimer');
+    const expiredEl = document.getElementById(type + 'OtpExpired');
+    const inputEl   = document.getElementById(type + 'OtpInput');
+    const submitBtn = document.getElementById(type + 'OtpBtn');
+    const resendBtn = document.getElementById(type + 'ResendBtn');
+    let remaining = 600;
+
+    function tick() {
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      timerEl.classList.toggle('expiring', remaining <= 60);
+      if (remaining <= 0) {
+        clearInterval(otpTimerInterval[type]);
+        expiredEl.classList.add('show');
+        inputEl.disabled   = true;
+        submitBtn.disabled = true;
+        resendBtn.disabled = false;
+        document.getElementById(type + 'ResendText').textContent = 'Hantar semula OTP';
+        if (otpResendInterval[type]) clearInterval(otpResendInterval[type]);
+      }
+      remaining--;
+    }
+    tick();
+    otpTimerInterval[type] = setInterval(tick, 1000);
+  }
+
+  function startResendCooldown(type) {
+    if (otpResendInterval[type]) clearInterval(otpResendInterval[type]);
+    const resendBtn   = document.getElementById(type + 'ResendBtn');
+    resendBtn.disabled = true;
+    let secs = 60;
+
+    function tick() {
+      const el = document.getElementById(type + 'ResendCountdown');
+      if (el) el.textContent = secs;
+      if (secs <= 0) {
+        clearInterval(otpResendInterval[type]);
+        resendBtn.disabled = false;
+        document.getElementById(type + 'ResendText').textContent = 'Hantar semula OTP';
+      }
+      secs--;
+    }
+    tick();
+    otpResendInterval[type] = setInterval(tick, 1000);
+  }
+
+  function clearOtpTimers(type) {
+    if (otpTimerInterval[type])  { clearInterval(otpTimerInterval[type]);  otpTimerInterval[type]  = null; }
+    if (otpResendInterval[type]) { clearInterval(otpResendInterval[type]); otpResendInterval[type] = null; }
+  }
+
+  function showOtpErr(type, msg) {
+    const errEl = document.getElementById(type + 'OtpError');
+    const msgEl = document.getElementById(type + 'OtpErrorMsg');
+    if (msgEl) msgEl.textContent = msg;
+    errEl.classList.add('show');
+    setTimeout(() => errEl.classList.remove('show'), 5000);
+  }
+
+  function submitOTP(type) {
+    const otp = document.getElementById(type + 'OtpInput').value.trim();
+    if (otp.length !== 6) { showOtpErr(type, 'Sila masukkan 6 digit OTP.'); return; }
+
+    const btn = document.getElementById(type + 'OtpBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    const base    = type === 'kanak' ? pendingKanakPayload : pendingDewasaPayload;
+    const payload = Object.assign({}, base, { otp: otp });
+    const action  = type === 'kanak' ? 'confirmRegisterKanak' : 'confirmRegisterDewasa';
+
+    callGAS(action, payload,
+      function(data) {
+        btn.classList.remove('loading');
+        if (data.success) {
+          clearOtpTimers(type);
+          if (type === 'kanak') {
+            document.getElementById('bilBadge').textContent        = 'No. Bil: ' + (data.bil || '—');
+            document.getElementById('kanakOtpPanel').style.display = 'none';
+            document.getElementById('kanakSuccess').style.display  = 'block';
+          } else {
+            document.getElementById('dewasaBilBadge').textContent    = 'ID Murid: ' + (data.id || '—');
+            document.getElementById('dewasaOtpPanel').style.display  = 'none';
+            document.getElementById('dewasaSuccess').style.display   = 'block';
+          }
+        } else {
+          btn.disabled = false;
+          if (data.expired) {
+            clearOtpTimers(type);
+            document.getElementById(type + 'OtpExpired').classList.add('show');
+            document.getElementById(type + 'OtpInput').disabled = true;
+            btn.disabled = true;
+            document.getElementById(type + 'ResendBtn').disabled = false;
+            document.getElementById(type + 'ResendText').textContent = 'Hantar semula OTP';
+            if (otpResendInterval[type]) clearInterval(otpResendInterval[type]);
+          } else {
+            showOtpErr(type, data.message || 'OTP tidak tepat.');
+            if (data.attemptsLeft !== undefined) {
+              document.getElementById(type + 'OtpAttempts').textContent = data.attemptsLeft + ' cubaan berbaki';
+            }
+            if (data.attemptsLeft === 0) {
+              document.getElementById(type + 'OtpInput').disabled = true;
+              btn.disabled = true;
+            }
+          }
+        }
+      },
+      function() {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showOtpErr(type, 'Ralat sambungan. Sila cuba sebentar lagi.');
+      }
+    );
+  }
+
+  function resendOTP(type) {
+    const resendBtn = document.getElementById(type + 'ResendBtn');
+    resendBtn.disabled = true;
+    const payload = type === 'kanak' ? pendingKanakPayload : pendingDewasaPayload;
+    const action  = type === 'kanak' ? 'sendOTPKanak' : 'sendOTPDewasa';
+
+    callGAS(action, payload,
+      function(data) {
+        if (data.success) {
+          // reset OTP panel state
+          document.getElementById(type + 'OtpInput').value    = '';
+          document.getElementById(type + 'OtpInput').disabled = false;
+          document.getElementById(type + 'OtpBtn').disabled   = false;
+          document.getElementById(type + 'OtpExpired').classList.remove('show');
+          document.getElementById(type + 'OtpError').classList.remove('show');
+          document.getElementById(type + 'OtpAttempts').textContent = '3 cubaan berbaki';
+          document.getElementById(type + 'ResendText').innerHTML =
+            'Hantar semula (<span id="' + type + 'ResendCountdown">60</span>s)';
+          startOtpCountdown(type);
+          startResendCooldown(type);
+          setTimeout(() => document.getElementById(type + 'OtpInput').focus(), 100);
+        } else {
+          resendBtn.disabled = false;
+          showOtpErr(type, data.message || 'Ralat menghantar OTP.');
+        }
+      },
+      function() {
+        resendBtn.disabled = false;
+        showOtpErr(type, 'Ralat sambungan. Sila cuba sebentar lagi.');
+      }
+    );
+  }
+
+  function cancelOTP(type) {
+    clearOtpTimers(type);
+    document.getElementById(type + 'OtpPanel').style.display = 'none';
+    document.getElementById(type + 'OtpInput').disabled      = false;
+    document.getElementById(type + 'OtpBtn').disabled        = false;
+    if (type === 'kanak') {
+      document.querySelector('#formKanak .card').style.display = 'block';
+      document.getElementById('stepIndicator').style.display   = '';
+      document.querySelector('#formKanak .step-label').style.display = '';
+      const b = document.getElementById('submitKanakBtn');
+      b.classList.remove('loading'); b.disabled = false;
+    } else {
+      document.querySelector('#formDewasa .card').style.display = 'block';
+      const b = document.getElementById('submitDewasaBtn');
+      b.classList.remove('loading'); b.disabled = false;
+    }
   }
 
   // =====================
