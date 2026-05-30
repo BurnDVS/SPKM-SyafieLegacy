@@ -16,30 +16,38 @@ var TAB = {
 
 // Kolum tab PendaftaranBaru (0-indexed) — disahkan dari sheet sebenar
 var COL_KANAK = {
-  BIL:       0,  // A — Bil
-  TIMESTAMP: 1,  // B — Timestamp
-  EMAIL:     2,  // C — Email Address
-  NAMA:      3,  // D — Nama (Murid/Ibu)
-  TELEFON:   4,  // E — Nombor Telefon
-  NO_MYKID:  5,  // F — No.MYKID
-  PAKEJ:     6,  // G — Pilihan Pakej
-  TAHAP:     7,  // H — Tahap Pengajian
-  ALAMAT:    8,  // I — Alamat
-  KAEDAH:    9   // J — Kaedah Pengajian
+  BIL:        0,  // A — Bil
+  TIMESTAMP:  1,  // B — Timestamp
+  NAMA_IBU:   2,  // C — Nama Ibu/Bapa/Penjaga
+  TELEFON:    3,  // D — Nombor Telefon
+  NAMA:       4,  // E — Nama Anak (seperti MYKID)
+  NO_MYKID:   5,  // F — No. MYKID
+  EMAIL:      6,  // G — Email Address
+  ALAMAT:     7,  // H — Alamat Penuh
+  TAHAP:      8,  // I — Tahap Pengajian
+  FAHAM:      9,  // J — Saya Faham
+  PAKEJ:     10,  // K — Pilihan Pakej
+  KAEDAH:    11,  // L — Kaedah Pengajian
+  MERGED_ID: 12,  // M — Merged Doc ID - Slip Pendaftaran
+  MERGED_URL:13   // N — Merged Doc URL - Slip Pendaftaran
 };
 
 // Kolum tab KelasDewasa (0-indexed) — disahkan dari sheet sebenar
 var COL_DEWASA = {
-  BIL:       0,  // A — Bil
-  TIMESTAMP: 1,  // B — Timestamp
-  EMAIL:     2,  // C — Email Address
-  NAMA:      3,  // D — Nama
-  TELEFON:   4,  // E — Nombor Telefon
-  NO_MYKID:  5,  // F — (kosong untuk dewasa)
-  PAKEJ:     6,  // G — (kosong untuk dewasa)
-  TAHAP:     7,  // H — Tahap Pengajian
-  ALAMAT:    8,  // I — Alamat
-  GURU:      9   // J — Nama Guru
+  BIL:        0,  // A — Bil
+  TIMESTAMP:  1,  // B — Timestamp
+  EMAIL:      2,  // C — Email Address
+  NAMA:       3,  // D — Nama
+  TELEFON:    4,  // E — Nombor Telefon
+  NO_MYKAD:   5,  // F — No. MYKAD
+  PAKEJ:      6,  // G — Pilihan Pakej
+  KAEDAH:     7,  // H — Kaedah Pengajian
+  ALAMAT:     8,  // I — Alamat Penuh
+  TAHAP:      9,  // J — Tahap Pengajian
+  FAHAM:     10,  // K — Saya Faham
+  MERGED_ID: 13,  // N — Merged Doc ID
+  MERGED_URL:14,  // O — Merged Doc URL
+  GURU:      17   // R — Nama Guru
 };
 
 // Kolum tab Maklumat Guru (0-indexed)
@@ -181,7 +189,7 @@ function loginGuru(params) {
 
 // ============================================================
 // 2. registerKanak
-// Simpan pendaftaran murid kanak-kanak ke tab PendaftaranBaru!
+// Simpan pendaftaran murid kanak-kanak ke tab PendaftaranBaru
 // Input:  { namaIbu, telefon, namaAnak, mykid, email, alamat,
 //           tahap, faham, pakej, kaedah }
 // Output: { success, bil } atau { success: false, message }
@@ -204,20 +212,22 @@ function registerKanak(params) {
     if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
 
     var lastRow   = sheet.getLastRow();
-    var nextBil   = Math.max(1, lastRow - 1); // tolak baris header
+    var nextBil   = lastRow; // header = baris 1, data mula baris 2; bil seterusnya = lastRow
     var timestamp = new Date();
 
-    // Bina row mengikut susunan kolum COL_KANAK (A-J = 10 kolum)
-    var newRow = new Array(10).fill('');
+    // Bina row mengikut susunan kolum COL_KANAK (A-L = 12 kolum)
+    var newRow = new Array(12).fill('');
     newRow[COL_KANAK.BIL]       = nextBil;
     newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.EMAIL]     = params.email.trim();
-    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();   // D = Nama (Murid)
+    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim();
     newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
+    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim();
     newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
-    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
-    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
+    newRow[COL_KANAK.EMAIL]     = params.email.trim();
     newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
+    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
+    newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
+    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
     newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
 
     sheet.appendRow(newRow);
@@ -239,7 +249,7 @@ function registerKanak(params) {
 
 // ============================================================
 // 3. registerDewasa
-// Simpan pendaftaran murid dewasa ke tab KelasDewasa!
+// Simpan pendaftaran murid dewasa ke tab KelasDewasa
 // Input:  { nama, telefon, email, alamat, tahap, guru }
 // Output: { success, id } atau { success: false, message }
 // ============================================================
@@ -261,18 +271,18 @@ function registerDewasa(params) {
     if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
 
     var lastRow   = sheet.getLastRow();
-    var nextBil   = Math.max(1, lastRow - 1);
+    var nextBil   = lastRow;
     var timestamp = new Date();
 
-    // Bina row mengikut susunan kolum COL_DEWASA (A-J = 10 kolum)
-    var newRow = new Array(10).fill('');
+    // Bina row mengikut susunan kolum COL_DEWASA (A-R = 18 kolum)
+    var newRow = new Array(18).fill('');
     newRow[COL_DEWASA.BIL]       = nextBil;
     newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     newRow[COL_DEWASA.EMAIL]     = params.email.trim();
     newRow[COL_DEWASA.NAMA]      = params.nama.trim();
     newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
-    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
     newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
+    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
     newRow[COL_DEWASA.GURU]      = (params.guru || '').trim();
 
     sheet.appendRow(newRow);
@@ -341,7 +351,7 @@ function attendance(params) {
 // 5. generateSlipKanak
 // Jana slip pendaftaran menggunakan template Google Docs
 // Dipanggil terus dari registerKanak() ATAU oleh onFormSubmit()
-// Parameter: rowNum = nombor baris dalam tab PendaftaranBaru!
+// Parameter: rowNum = nombor baris dalam tab PendaftaranBaru
 // ============================================================
 function generateSlipKanak(rowNum) {
   try {
@@ -362,7 +372,7 @@ function generateSlipKanak(rowNum) {
 
     // Salin template
     var template = DriveApp.getFileById(templateId);
-    var namaAnak = rowData[COL_KANAK.NAMA_ANAK] || 'Murid';
+    var namaAnak = rowData[COL_KANAK.NAMA] || 'Murid';
     var bil      = rowData[COL_KANAK.BIL]       || rowNum;
     var newName  = 'Slip_Pendaftaran_' + namaAnak + '_Bil' + bil;
     var newFile  = template.makeCopy(newName, DriveApp.getFolderById(outputFolder));
@@ -378,7 +388,7 @@ function generateSlipKanak(rowNum) {
       '{{TELEFON}}':      rowData[COL_KANAK.TELEFON]    || '',
       '{{EMAIL}}':        rowData[COL_KANAK.EMAIL]      || '',
       '{{ALAMAT}}':       rowData[COL_KANAK.ALAMAT]     || '',
-      '{{NAMA_ANAK}}':    rowData[COL_KANAK.NAMA_ANAK]  || '',
+      '{{NAMA_ANAK}}':    rowData[COL_KANAK.NAMA]       || '',
       '{{NO_MYKID}}':     rowData[COL_KANAK.NO_MYKID]   || '',
       '{{TAHAP}}':        rowData[COL_KANAK.TAHAP]      || '',
       '{{PAKEJ}}':        rowData[COL_KANAK.PAKEJ]      || '',
@@ -463,7 +473,7 @@ function hantarEmailSlip(emailTo, namaAnak, bil, slipUrl, fileId) {
 // ============================================================
 // 7. onFormSubmit (TRIGGER)
 // Dipanggil secara automatik bila ada row baru dalam
-// tab PendaftaranBaru! (melalui Google Form atau appendRow)
+// tab PendaftaranBaru (melalui Google Form atau appendRow)
 //
 // CARA PASANG TRIGGER:
 //   Jalankan fungsi createTriggers() sekali dari editor GAS
@@ -651,7 +661,7 @@ function getMuridList() {
         return {
           bil:      r[COL_KANAK.BIL],
           namaAnak: r[COL_KANAK.NAMA],
-          namaIbu:  '',
+          namaIbu:  r[COL_KANAK.NAMA_IBU] || '',
           telefon:  r[COL_KANAK.TELEFON],
           tahap:    r[COL_KANAK.TAHAP],
           pakej:    r[COL_KANAK.PAKEJ]
@@ -739,7 +749,7 @@ function notifikasiKetidakhadiran() {
     // Bina peta nama murid → telefon ibu bapa
     var telefonMap = {};
     for (var k = 1; k < kanakData.length; k++) {
-      var nama = (kanakData[k][COL_KANAK.NAMA_ANAK] || '').toString().trim().toLowerCase();
+      var nama = (kanakData[k][COL_KANAK.NAMA] || '').toString().trim().toLowerCase();
       if (nama) telefonMap[nama] = (kanakData[k][COL_KANAK.TELEFON] || '').toString().trim();
     }
 
@@ -859,7 +869,7 @@ function testAttendance() {
 }
 
 function testGenerateSlip() {
-  // Jana slip untuk baris terakhir dalam tab PendaftaranBaru!
+  // Jana slip untuk baris terakhir dalam tab PendaftaranBaru
   var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(TAB.KANAK);
   var last  = sheet.getLastRow();
