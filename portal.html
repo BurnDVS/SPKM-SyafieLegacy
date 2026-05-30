@@ -645,9 +645,8 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
-  <div class="card-grid">
-
-    <!-- CARD 1: ADMIN LOGIN -->
+  <div style="max-width:500px; margin:0 auto;">
+  <!-- CARD 1: ADMIN LOGIN -->
     <div class="card" id="loginCard">
       <div class="card-header">
         <div class="card-icon green">🔒</div>
@@ -687,7 +686,7 @@
       <!-- Dashboard (post-login) -->
       <div class="card-body" id="dashboardPreview" style="display:none;">
         <p style="font-size:14px; color:var(--text-mid); margin-bottom:14px;">Selamat datang, <strong id="guruName"></strong> 👋</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
           <div class="stat-card" style="background:var(--green-light);">
             <p class="stat-label" style="color:var(--green);">Kanak</p>
             <p class="stat-val" style="color:var(--green);" id="statKanak">—</p>
@@ -695,10 +694,6 @@
           <div class="stat-card" style="background:var(--gold-light);">
             <p class="stat-label" style="color:var(--gold-dark);">Dewasa</p>
             <p class="stat-val" style="color:var(--gold-dark);" id="statDewasa">—</p>
-          </div>
-          <div class="stat-card" style="background:#EEF2FF;">
-            <p class="stat-label" style="color:#4F46E5;">Hadir</p>
-            <p class="stat-val" style="color:#4F46E5;" id="statHadir">—</p>
           </div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
@@ -709,49 +704,9 @@
         <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="width:100%; margin-top:0; color:var(--error); border-color:#F5C6C2;">Log Keluar</button>
       </div>
     </div>
+  </div><!-- /max-width wrapper -->
 
-    <!-- CARD 2: DAFTAR MURID BARU -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon gold">📝</div>
-        <div class="card-header-text">
-          <h3>Daftar Murid Baru</h3>
-          <p>Kanak-kanak &amp; Dewasa</p>
-        </div>
-      </div>
-      <div class="card-body">
-        <div style="margin-bottom:20px;">
-          <p style="font-size:13px; color:var(--text-mid); line-height:1.7; margin-bottom:14px;">
-            Ibu bapa atau wali boleh mendaftar murid baru tanpa perlu log masuk. Slip pendaftaran akan dihantar ke e-mel selepas pendaftaran berjaya.
-          </p>
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
-              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">1</span>
-              Isi maklumat murid &amp; ibu bapa
-            </div>
-            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
-              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">2</span>
-              Pilih pakej &amp; kaedah pengajian
-            </div>
-            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-mid);">
-              <span style="width:22px; height:22px; background:var(--green-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--green); font-weight:600; flex-shrink:0;">3</span>
-              Terima slip pendaftaran melalui e-mel
-            </div>
-          </div>
-        </div>
 
-        <div style="border-top:1px solid var(--border); padding-top:16px; display:flex; flex-direction:column; gap:10px;">
-          <button class="btn btn-gold" style="margin-top:0;" onclick="showDaftar('kanak')">
-            👦 Daftar Murid Kanak-kanak
-          </button>
-          <button class="btn btn-ghost" style="margin-top:0;" onclick="showDaftar('dewasa')">
-            🧑 Daftar Murid Dewasa
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /card-grid -->
 </section>
 
 
@@ -1582,6 +1537,11 @@
     setLoginState(false);
     const tEl = document.getElementById('hadirTarikh');
     if (tEl) tEl.value = new Date().toISOString().split('T')[0];
+    ['loginEmail', 'loginPhone'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleLogin();
+      });
+    });
   });
 </script>
 
