@@ -630,6 +630,7 @@
   <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📝 Daftar Murid</button>
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
+  <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -1078,6 +1079,32 @@
   </div>
 </section>
 
+
+<!-- ============================================================ -->
+<!-- PANEL: GURU (login required) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-guru">
+  <div class="section-heading">
+    <h2>Senarai Guru</h2>
+    <p>Semua guru berdaftar dalam sistem</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+      <table class="data-table" id="guruTable">
+        <thead>
+          <tr><th>Bil</th><th>Nama Penuh</th><th>Email</th><th>Telefon</th></tr>
+        </thead>
+        <tbody id="guruBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
 </main>
 
 <footer>
@@ -1119,6 +1146,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (name === 'kehadiran') loadKehadiranHariIni();
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
+    if (name === 'guru') loadGuruList();
   }
 
   function showDaftar(type) {
@@ -1127,7 +1155,7 @@
   }
 
   function setLoginState(loggedIn) {
-    ['kehadiran', 'murid'].forEach(n => {
+    ['kehadiran', 'murid', 'guru'].forEach(n => {
       const el = document.getElementById('nav-' + n);
       if (el) el.style.display = loggedIn ? '' : 'none';
     });
@@ -1527,6 +1555,30 @@
         (r.email   || '').toLowerCase().includes(q)
       ) : allMuridDewasa);
     }
+  }
+
+  // =====================
+  // SENARAI GURU
+  // =====================
+  function loadGuruList() {
+    const tbody = document.getElementById('guruBody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    callGAS('getGuru', {},
+      function(data) {
+        if (!data.success || !data.rows || data.rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada data guru.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.rows.map((r, i) =>
+          `<tr>
+            <td>${i + 1}</td>
+            <td>${escHtml(r.nama)}</td>
+            <td>${escHtml(r.email)}</td>
+            <td>${escHtml(r.telefon)}</td>
+          </tr>`
+        ).join('');
+      }
+    );
   }
 
   // =====================

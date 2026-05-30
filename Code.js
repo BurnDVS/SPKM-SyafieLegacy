@@ -101,6 +101,7 @@ function doPost(e) {
     else if (action === 'getDashboardStats')   result = getDashboardStats();
     else if (action === 'getKehadiranHariIni') result = getKehadiranHariIni();
     else if (action === 'getMuridList')        result = getMuridList();
+    else if (action === 'getGuru')             result = getGuru();
     else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
 
     return ContentService
@@ -132,6 +133,7 @@ function doAction(action, payload) {
   else if (action === 'getDashboardStats')   return getDashboardStats();
   else if (action === 'getKehadiranHariIni') return getKehadiranHariIni();
   else if (action === 'getMuridList')        return getMuridList();
+  else if (action === 'getGuru')             return getGuru();
   else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
 }
 
@@ -802,6 +804,34 @@ function createWhatsAppTriggers() {
     .everyDays(1)
     .create();
   Logger.log('Trigger WA dipasang: notifikasiKetidakhadiran setiap hari jam 9pm.');
+}
+
+// ============================================================
+// 19. getGuru
+// Returns { success, rows: [{nama, email, telefon}] }
+// ============================================================
+function getGuru() {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.GURU);
+    if (!sheet || sheet.getLastRow() < 2) return { success: true, rows: [] };
+
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+    var rows = data
+      .map(function(r) {
+        return {
+          nama:    (r[COL_GURU.NAMA]    || '').toString().trim(),
+          email:   (r[COL_GURU.EMAIL]   || '').toString().trim(),
+          telefon: (r[COL_GURU.TELEFON] || '').toString().trim()
+        };
+      })
+      .filter(function(r) { return r.nama; });
+
+    return { success: true, rows: rows };
+  } catch (err) {
+    Logger.log('getGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
 }
 
 // ============================================================
