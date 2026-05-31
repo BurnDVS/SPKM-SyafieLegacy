@@ -1766,7 +1766,8 @@ function getEbayarStats() {
 // getYuranParent
 // Cari rekod bayaran yuran berdasarkan nama + senarai belum bayar
 // Input:  { keyword } — substring carian nama (boleh kosong)
-// Output: { success, found:[{nama,bulan,resitUrl}], notPaid:{Jan2026:[nama...],...} }
+// Output: { success, found:[{nama,bulan,resitUrl}], belumBayar:{JAN2026:[nama...],...} }
+// Logic belumBayar: cross-check tab "NAMA MURID" vs tab Yuran bulanan
 // ============================================================
 function getYuranParent(params) {
   params = params || {};
@@ -1796,24 +1797,14 @@ function getYuranParent(params) {
       { name: 'DIS2026',         label: 'Disember 2026' }
     ];
 
-    var CALC_TABS = [
-      { name: 'CalculationJan2026',   label: 'Jan2026' },
-      { name: 'CalculationFeb2026',   label: 'Feb2026' },
-      { name: 'CalculationMac2026',   label: 'Mac2026' },
-      { name: 'CalculationApril2026', label: 'April2026' },
-      { name: 'CalculationMei2026',   label: 'Mei2026' },
-      { name: 'CalculationJun2026',   label: 'Jun2026' },
-      { name: 'CalculationJulai2026', label: 'Julai2026' },
-      { name: 'CalculationOgos2026',  label: 'Ogos2026' },
-      { name: 'CalculationSept2026',  label: 'Sept2026' },
-      { name: 'CalculationOkt2026',   label: 'Okt2026' },
-      { name: 'CalculationNov2026',   label: 'Nov2026' },
-      { name: 'CalculationDis2026',   label: 'Dis2026' }
+    var BULAN_2026 = [
+      'JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
+      'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'
     ];
 
     var ss = SpreadsheetApp.openById(YURAN_SS_ID);
 
-    // 1. FOUND — cari dalam Yuran payment tabs (hanya jika keyword diisi)
+    // 1. FOUND — cari dalam Yuran payment tabs (kekalkan sama)
     var found = [];
     if (keyword.length >= 2) {
       for (var p = 0; p < PAYMENT_TABS.length; p++) {
@@ -1837,28 +1828,59 @@ function getYuranParent(params) {
       }
     }
 
-    // 2. NOT PAID — baca Calculation tabs, Col A = nama, Col C = status (0 = belum)
-    var notPaid = {};
-    for (var c = 0; c < CALC_TABS.length; c++) {
-      try {
-        var cSheet = ss.getSheetByName(CALC_TABS[c].name);
-        if (!cSheet || cSheet.getLastRow() < 2) { notPaid[CALC_TABS[c].label] = []; continue; }
-        var cData = cSheet.getRange(2, 1, cSheet.getLastRow() - 1, 3).getValues();
-        var belum = [];
-        for (var cr = 0; cr < cData.length; cr++) {
-          var mNama    = (cData[cr][0] || '').toString().trim();
-          var statusVal = cData[cr][2]; // Col C, 0 = belum bayar
-          if (!mNama || !/[A-Za-z]/.test(mNama)) continue;
-          if (statusVal === 0 || statusVal === '0') belum.push(mNama);
+    // 2. SENARAI MURID AKTIF dari tab "NAMA MURID" (Col B, skip header row 1)
+    var activeMurid = [];
+    try {
+      var nmSheet = ss.getSheetByName('NAMA MURID');
+      if (nmSheet && nmSheet.getLastRow() > 1) {
+        var nmData = nmSheet.getRange(2, 2, nmSheet.getLastRow() - 1, 1).getValues();
+        for (var nm = 0; nm < nmData.length; nm++) {
+          var nmNama = (nmData[nm][0] || '').toString().trim().toUpperCase();
+          if (nmNama) activeMurid.push(nmNama);
         }
-        notPaid[CALC_TABS[c].label] = belum;
-      } catch (ce) {
-        Logger.log('getYuranParent calc tab error ' + CALC_TABS[c].name + ': ' + ce.message);
-        notPaid[CALC_TABS[c].label] = [];
+      }
+    } catch (nmErr) {
+      Logger.log('getYuranParent NAMA MURID error: ' + nmErr.message);
+    }
+
+    // 3. BELUM BAYAR — cross-check murid aktif vs tab Yuran bulanan
+    // Hanya include bulan yang tabnya wujud; skip bulan yang tab tak wujud
+    var belumBayar = {};
+    for (var b = 0; b < BULAN_2026.length; b++) {
+      var bulanKey = BULAN_2026[b];
+      try {
+        var bSheet = ss.getSheetByName(bulanKey);
+        if (!bSheet || bSheet.getLastRow() < 2) continue; // skip — tab tak wujud
+
+        var lastBCol = Math.max(11, bSheet.getLastColumn());
+        var bData = bSheet.getRange(2, 1, bSheet.getLastRow() - 1, lastBCol).getValues();
+
+        // Kumpul nama yang sudah bayar dari Col C (index 2), handle comma-separated
+        var sudahBayarSet = {};
+        for (var br = 0; br < bData.length; br++) {
+          var bRawNama = (bData[br][2] || '').toString().trim().toUpperCase();
+          if (!bRawNama) continue;
+          var bParts = bRawNama.split(',');
+          for (var bp = 0; bp < bParts.length; bp++) {
+            var bNama = bParts[bp].trim().toUpperCase();
+            if (bNama) sudahBayarSet[bNama] = true;
+          }
+        }
+
+        // Murid aktif yang TIDAK ada dalam sudahBayarSet = belum bayar
+        var belumList = [];
+        for (var am = 0; am < activeMurid.length; am++) {
+          if (!sudahBayarSet[activeMurid[am]]) belumList.push(activeMurid[am]);
+        }
+        belumBayar[bulanKey] = belumList;
+
+      } catch (bErr) {
+        Logger.log('getYuranParent bulan error ' + bulanKey + ': ' + bErr.message);
+        // skip bulan yang error — jangan include
       }
     }
 
-    return { success: true, found: found, notPaid: notPaid };
+    return { success: true, found: found, belumBayar: belumBayar };
 
   } catch (err) {
     Logger.log('getYuranParent error: ' + err.message);
