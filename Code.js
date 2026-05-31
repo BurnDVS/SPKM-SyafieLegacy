@@ -1767,7 +1767,7 @@ function getEbayarStats() {
 // Cari rekod bayaran yuran berdasarkan nama + senarai belum bayar
 // Input:  { keyword } — substring carian nama (boleh kosong)
 // Output: { success, found:[{nama,bulan,resitUrl}], belumBayar:{JAN2026:[nama...],...} }
-// Logic belumBayar: cross-check tab "NAMA MURID" vs tab Yuran bulanan
+// Logic belumBayar: cross-check "NAMA MURID" (Col B + Col F tarikh daftar) vs tab Yuran
 // ============================================================
 function getYuranParent(params) {
   params = params || {};
@@ -1797,6 +1797,7 @@ function getYuranParent(params) {
       { name: 'DIS2026',         label: 'Disember 2026' }
     ];
 
+    // BULAN_2026[b] maps to month index b (0=Jan … 11=Dis), all year 2026
     var BULAN_2026 = [
       'JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
       'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'
@@ -1828,15 +1829,48 @@ function getYuranParent(params) {
       }
     }
 
-    // 2. SENARAI MURID AKTIF dari tab "NAMA MURID" (Col B, skip header row 1)
+    // 2. SENARAI MURID AKTIF dari tab "NAMA MURID"
+    //    Col B (index 0) = nama, Col F (index 4) = tarikh daftar
+    //    regMonthIdx: -1 = murid lama/tiada tarikh (masuk semua bulan)
+    //                 0-11 = bulan daftar dalam 2026 (masuk dari bulan tersebut)
+    //                 999 = daftar selepas 2026 (skip semua bulan 2026)
     var activeMurid = [];
     try {
       var nmSheet = ss.getSheetByName('NAMA MURID');
       if (nmSheet && nmSheet.getLastRow() > 1) {
-        var nmData = nmSheet.getRange(2, 2, nmSheet.getLastRow() - 1, 1).getValues();
+        // Read Col B to Col F (5 columns starting at column 2)
+        var nmData = nmSheet.getRange(2, 2, nmSheet.getLastRow() - 1, 5).getValues();
         for (var nm = 0; nm < nmData.length; nm++) {
-          var nmNama = (nmData[nm][0] || '').toString().trim().toUpperCase();
-          if (nmNama) activeMurid.push(nmNama);
+          var nmNama = (nmData[nm][0] || '').toString().trim().toUpperCase(); // Col B
+          if (!nmNama) continue;
+
+          var tarikhRaw   = nmData[nm][4]; // Col F (5th column read = index 4)
+          var regMonthIdx = -1;            // default: old murid, masuk semua bulan
+
+          if (tarikhRaw) {
+            var d = null;
+            if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
+              d = tarikhRaw;
+            } else {
+              var ts = tarikhRaw.toString().trim();
+              if (ts) {
+                var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // dd/MM/yyyy
+                if (m1) d = new Date(parseInt(m1[3], 10), parseInt(m1[2], 10) - 1, parseInt(m1[1], 10));
+                if (!d) {
+                  var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})$/);     // yyyy-MM-dd
+                  if (m2) d = new Date(parseInt(m2[1], 10), parseInt(m2[2], 10) - 1, parseInt(m2[3], 10));
+                }
+              }
+            }
+            if (d && !isNaN(d.getTime())) {
+              var yr = d.getFullYear();
+              if (yr < 2026)  { regMonthIdx = -1;             } // Daftar sebelum 2026 = murid lama
+              else if (yr === 2026) { regMonthIdx = d.getMonth(); } // 0=Jan … 11=Dis
+              else            { regMonthIdx = 999;             } // Daftar selepas 2026
+            }
+          }
+
+          activeMurid.push({ nama: nmNama, regMonthIdx: regMonthIdx });
         }
       }
     } catch (nmErr) {
@@ -1844,10 +1878,12 @@ function getYuranParent(params) {
     }
 
     // 3. BELUM BAYAR — cross-check murid aktif vs tab Yuran bulanan
-    // Hanya include bulan yang tabnya wujud; skip bulan yang tab tak wujud
+    //    Filter: murid yang daftar SELEPAS bulan berkenaan tidak dimasukkan
+    //    Hanya include bulan yang tabnya wujud; skip bulan yang tab tak wujud
     var belumBayar = {};
     for (var b = 0; b < BULAN_2026.length; b++) {
-      var bulanKey = BULAN_2026[b];
+      var bulanKey      = BULAN_2026[b];
+      var bulanMonthIdx = b; // 0=Jan, 1=Feb, ..., 11=Dis
       try {
         var bSheet = ss.getSheetByName(bulanKey);
         if (!bSheet || bSheet.getLastRow() < 2) continue; // skip — tab tak wujud
@@ -1867,10 +1903,14 @@ function getYuranParent(params) {
           }
         }
 
-        // Murid aktif yang TIDAK ada dalam sudahBayarSet = belum bayar
+        // Cross-check: murid aktif yang layak untuk bulan ini dan belum bayar
         var belumList = [];
         for (var am = 0; am < activeMurid.length; am++) {
-          if (!sudahBayarSet[activeMurid[am]]) belumList.push(activeMurid[am]);
+          var murid = activeMurid[am];
+          // Skip murid yang daftar selepas bulan ini (regMonthIdx > bulanMonthIdx)
+          // -1 = tiada tarikh (lulus), 0-11 = bandingkan, 999 = daftar selepas 2026 (skip)
+          if (murid.regMonthIdx !== -1 && murid.regMonthIdx > bulanMonthIdx) continue;
+          if (!sudahBayarSet[murid.nama]) belumList.push(murid.nama);
         }
         belumBayar[bulanKey] = belumList;
 
