@@ -134,14 +134,8 @@ function doPost(e) {
   }
 }
 
-// doGet — serve portal HTML or ebayar page based on ?page= parameter
+// doGet — serve portal HTML
 function doGet(e) {
-  var page = (e && e.parameter && e.parameter.page) ? e.parameter.page : 'portal';
-  if (page === 'ebayar') {
-    return HtmlService.createHtmlOutputFromFile('ebayar')
-      .setTitle('eBayar — Kelas Mengaji')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
   return HtmlService.createHtmlOutputFromFile('portal')
     .setTitle('Sistem Pengurusan Kelas Mengaji')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
