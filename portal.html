@@ -1205,13 +1205,13 @@
 <nav class="nav-bar" role="navigation" aria-label="Menu utama">
   <button class="nav-tab active" id="nav-utama"     onclick="showPanel('utama')">🏠 Utama</button>
   <button class="nav-tab"        id="tabLogMasuk"   onclick="showPanel('home')">🔒 Log Masuk</button>
-  <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📝 Daftar Murid</button>
-  <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" style="display:none;">✅ Kehadiran</button>
-  <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
-  <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
-  <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
-  <button class="nav-tab"        id="nav-ebayar"    onclick="showPanel('ebayar')" aria-selected="false">💳 eBayar</button>
-  <button class="nav-tab"        id="nav-esemak"    onclick="showPanel('esemak')">🔍 eSemak</button>
+  <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📋 Daftar Murid</button>
+  <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" data-auth="true" style="display:none;">✅ Kehadiran</button>
+  <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     data-auth="true" style="display:none;">👥 Murid</button>
+  <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      data-auth="true" style="display:none;">👨‍🏫 Senarai Guru</button>
+  <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     data-auth="true" style="display:none;">💰 Yuran</button>
+  <button class="nav-tab"        id="nav-ebayar"    onclick="showPanel('ebayar')">💳 eBayar</button>
+  <button class="nav-tab"        id="nav-esemak"    onclick="showPanel('esemak')">🔍 eSemak Yuran</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -2295,6 +2295,12 @@
     if (name === 'esemak') initEsemak();
   }
 
+  function updateNav(isLoggedIn) {
+    document.querySelectorAll('[data-auth="true"]').forEach(function(el) {
+      el.style.display = isLoggedIn ? '' : 'none';
+    });
+  }
+
   function showDaftar(type) {
     showPanel('daftar');
     switchRegTab(type);
@@ -2462,6 +2468,7 @@
           document.getElementById('headerUserName').textContent = data.user;
           document.getElementById('headerUserInfo').style.display = 'flex';
           setLoginState(true);
+          updateNav(true);
           loadDashboardStats();
           const gEl = document.getElementById('hadirGuru');
           if (gEl) gEl.value = data.user;
@@ -2490,6 +2497,7 @@
     document.getElementById('headerUserInfo').style.display = 'none';
     document.getElementById('headerUserName').textContent = '';
     setLoginState(false);
+    updateNav(false);
     showPanel('home');
   }
 
