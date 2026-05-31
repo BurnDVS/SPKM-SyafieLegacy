@@ -112,6 +112,7 @@ function doPost(e) {
     else if (action === 'getMuridList')           result = getMuridList();
     else if (action === 'getGuru')                result = getGuru();
     else if (action === 'getYuranStats')          result = getYuranStats(body);
+    else if (action === 'getEbayarStats')         result = getEbayarStats();
     else if (action === 'recordCash')             result = recordCash(body);
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
     else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
@@ -157,6 +158,7 @@ function doAction(action, payload) {
   else if (action === 'getMuridList')          return getMuridList();
   else if (action === 'getGuru')               return getGuru();
   else if (action === 'getYuranStats')         return getYuranStats(payload);
+  else if (action === 'getEbayarStats')        return getEbayarStats();
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
@@ -1702,5 +1704,58 @@ function confirmRegisterDewasa(params) {
   } catch (err) {
     Logger.log('confirmRegisterDewasa error: ' + err.message);
     return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+  }
+}
+
+// ============================================================
+// getEbayarStats
+// Baca stats agregat dari 12 tab Calculation dalam Yuran spreadsheet
+// Output: { success, stats: [{jumlahDaftar, selesai, belum, peratus}] }
+// ============================================================
+function getEbayarStats() {
+  try {
+    var STATS_SHEET_ID = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
+    var tabs = [
+      'CalculationJan2026',
+      'CalculationFeb2026',
+      'CalculationMac2026',
+      'CalculationApril2026',
+      'CalculationMei2026',
+      'CalculationJun2026',
+      'CalculationJulai2026',
+      'CalculationOgos2026',
+      'CalculationSept2026',
+      'CalculationOkt2026',
+      'CalculationNov2026',
+      'CalculationDis2026'
+    ];
+
+    var ss      = SpreadsheetApp.openById(STATS_SHEET_ID);
+    var results = [];
+
+    for (var i = 0; i < tabs.length; i++) {
+      try {
+        var sheet = ss.getSheetByName(tabs[i]);
+        if (!sheet) {
+          results.push({ error: 'Tab tidak dijumpai: ' + tabs[i] });
+          continue;
+        }
+        var row = sheet.getRange(2, 5, 1, 4).getValues()[0];
+        results.push({
+          jumlahDaftar: row[0] || 0,
+          selesai:      row[1] || 0,
+          belum:        row[2] || 0,
+          peratus:      row[3] || 0
+        });
+      } catch (tabErr) {
+        results.push({ error: tabErr.message });
+      }
+    }
+
+    return { success: true, stats: results };
+
+  } catch (err) {
+    Logger.log('getEbayarStats error: ' + err.message);
+    return { success: false, message: err.message };
   }
 }
