@@ -1058,6 +1058,119 @@
     .ebayar-qr { width: 120px; height: 120px; }
   }
 
+  /* === ESEMAK PANEL === */
+  .esemak-months-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 860px) { .esemak-months-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .esemak-months-grid { grid-template-columns: 1fr; } }
+
+  .esemak-month-block {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .esemak-month-header {
+    background: var(--green);
+    color: #FFFFFF;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: 'Lora', serif;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .esemak-month-header.current-month {
+    background: #1A3A6B;
+    border: 2px solid #FFD700;
+  }
+  .esemak-belum-count {
+    background: #E74C3C;
+    color: #FFFFFF;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .esemak-belum-count.all-paid { background: #2E7D32; }
+  .esemak-current-badge {
+    background: #FFD700;
+    color: #0A1F44;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .esemak-murid-list { list-style: none; padding: 0; margin: 0; }
+  .esemak-murid-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dark);
+  }
+  .esemak-murid-item:last-child { border-bottom: none; }
+  .esemak-urgent-link {
+    color: #E74C3C;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .esemak-urgent-link:hover { text-decoration: underline; }
+  .esemak-empty-month {
+    padding: 14px 16px;
+    font-size: 12px;
+    color: #2E7D32;
+    text-align: center;
+    background: #E8F5E9;
+  }
+
+  .esemak-result-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+  }
+  .esemak-result-name {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--green);
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .esemak-payment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 12px;
+  }
+  .esemak-payment-row:last-child { border-bottom: none; }
+  .esemak-payment-bulan { color: var(--text-mid); }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -1098,6 +1211,7 @@
   <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
   <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
   <button class="nav-tab"        id="nav-ebayar"    onclick="showPanel('ebayar')" aria-selected="false">💳 eBayar</button>
+  <button class="nav-tab"        id="nav-esemak"    onclick="showPanel('esemak')">🔍 eSemak</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -2055,6 +2169,64 @@
 
 </section>
 
+
+<!-- ============================================================ -->
+<!-- PANEL: ESEMAK (boleh akses tanpa login) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-esemak">
+
+  <div class="section-heading">
+    <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+    <h2>eSemak Yuran</h2>
+    <p>Semak rekod bayaran yuran dan senarai murid belum kemaskini</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <!-- SEARCH BOX -->
+  <div style="max-width:620px; margin:0 auto 36px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon gold">🔍</div>
+        <div class="card-header-text">
+          <h3>Semak Rekod Bayaran</h3>
+          <p>Masukkan nama murid untuk semak rekod yuran dan resit</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex; gap:12px;">
+          <input type="text" id="esemakKeyword" placeholder="Contoh: BUKHORI"
+                 oninput="this.value=this.value.toUpperCase()"
+                 onkeydown="if(event.key==='Enter')semakYuran()"
+                 style="margin:0; flex:1;">
+          <button class="btn btn-primary btn-sm" style="margin-top:0; flex-shrink:0;" onclick="semakYuran()">Semak</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH RESULTS -->
+  <div id="esemakResultArea" style="max-width:700px; margin:0 auto 48px; display:none;">
+    <h3 style="font-family:'Lora',serif; font-size:17px; color:var(--green); margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+      🔍 Hasil Carian
+    </h3>
+    <div id="esemakResultContainer"></div>
+  </div>
+
+  <!-- SENARAI BELUM KEMASKINI -->
+  <div style="max-width:960px; margin:0 auto;">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap;">
+      <h3 style="font-family:'Lora',serif; font-size:18px; color:var(--green); margin:0;">
+        ⚠ Senarai Belum Kemaskini
+      </h3>
+      <span style="font-size:12px; color:var(--text-muted);">Dikemaskini dari CalculationTabs · 2026</span>
+    </div>
+    <div id="esemakBelumContainer">
+      <p style="color:var(--text-muted); text-align:center; padding:40px 0;">Memuatkan senarai belum kemaskini...</p>
+    </div>
+  </div>
+
+</section>
+
 </main>
 
 <footer>
@@ -2084,6 +2256,9 @@
   let kehadiranStatsData  = [];
   let currentKehadiranTab = 'stats';
   let guruMuridList       = [];
+
+  // eSemak state
+  let esemakLoaded = false;
   const BULAN_LIST = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
 
   // OTP flow state
@@ -2117,6 +2292,7 @@
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
     if (name === 'guru') loadGuruList();
     if (name === 'yuran') loadYuranPanel();
+    if (name === 'esemak') initEsemak();
   }
 
   function showDaftar(type) {
@@ -3264,6 +3440,151 @@
         showErr('rekodError', 'Ralat sambungan. Sila cuba semula.');
       }
     );
+  }
+
+  // =====================
+  // ESEMAK
+  // =====================
+  async function initEsemak() {
+    if (esemakLoaded) return;
+    document.getElementById('esemakBelumContainer').innerHTML =
+      '<p style="text-align:center; color:var(--text-muted); padding:40px 0;">Memuatkan senarai belum kemaskini...</p>';
+    try {
+      var data = await callGASPromise('getYuranParent', { keyword: '' });
+      if (data.success) {
+        renderBelumKemaskini(data.notPaid);
+        esemakLoaded = true;
+      } else {
+        document.getElementById('esemakBelumContainer').innerHTML =
+          '<p style="text-align:center; color:var(--error); padding:40px 0;">Ralat: ' + escHtml(data.message || 'Tidak dapat memuatkan data.') + '</p>';
+      }
+    } catch (err) {
+      document.getElementById('esemakBelumContainer').innerHTML =
+        '<p style="text-align:center; color:var(--error); padding:40px 0;">Ralat sambungan. Sila cuba semula.</p>';
+    }
+  }
+
+  async function semakYuran() {
+    var keyword    = (document.getElementById('esemakKeyword').value || '').trim().toUpperCase();
+    var resultArea = document.getElementById('esemakResultArea');
+    var resultEl   = document.getElementById('esemakResultContainer');
+    resultArea.style.display = 'block';
+
+    if (!keyword || keyword.length < 2) {
+      resultEl.innerHTML =
+        '<div class="alert alert-error show"><span class="alert-icon">⚠</span><span>Sila masukkan sekurang-kurangnya 2 huruf nama.</span></div>';
+      return;
+    }
+
+    resultEl.innerHTML =
+      '<p style="text-align:center; color:var(--text-muted); padding:20px;">&#x1F50D; Mencari rekod untuk <strong>' + escHtml(keyword) + '</strong>...</p>';
+
+    try {
+      var data = await callGASPromise('getYuranParent', { keyword: keyword });
+      if (!data.success) {
+        resultEl.innerHTML =
+          '<p style="text-align:center; color:var(--error); padding:20px;">Ralat: ' + escHtml(data.message || 'Tidak dapat memuatkan data.') + '</p>';
+        return;
+      }
+      renderEsemakResult(data.found, keyword);
+    } catch (err) {
+      resultEl.innerHTML =
+        '<p style="text-align:center; color:var(--error); padding:20px;">Ralat sambungan. Sila cuba semula.</p>';
+    }
+  }
+
+  function renderEsemakResult(found, keyword) {
+    var el = document.getElementById('esemakResultContainer');
+    if (!found || found.length === 0) {
+      el.innerHTML =
+        '<div class="card"><div class="card-body" style="text-align:center; color:var(--text-muted);">' +
+        'Tiada rekod bayaran dijumpai untuk <strong>' + escHtml(keyword) + '</strong>.' +
+        '</div></div>';
+      return;
+    }
+
+    // Group by name
+    var byNama = {};
+    for (var i = 0; i < found.length; i++) {
+      var f = found[i];
+      var key = f.nama.toUpperCase().trim();
+      if (!byNama[key]) byNama[key] = { nama: f.nama, payments: [] };
+      byNama[key].payments.push({ bulan: f.bulan, resitUrl: f.resitUrl });
+    }
+
+    var html = '';
+    var keys = Object.keys(byNama).sort();
+    for (var k = 0; k < keys.length; k++) {
+      var murid = byNama[keys[k]];
+      html += '<div class="esemak-result-card">';
+      html += '<div class="esemak-result-name">&#x1F464; ' + escHtml(murid.nama) + '</div>';
+      for (var j = 0; j < murid.payments.length; j++) {
+        var pay = murid.payments[j];
+        var resitBtn = pay.resitUrl
+          ? '<a href="' + escHtml(pay.resitUrl) + '" target="_blank" class="btn btn-ghost btn-sm" style="margin:0; padding:4px 10px; font-size:12px;">&#x1F4C4; Resit</a>'
+          : '<span style="color:var(--text-muted); font-size:12px;">Tiada resit</span>';
+        html += '<div class="esemak-payment-row">';
+        html += '<span class="esemak-payment-bulan">&#x2705; ' + escHtml(pay.bulan) + '</span>';
+        html += resitBtn;
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderBelumKemaskini(notPaid) {
+    var el  = document.getElementById('esemakBelumContainer');
+    var now = new Date();
+    var currentMonthIdx = now.getMonth();
+
+    var MONTHS = [
+      { key: 'Jan2026',   label: 'Januari 2026',   idx: 0 },
+      { key: 'Feb2026',   label: 'Februari 2026',  idx: 1 },
+      { key: 'Mac2026',   label: 'Mac 2026',        idx: 2 },
+      { key: 'April2026', label: 'April 2026',      idx: 3 },
+      { key: 'Mei2026',   label: 'Mei 2026',        idx: 4 },
+      { key: 'Jun2026',   label: 'Jun 2026',        idx: 5 },
+      { key: 'Julai2026', label: 'Julai 2026',      idx: 6 },
+      { key: 'Ogos2026',  label: 'Ogos 2026',       idx: 7 },
+      { key: 'Sept2026',  label: 'September 2026',  idx: 8 },
+      { key: 'Okt2026',   label: 'Oktober 2026',    idx: 9 },
+      { key: 'Nov2026',   label: 'November 2026',   idx: 10 },
+      { key: 'Dis2026',   label: 'Disember 2026',   idx: 11 }
+    ];
+
+    var html = '<div class="esemak-months-grid">';
+    for (var m = 0; m < MONTHS.length; m++) {
+      var month      = MONTHS[m];
+      var list       = (notPaid && notPaid[month.key]) ? notPaid[month.key] : [];
+      var isCurrent  = month.idx === currentMonthIdx;
+      var hdrClass   = isCurrent ? 'esemak-month-header current-month' : 'esemak-month-header';
+      var curBadge   = isCurrent ? '<span class="esemak-current-badge">Bulan Ini</span>' : '';
+      var cntClass   = list.length === 0 ? 'esemak-belum-count all-paid' : 'esemak-belum-count';
+      var cntLabel   = list.length === 0 ? '&#x2705; 0' : list.length + ' belum';
+
+      html += '<div class="esemak-month-block">';
+      html += '<div class="' + hdrClass + '">';
+      html += '<span>' + escHtml(month.label) + curBadge + '</span>';
+      html += '<span class="' + cntClass + '">' + cntLabel + '</span>';
+      html += '</div>';
+
+      if (list.length === 0) {
+        html += '<div class="esemak-empty-month">&#x2705; Semua murid telah membayar!</div>';
+      } else {
+        html += '<ul class="esemak-murid-list">';
+        for (var n = 0; n < list.length; n++) {
+          html += '<li class="esemak-murid-item">';
+          html += '<span>' + escHtml(list[n]) + '</span>';
+          html += '<a href="javascript:void(0)" onclick="showPanel(\'ebayar\')" class="esemak-urgent-link">Sila Kemaskini Segera &#x2192;</a>';
+          html += '</li>';
+        }
+        html += '</ul>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
   }
 
   // =====================

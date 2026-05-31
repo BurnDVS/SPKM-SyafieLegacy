@@ -113,6 +113,7 @@ function doPost(e) {
     else if (action === 'getGuru')                result = getGuru();
     else if (action === 'getYuranStats')          result = getYuranStats(body);
     else if (action === 'getEbayarStats')         result = getEbayarStats();
+    else if (action === 'getYuranParent')         result = getYuranParent(body);
     else if (action === 'recordCash')             result = recordCash(body);
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
     else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
@@ -159,6 +160,7 @@ function doAction(action, payload) {
   else if (action === 'getGuru')               return getGuru();
   else if (action === 'getYuranStats')         return getYuranStats(payload);
   else if (action === 'getEbayarStats')        return getEbayarStats();
+  else if (action === 'getYuranParent')        return getYuranParent(payload);
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
@@ -1756,6 +1758,110 @@ function getEbayarStats() {
 
   } catch (err) {
     Logger.log('getEbayarStats error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// getYuranParent
+// Cari rekod bayaran yuran berdasarkan nama + senarai belum bayar
+// Input:  { keyword } — substring carian nama (boleh kosong)
+// Output: { success, found:[{nama,bulan,resitUrl}], notPaid:{Jan2026:[nama...],...} }
+// ============================================================
+function getYuranParent(params) {
+  params = params || {};
+  try {
+    var keyword = (params.keyword || '').toString().trim().toUpperCase();
+
+    var PAYMENT_TABS = [
+      { name: 'Yuran Mei',       label: 'Mei 2024' },
+      { name: 'Yuran Jun',       label: 'Jun 2024' },
+      { name: 'Yuran Julai',     label: 'Julai 2024' },
+      { name: 'Yuran Ogos',      label: 'Ogos 2024' },
+      { name: 'Yuran September', label: 'September 2024' },
+      { name: 'Yuran Oktober',   label: 'Oktober 2024' },
+      { name: 'Yuran November',  label: 'November 2024' },
+      { name: 'Yuran Disember',  label: 'Disember 2024' },
+      { name: 'JAN2026',         label: 'Januari 2026' },
+      { name: 'FEB2026',         label: 'Februari 2026' },
+      { name: 'MAC2026',         label: 'Mac 2026' },
+      { name: 'APRIL2026',       label: 'April 2026' },
+      { name: 'MEI2026',         label: 'Mei 2026' },
+      { name: 'JUN2026',         label: 'Jun 2026' },
+      { name: 'JULAI2026',       label: 'Julai 2026' },
+      { name: 'OGOS2026',        label: 'Ogos 2026' },
+      { name: 'SEPT2026',        label: 'September 2026' },
+      { name: 'OKT2026',         label: 'Oktober 2026' },
+      { name: 'NOV2026',         label: 'November 2026' },
+      { name: 'DIS2026',         label: 'Disember 2026' }
+    ];
+
+    var CALC_TABS = [
+      { name: 'CalculationJan2026',   label: 'Jan2026' },
+      { name: 'CalculationFeb2026',   label: 'Feb2026' },
+      { name: 'CalculationMac2026',   label: 'Mac2026' },
+      { name: 'CalculationApril2026', label: 'April2026' },
+      { name: 'CalculationMei2026',   label: 'Mei2026' },
+      { name: 'CalculationJun2026',   label: 'Jun2026' },
+      { name: 'CalculationJulai2026', label: 'Julai2026' },
+      { name: 'CalculationOgos2026',  label: 'Ogos2026' },
+      { name: 'CalculationSept2026',  label: 'Sept2026' },
+      { name: 'CalculationOkt2026',   label: 'Okt2026' },
+      { name: 'CalculationNov2026',   label: 'Nov2026' },
+      { name: 'CalculationDis2026',   label: 'Dis2026' }
+    ];
+
+    var ss = SpreadsheetApp.openById(YURAN_SS_ID);
+
+    // 1. FOUND — cari dalam Yuran payment tabs (hanya jika keyword diisi)
+    var found = [];
+    if (keyword.length >= 2) {
+      for (var p = 0; p < PAYMENT_TABS.length; p++) {
+        try {
+          var pSheet = ss.getSheetByName(PAYMENT_TABS[p].name);
+          if (!pSheet || pSheet.getLastRow() < 2) continue;
+          var lastCol = Math.max(12, pSheet.getLastColumn());
+          var pData = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, lastCol).getValues();
+          for (var pr = 0; pr < pData.length; pr++) {
+            var rawNama  = (pData[pr][2] || '').toString().trim().toUpperCase(); // Col C
+            var resitUrl = (pData[pr][11] || '').toString().trim();              // Col L
+            if (!rawNama) continue;
+            var parts = rawNama.split(',');
+            for (var pn = 0; pn < parts.length; pn++) {
+              var nama = parts[pn].trim().toUpperCase();
+              if (!nama || nama.indexOf(keyword) === -1) continue;
+              found.push({ nama: nama, bulan: PAYMENT_TABS[p].label, resitUrl: resitUrl });
+            }
+          }
+        } catch (pe) { Logger.log('getYuranParent payment tab error ' + PAYMENT_TABS[p].name + ': ' + pe.message); }
+      }
+    }
+
+    // 2. NOT PAID — baca Calculation tabs, Col A = nama, Col C = status (0 = belum)
+    var notPaid = {};
+    for (var c = 0; c < CALC_TABS.length; c++) {
+      try {
+        var cSheet = ss.getSheetByName(CALC_TABS[c].name);
+        if (!cSheet || cSheet.getLastRow() < 2) { notPaid[CALC_TABS[c].label] = []; continue; }
+        var cData = cSheet.getRange(2, 1, cSheet.getLastRow() - 1, 3).getValues();
+        var belum = [];
+        for (var cr = 0; cr < cData.length; cr++) {
+          var mNama    = (cData[cr][0] || '').toString().trim();
+          var statusVal = cData[cr][2]; // Col C, 0 = belum bayar
+          if (!mNama || !/[A-Za-z]/.test(mNama)) continue;
+          if (statusVal === 0 || statusVal === '0') belum.push(mNama);
+        }
+        notPaid[CALC_TABS[c].label] = belum;
+      } catch (ce) {
+        Logger.log('getYuranParent calc tab error ' + CALC_TABS[c].name + ': ' + ce.message);
+        notPaid[CALC_TABS[c].label] = [];
+      }
+    }
+
+    return { success: true, found: found, notPaid: notPaid };
+
+  } catch (err) {
+    Logger.log('getYuranParent error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
