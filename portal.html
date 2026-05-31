@@ -861,6 +861,75 @@
     max-height: 500px;
   }
 
+  /* === EBAYAR PANEL === */
+  .ebayar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) { .ebayar-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .ebayar-grid { grid-template-columns: 1fr; } }
+
+  .ebayar-card {
+    background: #FFFFFF;
+    border: 1px solid #E2D9C5;
+    border-radius: 14px;
+    padding: 24px 16px 20px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ebayar-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.10); }
+  .ebayar-card.current { border: 2px solid #0A1F44; background: #E8EEF8; }
+  .ebayar-card.past { opacity: 0.6; }
+
+  .ebayar-month {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0A1F44;
+    letter-spacing: 1px;
+  }
+  .ebayar-year {
+    font-size: 12px;
+    color: #888;
+    font-weight: 400;
+    letter-spacing: 2px;
+  }
+  .ebayar-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 12px;
+    border-radius: 20px;
+    min-height: 20px;
+  }
+  .ebayar-badge.current-badge { background: #0A1F44; color: #FFD700; }
+  .ebayar-badge.past-badge { background: #E2D9C5; color: #888; }
+  .ebayar-badge.future-badge { background: #FFF8DC; color: #B8960C; }
+
+  .ebayar-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 9px 18px;
+    background: #FFD700;
+    color: #0A1F44;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .ebayar-btn:hover { background: #B8960C; color: #FFFFFF; }
+  .ebayar-card.past .ebayar-btn { background: #E2D9C5; color: #888; pointer-events: none; }
+  .ebayar-card.future-locked .ebayar-btn { background: #E2D9C5; color: #888; pointer-events: none; }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -900,6 +969,7 @@
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     style="display:none;">📋 Murid</button>
   <button class="nav-tab"        id="nav-guru"      onclick="showPanel('guru')"      style="display:none;">👨‍🏫 Senarai Guru</button>
   <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     style="display:none;">💰 Yuran</button>
+  <button class="nav-tab"        id="nav-ebayar"    onclick="showPanel('ebayar')" aria-selected="false">💳 eBayar</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -1751,6 +1821,92 @@
   </div>
 </section>
 
+
+<section class="panel" id="panel-ebayar">
+
+  <div class="section-heading">
+    <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+    <h2>Portal Bayaran Yuran 2026</h2>
+    <p>Klik butang bulan untuk membuat bayaran yuran melalui Google Form</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <div class="ebayar-grid">
+    <div class="ebayar-card" id="ecard-0">
+      <div class="ebayar-month">JANUARI</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-0"></div>
+      <a href="https://forms.gle/DuzmZnoSu1JxY95fA" target="_blank" class="ebayar-btn" id="ebtn-0">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-1">
+      <div class="ebayar-month">FEBRUARI</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-1"></div>
+      <a href="https://forms.gle/Ue9jHfgP7ZR5tvWv6" target="_blank" class="ebayar-btn" id="ebtn-1">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-2">
+      <div class="ebayar-month">MAC</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-2"></div>
+      <a href="https://forms.gle/TMYXVccPVT6ziVi8A" target="_blank" class="ebayar-btn" id="ebtn-2">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-3">
+      <div class="ebayar-month">APRIL</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-3"></div>
+      <a href="https://forms.gle/8t2uKNnp3x13ekH67" target="_blank" class="ebayar-btn" id="ebtn-3">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-4">
+      <div class="ebayar-month">MEI</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-4"></div>
+      <a href="https://forms.gle/1sfLDT5iM9DUTLaE8" target="_blank" class="ebayar-btn" id="ebtn-4">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-5">
+      <div class="ebayar-month">JUN</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-5"></div>
+      <a href="https://forms.gle/bdvhV9n8hT9PDmso6" target="_blank" class="ebayar-btn" id="ebtn-5">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-6">
+      <div class="ebayar-month">JULAI</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-6"></div>
+      <a href="https://forms.gle/sRwXkUCxKex4ak499" target="_blank" class="ebayar-btn" id="ebtn-6">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-7">
+      <div class="ebayar-month">OGOS</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-7"></div>
+      <a href="https://forms.gle/JGydXBHTj4e88QXW6" target="_blank" class="ebayar-btn" id="ebtn-7">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-8">
+      <div class="ebayar-month">SEPTEMBER</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-8"></div>
+      <a href="https://forms.gle/NdNdkaaQ752Uh8hi7" target="_blank" class="ebayar-btn" id="ebtn-8">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-9">
+      <div class="ebayar-month">OKTOBER</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-9"></div>
+      <a href="https://forms.gle/5MqvBgKTGcTV5f4D8" target="_blank" class="ebayar-btn" id="ebtn-9">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-10">
+      <div class="ebayar-month">NOVEMBER</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-10"></div>
+      <a href="https://forms.gle/A229QLjGbDEktucK6" target="_blank" class="ebayar-btn" id="ebtn-10">&#x1F4B3; Bayar Yuran</a>
+    </div>
+    <div class="ebayar-card" id="ecard-11">
+      <div class="ebayar-month">DISEMBER</div>
+      <div class="ebayar-year">2026</div>
+      <div class="ebayar-badge" id="ebadge-11"></div>
+      <a href="https://forms.gle/Ux3YTabputDjFCEM8" target="_blank" class="ebayar-btn" id="ebtn-11">&#x1F4B3; Bayar Yuran</a>
+    </div>
+  </div>
+
+</section>
 
 </main>
 
@@ -2955,10 +3111,38 @@
   }
 
   // =====================
+  // EBAYAR
+  // =====================
+  function initEbayar() {
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+    for (var i = 0; i < 12; i++) {
+      var card  = document.getElementById('ecard-'  + i);
+      var badge = document.getElementById('ebadge-' + i);
+      if (!card || !badge) continue;
+      if (currentYear > 2026 || (currentYear === 2026 && i < currentMonth)) {
+        card.classList.add('past');
+        badge.textContent = '✓ Selesai';
+        badge.className = 'ebayar-badge past-badge';
+      } else if (currentYear === 2026 && i === currentMonth) {
+        card.classList.add('current');
+        badge.textContent = '● Bulan Ini';
+        badge.className = 'ebayar-badge current-badge';
+      } else {
+        card.classList.add('future-locked');
+        badge.textContent = 'Akan Datang';
+        badge.className = 'ebayar-badge future-badge';
+      }
+    }
+  }
+
+  // =====================
   // INIT
   // =====================
   document.addEventListener('DOMContentLoaded', () => {
     updateStepUI(1);
+    initEbayar();
     setLoginState(false);
     showPanel('utama');
     const tEl = document.getElementById('hadirTarikh');
