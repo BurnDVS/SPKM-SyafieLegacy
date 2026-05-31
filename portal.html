@@ -2213,12 +2213,27 @@
   </div>
 
   <!-- SENARAI BELUM KEMASKINI -->
-  <div style="max-width:960px; margin:0 auto;">
+  <div style="max-width:700px; margin:0 auto;">
     <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap;">
-      <h3 style="font-family:'Lora',serif; font-size:18px; color:var(--green); margin:0;">
+      <h3 style="font-family:'Lora',serif; font-size:18px; color:var(--green); margin:0; flex-shrink:0;">
         ⚠ Senarai Belum Kemaskini
       </h3>
-      <span style="font-size:12px; color:var(--text-muted);">Dikemaskini dari CalculationTabs · 2026</span>
+      <select id="esemakBulanSelect" onchange="onEsemakBulanChange()"
+              style="margin:0; flex:1; min-width:160px; max-width:200px; font-weight:500; color:var(--green); border-color:var(--gold);">
+        <option value="JAN2026">Januari 2026</option>
+        <option value="FEB2026">Februari 2026</option>
+        <option value="MAC2026">Mac 2026</option>
+        <option value="APRIL2026">April 2026</option>
+        <option value="MEI2026">Mei 2026</option>
+        <option value="JUN2026">Jun 2026</option>
+        <option value="JULAI2026">Julai 2026</option>
+        <option value="OGOS2026">Ogos 2026</option>
+        <option value="SEPT2026">September 2026</option>
+        <option value="OKT2026">Oktober 2026</option>
+        <option value="NOV2026">November 2026</option>
+        <option value="DIS2026">Disember 2026</option>
+      </select>
+      <span id="esemakBelumCount" style="font-size:13px; font-weight:500; white-space:nowrap;"></span>
     </div>
     <div id="esemakBelumContainer">
       <p style="color:var(--text-muted); text-align:center; padding:40px 0;">Memuatkan senarai belum kemaskini...</p>
@@ -2258,7 +2273,8 @@
   let guruMuridList       = [];
 
   // eSemak state
-  let esemakLoaded = false;
+  let esemakLoaded    = false;
+  let esemakBelumData = null;
   const BULAN_LIST = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
 
   // OTP flow state
@@ -3542,61 +3558,54 @@
   }
 
   function renderBelumKemaskini(belumBayar) {
-    var el  = document.getElementById('esemakBelumContainer');
-    var now = new Date();
-    var currentMonthIdx = now.getMonth();
+    esemakBelumData = belumBayar;
+    // Set dropdown default to current month
+    var BULAN_KEYS = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
+                      'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
+    var sel = document.getElementById('esemakBulanSelect');
+    if (sel) sel.value = BULAN_KEYS[new Date().getMonth()];
+    renderBelumBulan(sel ? sel.value : BULAN_KEYS[new Date().getMonth()]);
+  }
 
-    var MONTHS = [
-      { key: 'JAN2026',   label: 'Januari 2026',   idx: 0 },
-      { key: 'FEB2026',   label: 'Februari 2026',  idx: 1 },
-      { key: 'MAC2026',   label: 'Mac 2026',        idx: 2 },
-      { key: 'APRIL2026', label: 'April 2026',      idx: 3 },
-      { key: 'MEI2026',   label: 'Mei 2026',        idx: 4 },
-      { key: 'JUN2026',   label: 'Jun 2026',        idx: 5 },
-      { key: 'JULAI2026', label: 'Julai 2026',      idx: 6 },
-      { key: 'OGOS2026',  label: 'Ogos 2026',       idx: 7 },
-      { key: 'SEPT2026',  label: 'September 2026',  idx: 8 },
-      { key: 'OKT2026',   label: 'Oktober 2026',    idx: 9 },
-      { key: 'NOV2026',   label: 'November 2026',   idx: 10 },
-      { key: 'DIS2026',   label: 'Disember 2026',   idx: 11 }
-    ];
+  function onEsemakBulanChange() {
+    var sel = document.getElementById('esemakBulanSelect');
+    if (sel) renderBelumBulan(sel.value);
+  }
 
-    var html = '<div class="esemak-months-grid">';
-    for (var m = 0; m < MONTHS.length; m++) {
-      var month     = MONTHS[m];
-      var hasData   = belumBayar && belumBayar[month.key] !== undefined;
-      var list      = hasData ? belumBayar[month.key] : null;
-      var isCurrent = month.idx === currentMonthIdx;
-      var hdrClass  = isCurrent ? 'esemak-month-header current-month' : 'esemak-month-header';
-      var curBadge  = isCurrent ? '<span class="esemak-current-badge">Bulan Ini</span>' : '';
+  function renderBelumBulan(bulanKey) {
+    var el      = document.getElementById('esemakBelumContainer');
+    var countEl = document.getElementById('esemakBelumCount');
 
-      html += '<div class="esemak-month-block">';
-      html += '<div class="' + hdrClass + '">';
-      html += '<span>' + escHtml(month.label) + curBadge + '</span>';
-
-      if (!hasData) {
-        html += '<span class="esemak-belum-count" style="background:var(--text-muted);">—</span>';
-        html += '</div>';
-        html += '<div class="esemak-empty-month" style="color:var(--text-muted);">Tab belum tersedia</div>';
-      } else if (list.length === 0) {
-        html += '<span class="esemak-belum-count all-paid">&#x2705; 0</span>';
-        html += '</div>';
-        html += '<div class="esemak-empty-month">&#x2705; Semua murid telah membayar!</div>';
-      } else {
-        html += '<span class="esemak-belum-count">' + list.length + ' belum</span>';
-        html += '</div>';
-        html += '<ul class="esemak-murid-list">';
-        for (var n = 0; n < list.length; n++) {
-          html += '<li class="esemak-murid-item">';
-          html += '<span>' + escHtml(list[n]) + '</span>';
-          html += '<a href="javascript:void(0)" onclick="showPanel(\'ebayar\')" class="esemak-urgent-link">Sila Kemaskini Segera &#x2192;</a>';
-          html += '</li>';
-        }
-        html += '</ul>';
-      }
-      html += '</div>';
+    if (!esemakBelumData) {
+      el.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:40px 0;">Memuatkan...</p>';
+      return;
     }
-    html += '</div>';
+
+    var hasData = esemakBelumData[bulanKey] !== undefined;
+    var list    = hasData ? esemakBelumData[bulanKey] : null;
+
+    if (!hasData) {
+      if (countEl) countEl.style.color = 'var(--text-muted)', countEl.textContent = '—';
+      el.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; color:var(--text-muted); padding:32px;">Tab belum tersedia untuk bulan ini.</div></div>';
+      return;
+    }
+
+    if (list.length === 0) {
+      if (countEl) { countEl.style.color = '#2E7D32'; countEl.textContent = '✓ Semua dah bayar'; }
+      el.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; color:#2E7D32; padding:32px; font-weight:500;">&#x2705; Semua murid telah kemaskini yuran untuk bulan ini!</div></div>';
+      return;
+    }
+
+    if (countEl) { countEl.style.color = '#E74C3C'; countEl.textContent = list.length + ' belum bayar'; }
+
+    var html = '<div class="card"><ul class="esemak-murid-list">';
+    for (var i = 0; i < list.length; i++) {
+      html += '<li class="esemak-murid-item">';
+      html += '<span>' + escHtml(list[i]) + '</span>';
+      html += '<a href="javascript:void(0)" onclick="showPanel(\'ebayar\')" class="esemak-urgent-link">Sila Kemaskini Segera &#x2192;</a>';
+      html += '</li>';
+    }
+    html += '</ul></div>';
     el.innerHTML = html;
   }
 
