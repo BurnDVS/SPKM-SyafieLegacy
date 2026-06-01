@@ -86,19 +86,48 @@ var AUTOCRAT_CONFIG = {
 // ============================================================
 // ENTRY POINT: doPost (dipanggil oleh portal.html via fetch)
 // ============================================================
+var ALLOWED_ACTIONS = [
+  'login', 'registerKanak', 'registerDewasa',
+  'sendOTPKanak', 'sendOTPDewasa', 'confirmRegisterKanak', 'confirmRegisterDewasa',
+  'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
+  'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
+  'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
+  'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran'
+];
+
+var AUTH_REQUIRED_ACTIONS = [
+  'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
+  'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
+  'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran'
+];
+
 function doPost(e) {
-  var headers = {
-    'Access-Control-Allow-Origin':  '*',
-    'Access-Control-Allow-Methods': 'POST',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type':                 'application/json'
-  };
-
   try {
-    var body = JSON.parse(e.postData.contents);
-    var action = body.action;
-    var result;
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, message: 'Permintaan tidak sah.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
+    var body   = JSON.parse(e.postData.contents);
+    var action = (body.action || '').toString().trim();
+
+    if (ALLOWED_ACTIONS.indexOf(action) === -1) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, message: 'Tindakan tidak dibenarkan.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
+      var authCheck = validateToken(body.token);
+      if (!authCheck.valid) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    var result;
     if      (action === 'login')                  result = loginGuru(body);
     else if (action === 'registerKanak')          result = registerKanak(body);
     else if (action === 'registerDewasa')         result = registerDewasa(body);
@@ -117,12 +146,11 @@ function doPost(e) {
     else if (action === 'recordCash')             result = recordCash(body);
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
     else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
-    else if (action === 'getMuridListAll')         result = getMuridListAll();
-    else if (action === 'getKehadiranStats')       result = getKehadiranStats(body);
-    else if (action === 'getKehadiranRekod')       result = getKehadiranRekod(body);
-    else if (action === 'getMuridByGuru')          result = getMuridByGuru(body);
-    else if (action === 'simpanKehadiran')         result = simpanKehadiran(body);
-    else result = { success: false, message: 'Tindakan tidak dikenali: ' + action };
+    else if (action === 'getMuridListAll')        result = getMuridListAll();
+    else if (action === 'getKehadiranStats')      result = getKehadiranStats(body);
+    else if (action === 'getKehadiranRekod')      result = getKehadiranRekod(body);
+    else if (action === 'getMuridByGuru')         result = getMuridByGuru(body);
+    else if (action === 'simpanKehadiran')        result = simpanKehadiran(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -146,6 +174,19 @@ function doGet(e) {
 // Dipanggil oleh google.script.run dari portal.html
 function doAction(action, payload) {
   payload = payload || {};
+  action  = (action || '').toString().trim();
+
+  if (ALLOWED_ACTIONS.indexOf(action) === -1) {
+    return { success: false, message: 'Tindakan tidak dibenarkan.' };
+  }
+
+  if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
+    var authCheck = validateToken(payload.token);
+    if (!authCheck.valid) {
+      return { success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' };
+    }
+  }
+
   if      (action === 'login')                 return loginGuru(payload);
   else if (action === 'registerKanak')         return registerKanak(payload);
   else if (action === 'registerDewasa')        return registerDewasa(payload);
@@ -164,12 +205,11 @@ function doAction(action, payload) {
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
-  else if (action === 'getMuridListAll')        return getMuridListAll();
-  else if (action === 'getKehadiranStats')      return getKehadiranStats(payload);
-  else if (action === 'getKehadiranRekod')      return getKehadiranRekod(payload);
-  else if (action === 'getMuridByGuru')         return getMuridByGuru(payload);
-  else if (action === 'simpanKehadiran')        return simpanKehadiran(payload);
-  else return { success: false, message: 'Tindakan tidak dikenali: ' + action };
+  else if (action === 'getMuridListAll')       return getMuridListAll();
+  else if (action === 'getKehadiranStats')     return getKehadiranStats(payload);
+  else if (action === 'getKehadiranRekod')     return getKehadiranRekod(payload);
+  else if (action === 'getMuridByGuru')        return getMuridByGuru(payload);
+  else if (action === 'simpanKehadiran')       return simpanKehadiran(payload);
 }
 
 // ============================================================
@@ -181,18 +221,27 @@ function doAction(action, payload) {
 function loginGuru(params) {
   params = params || {};
   try {
-    var email = (params.email || '').trim().toLowerCase();
+    var email = sanitizeInput((params.email || '').trim().toLowerCase());
     var phone = normalizePhone(params.phone || '').slice(-6);
 
     if (!email || !phone) {
       return { success: false, message: 'E-mel dan nombor telefon diperlukan.' };
     }
 
-    var cacheKey = 'bf_' + email.replace(/[^a-z0-9]/g, '_');
-    var cache    = CacheService.getScriptCache();
-    var attempts = parseInt(cache.get(cacheKey) || '0', 10);
+    var props    = PropertiesService.getScriptProperties();
+    var attKey   = 'login_attempts_' + email.replace(/[^a-z0-9]/g, '_');
+    var tsKey    = 'login_ts_'       + email.replace(/[^a-z0-9]/g, '_');
+    var now      = new Date().getTime();
+    var attempts = parseInt(props.getProperty(attKey) || '0', 10);
+    var firstTs  = parseInt(props.getProperty(tsKey)  || '0', 10);
+
     if (attempts >= 5) {
-      return { success: false, message: 'Terlalu banyak cubaan. Sila cuba semula selepas 15 minit.' };
+      if (now - firstTs < 15 * 60 * 1000) {
+        return { success: false, message: 'Akaun disekat 15 minit. Sila cuba selepas 15 minit.' };
+      }
+      props.deleteProperty(attKey);
+      props.deleteProperty(tsKey);
+      attempts = 0;
     }
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -200,23 +249,29 @@ function loginGuru(params) {
     if (!sheet) return { success: false, message: 'Tab Maklumat Guru tidak dijumpai.' };
 
     var data = sheet.getDataRange().getValues();
-    // Row 0 = header, semak dari row 1
     for (var i = 1; i < data.length; i++) {
-      var rowEmail  = (data[i][COL_GURU.EMAIL]   || '').toString().trim().toLowerCase();
-      var rowPhone  = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString()).slice(-6);
-      var rowNama   = (data[i][COL_GURU.NAMA]    || '').toString().trim();
+      var rowEmail = (data[i][COL_GURU.EMAIL]   || '').toString().trim().toLowerCase();
+      var rowPhone = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString()).slice(-6);
+      var rowNama  = (data[i][COL_GURU.NAMA]    || '').toString().trim();
 
       Logger.log('Baris ' + i + ': rowPhone="' + rowPhone + '" vs input phone="' + phone + '" | rowEmail="' + rowEmail + '" vs input email="' + email + '"');
 
       if (rowEmail === email && rowPhone === phone) {
         var rowRole = (data[i][COL_GURU.ROLE] || '').toString().trim().toUpperCase() || 'GURU';
-        cache.remove(cacheKey);
+        props.deleteProperty(attKey);
+        props.deleteProperty(tsKey);
+
+        var token  = Utilities.getUuid();
+        var expiry = now + 30 * 60 * 1000;
+        props.setProperty('session_' + token, JSON.stringify({ email: email, nama: rowNama, expiry: expiry }));
+
         Logger.log('Login berjaya: ' + rowNama + ' (' + rowRole + ')');
-        return { success: true, user: rowNama, role: rowRole };
+        return { success: true, user: rowNama, role: rowRole, token: token };
       }
     }
 
-    cache.put(cacheKey, String(attempts + 1), 900);
+    if (attempts === 0) props.setProperty(tsKey, now.toString());
+    props.setProperty(attKey, String(attempts + 1));
     return { success: false, message: 'E-mel atau nombor WhatsApp tidak sepadan.' };
 
   } catch (err) {
@@ -630,10 +685,35 @@ function normalizePhone(phone) {
 }
 
 // ============================================================
-// HELPER: Sanitasi input — buang tag HTML & trim
+// HELPER: Sanitasi input — buang tag HTML, karakter khas & trim
 // ============================================================
 function sanitizeInput(str) {
-  return (str || '').toString().replace(/<[^>]*>/g, '').trim();
+  var s = (str || '').toString().substring(0, 500);
+  s = s.replace(/<[^>]*>/g, '');
+  s = s.replace(/[<>"'&;(){}]/g, '');
+  return s.trim();
+}
+
+// ============================================================
+// HELPER: Validate session token
+// ============================================================
+function validateToken(token) {
+  if (!token) return { valid: false };
+  var props = PropertiesService.getScriptProperties();
+  var key   = 'session_' + token;
+  var raw   = props.getProperty(key);
+  if (!raw) return { valid: false };
+  try {
+    var data = JSON.parse(raw);
+    if (new Date().getTime() > data.expiry) {
+      props.deleteProperty(key);
+      return { valid: false };
+    }
+    return { valid: true, user: data };
+  } catch (e) {
+    props.deleteProperty(key);
+    return { valid: false };
+  }
 }
 
 // ============================================================
@@ -1772,7 +1852,7 @@ function getEbayarStats() {
 function getYuranParent(params) {
   params = params || {};
   try {
-    var keyword = (params.keyword || '').toString().trim().toUpperCase();
+    var keyword = sanitizeInput((params.keyword || '').toString().trim()).toUpperCase();
 
     var PAYMENT_TABS = [
       { name: 'Yuran Mei',       label: 'Mei 2024' },
