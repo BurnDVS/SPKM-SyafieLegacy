@@ -46,7 +46,7 @@
     background: var(--green);
     padding: 0;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
   }
   .site-header::before {
     content: '';
@@ -1171,6 +1171,193 @@
   .esemak-payment-row:last-child { border-bottom: none; }
   .esemak-payment-bulan { color: var(--text-mid); }
 
+  /* === HEADER LOGIN DROPDOWN === */
+  .header-login-wrap {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .header-login-btn {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid rgba(255,215,0,0.4);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s;
+    line-height: 1;
+  }
+  .header-login-btn:hover {
+    background: rgba(255,215,0,0.12);
+    border-color: var(--gold);
+  }
+  .header-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    left: auto;
+    background: var(--green);
+    border: 1px solid rgba(255,215,0,0.5);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    min-width: 288px;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    z-index: 9999;
+    display: none;
+    animation: dropdownIn 0.18s ease;
+  }
+  @media (max-width: 480px) {
+    .header-dropdown {
+      position: fixed;
+      top: auto;
+      left: 12px;
+      right: 12px;
+      min-width: 0;
+      width: auto;
+    }
+  }
+  @keyframes dropdownIn {
+    from { opacity:0; transform:translateY(-8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .header-dropdown.open { display: block; }
+  .hdr-form-pad { padding: 22px 22px 18px; }
+  .hdr-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 6px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .hdr-input {
+    width: 100%;
+    padding: 10px 13px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+  }
+  .hdr-input:focus {
+    border-color: var(--gold);
+    background: rgba(255,255,255,0.12);
+  }
+  .hdr-input::placeholder { color: rgba(255,255,255,0.28); }
+  .hdr-login-err {
+    background: rgba(192,57,43,0.2);
+    border: 1px solid rgba(231,76,60,0.4);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #E88080;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .hdr-user-info { padding: 16px 22px 14px; }
+  .hdr-user-role {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .hdr-user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gold);
+  }
+  .hdr-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin: 0;
+  }
+  .hdr-logout-btn {
+    width: 100%;
+    padding: 13px 22px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #E88080;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .hdr-logout-btn:hover { background: rgba(231,76,60,0.12); }
+
+  /* === IDLE WARNING MODAL === */
+  .idle-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+  .idle-modal.show { display: flex; }
+  .idle-modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px 32px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+    animation: slideUp 0.22s ease;
+  }
+  @keyframes slideUp {
+    from { transform:translateY(16px); opacity:0; }
+    to   { transform:translateY(0);    opacity:1; }
+  }
+  .idle-modal-icon { font-size: 44px; margin-bottom: 14px; }
+  .idle-modal-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .idle-modal-msg {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .idle-modal-btn {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 36px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .idle-modal-btn:hover { background: var(--green-mid); }
+
   /* === FOOTER === */
   footer {
     text-align: center;
@@ -1181,6 +1368,134 @@
     margin-top: 40px;
   }
   footer span { color: var(--gold-dark); }
+
+  /* ============================================================ */
+  /* MICRO-ANIMATIONS & AUTO-REFRESH (appended)                   */
+  /* ============================================================ */
+
+  /* Btn: position + overflow for ripple/shimmer clipping */
+  .btn { position: relative; overflow: hidden; }
+
+  /* Ripple — interaction feedback, always runs */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: rippleEffect 0.6s linear;
+    background: rgba(255,255,255,0.3);
+    pointer-events: none;
+  }
+  @keyframes rippleEffect { to { transform: scale(4); opacity: 0; } }
+
+  /* Success icon bounceIn — interaction feedback, always runs */
+  @keyframes bounceIn {
+    0%   { transform: scale(0); }
+    60%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .success-icon.bounce { animation: bounceIn 0.5s cubic-bezier(0.36,0.07,0.19,0.97); }
+
+  /* Auto-refresh badge */
+  .auto-refresh-badge {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    opacity: 0.7;
+    justify-content: center;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+
+    /* Diagonal shimmer sweep on primary/gold buttons */
+    .btn-primary::after,
+    .btn-gold::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%);
+      animation: shimmerBtn 3s ease-in-out infinite;
+    }
+    @keyframes shimmerBtn {
+      0%   { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* Active scale — overrides existing .btn-primary:active / .btn-gold:active (0.99) */
+    .btn-primary:active,
+    .btn-gold:active,
+    .btn-ghost:active,
+    .btn:active {
+      transform: scale(0.96);
+      transition: transform 0.1s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    /* Step dot sonar pulse */
+    @keyframes sonarPulse {
+      0%   { box-shadow: 0 0 0 0   rgba(10,31,68,0.5); }
+      70%  { box-shadow: 0 0 0 10px rgba(10,31,68,0); }
+      100% { box-shadow: 0 0 0 0   rgba(10,31,68,0); }
+    }
+    .step-dot.active { animation: sonarPulse 2s infinite; }
+
+    /* Step dot pop on advance */
+    @keyframes dotPop {
+      0%   { transform: scale(0.8); }
+      50%  { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    .step-dot.pop { animation: dotPop 0.3s ease-out; }
+
+    /* Panel fadeSlideUp */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .panel-enter { animation: fadeSlideUp 0.3s ease-out forwards; }
+
+    /* Step slide-in from right */
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .step-in-right { animation: slideInRight 0.2s ease-out forwards; }
+
+    /* Alert animated slide-down */
+    @keyframes alertSlideDown {
+      from { max-height: 0; opacity: 0; }
+      to   { max-height: 80px; opacity: 1; }
+    }
+    .alert.show { overflow: hidden; animation: alertSlideDown 0.2s ease-out; }
+
+    /* Bil badge gold shimmer */
+    @keyframes bilShimmer {
+      0%,100% { background: var(--gold-light); box-shadow: none; }
+      50%     { background: #fffbe0; box-shadow: 0 0 8px rgba(255,215,0,0.5); }
+    }
+    .bil-badge.shimmer { animation: bilShimmer 0.6s ease-out; }
+
+    /* Header divider slow shimmer sweep */
+    @keyframes headerShimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+    .header-divider {
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold), #fff9cc, var(--gold), var(--gold-dark));
+      background-size: 300% auto;
+      animation: headerShimmer 3s linear infinite;
+    }
+
+    /* Auto-refresh badge pulse */
+    @keyframes refreshPulse {
+      0%,100% { opacity: 0.7; }
+      50%     { opacity: 1; }
+    }
+    .auto-refresh-badge.refreshing { animation: refreshPulse 1s ease-in-out; }
+
+  } /* end @media prefers-reduced-motion */
 </style>
 </head>
 <body>
@@ -1193,9 +1508,36 @@
       <h1>Sistem Pengurusan Kelas Mengaji</h1>
       <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
     </div>
-    <div id="headerUserInfo" style="display:none; align-items:center; gap:12px; margin-left:auto;">
-      <span style="color:#FFD700; font-size:13px;">👤 <span id="headerUserName"></span></span>
-      <button onclick="handleLogout()" style="background:#FFD700; color:#0A1F44; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">Log Keluar</button>
+    <div class="header-login-wrap" id="headerLoginWrap">
+      <!-- Sebelum login -->
+      <div id="headerPreLogin">
+        <button class="header-login-btn" onclick="toggleLoginDropdown()">🔒 Log Masuk</button>
+        <div class="header-dropdown" id="headerLoginDropdown">
+          <div class="hdr-form-pad">
+            <label class="hdr-label" for="loginEmail">E-mel</label>
+            <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()">
+            <label class="hdr-label" for="loginPhone">Kata Laluan</label>
+            <input class="hdr-input" type="text" id="loginPhone" placeholder="6 digit terakhir telefon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')handleLogin()">
+            <div class="hdr-login-err" id="headerLoginErr"></div>
+            <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()" style="margin-top:0; background:var(--gold); color:#0A1F44; border:none;">
+              <span class="btn-text">Log Masuk</span>
+              <span class="btn-loader" style="border-color:rgba(10,31,68,0.3); border-top-color:#0A1F44;"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Selepas login -->
+      <div id="headerPostLogin" style="display:none;">
+        <button class="header-login-btn" onclick="toggleUserDropdown()">👤 <span id="headerUserName"></span> ▼</button>
+        <div class="header-dropdown" id="headerUserDropdown">
+          <div class="hdr-user-info">
+            <p class="hdr-user-role">Log masuk sebagai</p>
+            <p class="hdr-user-name" id="headerUserNameDropdown"></p>
+          </div>
+          <hr class="hdr-divider">
+          <button class="hdr-logout-btn" onclick="handleLogout()">🚪 Log Keluar</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="header-divider"></div>
@@ -1204,7 +1546,6 @@
 <!-- NAV -->
 <nav class="nav-bar" role="navigation" aria-label="Menu utama">
   <button class="nav-tab active" id="nav-utama"     onclick="showPanel('utama')">🏠 Utama</button>
-  <button class="nav-tab"        id="tabLogMasuk"   onclick="showPanel('home')">🔒 Log Masuk</button>
   <button class="nav-tab"        id="nav-daftar"    onclick="showPanel('daftar')">📋 Daftar Murid</button>
   <button class="nav-tab"        id="nav-kehadiran" onclick="showPanel('kehadiran')" data-auth="true" style="display:none;">✅ Kehadiran</button>
   <button class="nav-tab"        id="nav-murid"     onclick="showPanel('murid')"     data-auth="true" style="display:none;">👥 Murid</button>
@@ -1280,16 +1621,6 @@
         </div>
       </div>
       <div class="card-body" id="loginFormWrapper">
-        <div class="form-group">
-          <label for="loginEmail">Alamat E-mel <span class="req">*</span></label>
-          <input type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email">
-        </div>
-        <div class="form-group">
-          <label for="loginPhone">Kata Laluan (6 Digit Terakhir No. Telefon) <span class="req">*</span></label>
-          <input type="text" id="loginPhone" placeholder="6 digit terakhir nombor telefon" maxlength="6" autocomplete="off">
-          <p class="helper">Contoh: jika nombor 0196929415, masukkan 929415</p>
-        </div>
-
         <div class="alert alert-error" id="loginError">
           <span class="alert-icon">⚠</span>
           <span id="loginErrorMsg">E-mel atau nombor tidak sepadan. Sila cuba semula.</span>
@@ -1298,14 +1629,6 @@
           <span class="alert-icon">✓</span>
           <span id="loginSuccessMsg">Log masuk berjaya! Selamat datang.</span>
         </div>
-
-        <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
-          <span class="btn-text">Log Masuk</span>
-          <span class="btn-loader"></span>
-        </button>
-        <p style="text-align:center; font-size:12px; color:var(--text-muted); margin-top:14px;">
-          Belum ada akaun guru? Hubungi pentadbir sistem.
-        </p>
       </div>
       <!-- Dashboard (post-login) -->
       <div class="card-body" id="dashboardPreview" style="display:none;">
@@ -2317,6 +2640,58 @@
     });
   }
 
+  // =====================
+  // HEADER DROPDOWN TOGGLES
+  // =====================
+  function toggleLoginDropdown() {
+    const ld = document.getElementById('headerLoginDropdown');
+    const ud = document.getElementById('headerUserDropdown');
+    if (ud) ud.classList.remove('open');
+    ld.classList.toggle('open');
+    if (ld.classList.contains('open')) {
+      setTimeout(function() {
+        const em = document.getElementById('loginEmail');
+        if (em) em.focus();
+      }, 50);
+    }
+  }
+
+  function toggleUserDropdown() {
+    const ud = document.getElementById('headerUserDropdown');
+    const ld = document.getElementById('headerLoginDropdown');
+    if (ld) ld.classList.remove('open');
+    ud.classList.toggle('open');
+  }
+
+  // =====================
+  // IDLE AUTO-LOGOUT
+  // =====================
+  let idleTimer = null;
+  let warnTimer = null;
+  const IDLE_MS = 30 * 60 * 1000;
+  const WARN_MS =  2 * 60 * 1000;
+
+  function resetIdleTimer() {
+    if (!loggedInGuru) return;
+    clearTimeout(idleTimer);
+    clearTimeout(warnTimer);
+    const modal = document.getElementById('idleWarningModal');
+    if (modal) modal.classList.remove('show');
+
+    warnTimer = setTimeout(function() {
+      const m = document.getElementById('idleWarningModal');
+      if (m) m.classList.add('show');
+    }, IDLE_MS - WARN_MS);
+
+    idleTimer = setTimeout(function() {
+      handleLogout();
+    }, IDLE_MS);
+  }
+
+  function extendSession() {
+    resetIdleTimer();
+  }
+
   function showDaftar(type) {
     showPanel('daftar');
     switchRegTab(type);
@@ -2445,18 +2820,24 @@
   // API CALL HELPER
   // =====================
   function callGAS(action, payload, onSuccess, onError) {
+    const p = Object.assign({}, payload);
+    const tok = sessionStorage.getItem('spkm_token');
+    if (tok) p.token = tok;
     google.script.run
       .withSuccessHandler(onSuccess || function() {})
       .withFailureHandler(onError  || function(err) { console.error('GAS error:', err); })
-      .doAction(action, payload);
+      .doAction(action, p);
   }
 
   function callGASPromise(action, payload) {
     return new Promise(function(resolve, reject) {
+      const p = Object.assign({}, payload);
+      const tok = sessionStorage.getItem('spkm_token');
+      if (tok) p.token = tok;
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .doAction(action, payload);
+        .doAction(action, p);
     });
   }
 
@@ -2465,9 +2846,16 @@
   // =====================
   function handleLogin() {
     hideAlert('loginError'); hideAlert('loginSuccess');
+    const hdrErr = document.getElementById('headerLoginErr');
+    if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
+
     const email = document.getElementById('loginEmail').value.trim();
     const phone = document.getElementById('loginPhone').value.trim();
-    if (!email || !phone) { showErr('loginError', 'Sila isi e-mel dan nombor telefon.'); return; }
+    if (!email || !phone) {
+      if (hdrErr) { hdrErr.textContent = 'Sila isi e-mel dan nombor telefon.'; hdrErr.style.display = 'block'; }
+      showErr('loginError', 'Sila isi e-mel dan nombor telefon.');
+      return;
+    }
 
     const btn = document.getElementById('loginBtn');
     btn.classList.add('loading'); btn.disabled = true;
@@ -2478,28 +2866,39 @@
         if (data.success) {
           loggedInGuru = data.user;
           currentRole  = data.role || 'GURU';
+          if (data.token) sessionStorage.setItem('spkm_token', data.token);
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
           document.getElementById('dashboardPreview').style.display = 'block';
           document.getElementById('headerUserName').textContent = data.user;
-          document.getElementById('headerUserInfo').style.display = 'flex';
+          document.getElementById('headerUserNameDropdown').textContent = data.user;
+          document.getElementById('headerPreLogin').style.display = 'none';
+          document.getElementById('headerPostLogin').style.display = '';
+          document.getElementById('headerLoginDropdown').classList.remove('open');
+          if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
           setLoginState(true);
           updateNav(true);
           loadDashboardStats();
+          resetIdleTimer();
           const gEl = document.getElementById('hadirGuru');
           if (gEl) gEl.value = data.user;
         } else {
-          showErr('loginError', data.message || 'E-mel atau nombor tidak sepadan.');
+          const msg = data.message || 'E-mel atau nombor tidak sepadan.';
+          showErr('loginError', msg);
+          if (hdrErr) { hdrErr.textContent = msg; hdrErr.style.display = 'block'; }
         }
       },
       function(err) {
         btn.classList.remove('loading'); btn.disabled = false;
-        showErr('loginError', 'Ralat sambungan. Sila cuba sebentar lagi.');
+        const msg = 'Ralat sambungan. Sila cuba sebentar lagi.';
+        showErr('loginError', msg);
+        if (hdrErr) { hdrErr.textContent = msg; hdrErr.style.display = 'block'; }
       }
     );
   }
 
   function handleLogout() {
+    sessionStorage.removeItem('spkm_token');
     loggedInGuru   = null;
     currentRole    = null;
     allMuridKanak  = [];
@@ -2510,11 +2909,19 @@
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
     document.getElementById('loginPhone').value = '';
-    document.getElementById('headerUserInfo').style.display = 'none';
+    document.getElementById('headerPreLogin').style.display = '';
+    document.getElementById('headerPostLogin').style.display = 'none';
+    document.getElementById('headerLoginDropdown').classList.remove('open');
+    document.getElementById('headerUserDropdown').classList.remove('open');
     document.getElementById('headerUserName').textContent = '';
+    document.getElementById('headerUserNameDropdown').textContent = '';
+    clearTimeout(idleTimer);
+    clearTimeout(warnTimer);
+    const iModal = document.getElementById('idleWarningModal');
+    if (iModal) iModal.classList.remove('show');
     setLoginState(false);
     updateNav(false);
-    showPanel('home');
+    showPanel('utama');
   }
 
   // =====================
@@ -3699,13 +4106,269 @@
     // Set default tarikh bayaran to today
     const cashTarikhEl = document.getElementById('cashTarikh');
     if (cashTarikhEl) cashTarikhEl.value = new Date().toISOString().split('T')[0];
-    ['loginEmail', 'loginPhone'].forEach(id => {
-      document.getElementById(id).addEventListener('keydown', e => {
-        if (e.key === 'Enter') handleLogin();
-      });
+    // Tutup dropdown bila klik luar
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('headerLoginWrap');
+      if (wrap && !wrap.contains(e.target)) {
+        const ld = document.getElementById('headerLoginDropdown');
+        const ud = document.getElementById('headerUserDropdown');
+        if (ld) ld.classList.remove('open');
+        if (ud) ud.classList.remove('open');
+      }
+    });
+
+    // Reset idle timer bila ada aktiviti
+    ['mousemove', 'keydown', 'mousedown', 'scroll', 'touchstart'].forEach(function(evt) {
+      document.addEventListener(evt, resetIdleTimer, { passive: true });
     });
   });
+
+  // =====================
+  // AUTO-REFRESH TIMERS
+  // =====================
+  let ebayarTimer = null;
+  let esemakTimer = null;
+
+  // =====================
+  // COUNT-UP ANIMATION HELPER
+  // =====================
+  function animateCountUp(el, finalText, duration) {
+    var match = finalText.match(/\d+/);
+    if (!match) return;
+    var target = parseInt(match[0], 10);
+    if (isNaN(target) || target === 0) return;
+    var prefix    = finalText.substring(0, finalText.indexOf(match[0]));
+    var suffix    = finalText.substring(finalText.indexOf(match[0]) + match[0].length);
+    var startTime = null;
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var progress = Math.min((ts - startTime) / duration, 1);
+      var easeOut  = 1 - Math.pow(1 - progress, 3);
+      el.textContent = prefix + Math.round(easeOut * target) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = finalText;
+    }
+    requestAnimationFrame(step);
+  }
+
+  // =====================
+  // RIPPLE (delegated — all .btn clicks)
+  // =====================
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn');
+    if (!btn) return;
+    var rect   = btn.getBoundingClientRect();
+    var size   = Math.max(rect.width, rect.height);
+    var ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.cssText =
+      'width:'  + size + 'px;height:' + size + 'px;' +
+      'left:'   + (e.clientX - rect.left - size / 2) + 'px;' +
+      'top:'    + (e.clientY - rect.top  - size / 2) + 'px;';
+    btn.appendChild(ripple);
+    setTimeout(function() { ripple.remove(); }, 600);
+  }, true);
+
+  // =====================
+  // SHOWPANEL WRAPPER — panel animation + auto-refresh timers
+  // =====================
+  (function() {
+    var _orig = showPanel;
+    window.showPanel = function(name) {
+      clearInterval(ebayarTimer); ebayarTimer = null;
+      clearInterval(esemakTimer); esemakTimer = null;
+
+      _orig(name);
+
+      // Animate incoming panel
+      if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+        var panel = document.getElementById('panel-' + name);
+        if (panel) {
+          panel.classList.remove('panel-enter');
+          void panel.offsetWidth;
+          panel.classList.add('panel-enter');
+          panel.addEventListener('animationend', function h() {
+            panel.classList.remove('panel-enter');
+            panel.removeEventListener('animationend', h);
+          });
+        }
+      }
+
+      // Auto-refresh: ebayar
+      if (name === 'ebayar') {
+        ebayarTimer = setInterval(function() {
+          try { initEbayar(); } catch(e) {}
+          var badge = document.getElementById('ebayarRefreshBadge');
+          if (badge) {
+            badge.classList.remove('refreshing');
+            void badge.offsetWidth;
+            badge.classList.add('refreshing');
+            setTimeout(function() { badge.classList.remove('refreshing'); }, 1000);
+          }
+        }, 30000);
+      }
+
+      // Auto-refresh: esemak (silent fail — no UI error on background fetch)
+      if (name === 'esemak') {
+        esemakTimer = setInterval(function() {
+          callGASPromise('getYuranParent', { keyword: '' })
+            .then(function(data) {
+              if (data && data.success) renderBelumKemaskini(data.belumBayar);
+            })
+            .catch(function() {});
+          var badge = document.getElementById('esemakRefreshBadge');
+          if (badge) {
+            badge.classList.remove('refreshing');
+            void badge.offsetWidth;
+            badge.classList.add('refreshing');
+            setTimeout(function() { badge.classList.remove('refreshing'); }, 1000);
+          }
+        }, 30000);
+      }
+    };
+  })();
+
+  // =====================
+  // UPDATESTEPUI WRAPPER — slide-in step + dot pop
+  // =====================
+  (function() {
+    var _orig = updateStepUI;
+    window.updateStepUI = function(step) {
+      _orig(step);
+      if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+      var incoming = document.querySelector('#formKanak .form-step.active');
+      if (incoming) {
+        incoming.classList.remove('step-in-right');
+        void incoming.offsetWidth;
+        incoming.classList.add('step-in-right');
+        incoming.addEventListener('animationend', function() {
+          incoming.classList.remove('step-in-right');
+        }, { once: true });
+      }
+      var activeDot = document.querySelector('.step-dot.active');
+      if (activeDot) {
+        activeDot.classList.remove('pop');
+        void activeDot.offsetWidth;
+        activeDot.classList.add('pop');
+        activeDot.addEventListener('animationend', function() {
+          activeDot.classList.remove('pop');
+        }, { once: true });
+      }
+    };
+  })();
+
+  // =====================
+  // DOM INIT — badges injection + MutationObservers
+  // =====================
+  document.addEventListener('DOMContentLoaded', function() {
+
+    // Inject auto-refresh badges into panel headings
+    var ebHd = document.querySelector('#panel-ebayar .section-heading');
+    if (ebHd) {
+      var eb = document.createElement('div');
+      eb.className = 'auto-refresh-badge'; eb.id = 'ebayarRefreshBadge';
+      eb.innerHTML = '🔄 <span>Kemaskini auto setiap 30 saat</span>';
+      ebHd.appendChild(eb);
+    }
+    var esHd = document.querySelector('#panel-esemak .section-heading');
+    if (esHd) {
+      var es = document.createElement('div');
+      es.className = 'auto-refresh-badge'; es.id = 'esemakRefreshBadge';
+      es.innerHTML = '🔄 <span>Kemaskini auto setiap 30 saat</span>';
+      esHd.appendChild(es);
+    }
+
+    // Success card: bounceIn icon + shimmer badge
+    function observeSuccessCard(cardId, badgeId) {
+      var card = document.getElementById(cardId);
+      if (!card) return;
+      new MutationObserver(function() {
+        if (card.style.display !== 'block') return;
+        var icon = card.querySelector('.success-icon');
+        if (icon) {
+          icon.classList.remove('bounce');
+          void icon.offsetWidth;
+          icon.classList.add('bounce');
+          icon.addEventListener('animationend', function() {
+            icon.classList.remove('bounce');
+          }, { once: true });
+        }
+        if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+          var badge = document.getElementById(badgeId);
+          if (badge) {
+            badge.classList.remove('shimmer');
+            void badge.offsetWidth;
+            badge.classList.add('shimmer');
+            badge.addEventListener('animationend', function() {
+              badge.classList.remove('shimmer');
+            }, { once: true });
+          }
+        }
+      }).observe(card, { attributes: true, attributeFilter: ['style'] });
+    }
+    observeSuccessCard('kanakSuccess',  'bilBadge');
+    observeSuccessCard('dewasaSuccess', 'dewasaBilBadge');
+
+    // Count-up for bil badges (animating flag prevents observer re-entry)
+    function observeCountUp(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var busy = false;
+      new MutationObserver(function() {
+        if (busy) return;
+        var text = el.textContent;
+        if (!/\d/.test(text)) return;
+        if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+        busy = true;
+        animateCountUp(el, text, 800);
+        setTimeout(function() { busy = false; }, 850);
+      }).observe(el, { characterData: true, childList: true, subtree: true });
+    }
+    observeCountUp('bilBadge');
+    observeCountUp('dewasaBilBadge');
+
+    // Count-up for dashboard stat numbers
+    ['statKanak', 'statDewasa'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var busy = false;
+      new MutationObserver(function() {
+        if (busy) return;
+        var text = el.textContent.trim();
+        if (!text || text === '—') return;
+        if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+        busy = true;
+        animateCountUp(el, text, 800);
+        setTimeout(function() { busy = false; }, 850);
+      }).observe(el, { characterData: true, childList: true, subtree: true });
+    });
+
+    // Dashboard greeting fade-slide-up on login
+    var dashPreview = document.getElementById('dashboardPreview');
+    if (dashPreview) {
+      new MutationObserver(function() {
+        if (dashPreview.style.display !== 'block') return;
+        if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+        dashPreview.querySelectorAll('p, .stat-card').forEach(function(el, i) {
+          el.style.animation = 'none';
+          void el.offsetHeight;
+          el.style.animation = 'fadeSlideUp ' + (0.25 + i * 0.07) + 's ease-out both';
+        });
+      }).observe(dashPreview, { attributes: true, attributeFilter: ['style'] });
+    }
+
+  });
 </script>
+
+<!-- IDLE WARNING MODAL -->
+<div class="idle-modal" id="idleWarningModal">
+  <div class="idle-modal-box">
+    <div class="idle-modal-icon">⏳</div>
+    <h3 class="idle-modal-title">Sesi Hampir Tamat</h3>
+    <p class="idle-modal-msg">Anda tidak aktif. Sesi akan tamat dalam <strong style="color:#E74C3C;">2 minit</strong>.<br>Klik OK untuk teruskan.</p>
+    <button class="idle-modal-btn" onclick="extendSession()">OK, Teruskan Sesi</button>
+  </div>
+</div>
 
 </body>
 </html>
