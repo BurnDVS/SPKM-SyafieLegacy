@@ -179,26 +179,33 @@ function doPost(e) {
 
 // doGet — serve portal HTML, atau API call via ?action=&payload=
 function doGet(e) {
-  if (e.parameter && e.parameter.action) {
-    var action  = (e.parameter.action || '').toString().trim();
-    var payload = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
-    payload.action = action;
+  try {
+    if (e.parameter && e.parameter.action) {
+      var action  = (e.parameter.action || '').toString().trim();
+      var payload = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
+      payload.action = action;
 
-    if (ALLOWED_ACTIONS.indexOf(action) === -1) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, message: 'Tindakan tidak dibenarkan.' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
-      var authCheck = validateToken(payload.token);
-      if (!authCheck.valid) {
+      if (ALLOWED_ACTIONS.indexOf(action) === -1) {
         return ContentService
-          .createTextOutput(JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' }))
+          .createTextOutput(JSON.stringify({ success: false, message: 'Tindakan tidak dibenarkan.' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
+        var authCheck = validateToken(payload.token);
+        if (!authCheck.valid) {
+          return ContentService
+            .createTextOutput(JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify(doAction(action, payload)))
+        .setMimeType(ContentService.MimeType.JSON);
     }
+  } catch (err) {
+    Logger.log('doGet API error: ' + err.message);
     return ContentService
-      .createTextOutput(JSON.stringify(doAction(action, payload)))
+      .createTextOutput(JSON.stringify({ success: false, message: 'Ralat pelayan: ' + err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 

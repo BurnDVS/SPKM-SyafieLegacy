@@ -1,4 +1,4 @@
-const CACHE = 'spkm-v1';
+const CACHE = 'spkm-v2';
 const SHELL = ['./', './manifest.json'];
 const GAS_ORIGIN = 'https://script.google.com';
 
