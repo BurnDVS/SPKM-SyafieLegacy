@@ -107,13 +107,19 @@ var AUTH_REQUIRED_ACTIONS = [
 
 function doPost(e) {
   try {
-    if (!e || !e.postData || !e.postData.contents) {
+    // Sokong dua format: URLSearchParams (application/x-www-form-urlencoded)
+    // dan JSON text/plain — kedua-dua simple CORS request
+    var body;
+    if (e.parameter && e.parameter.data) {
+      body = JSON.parse(e.parameter.data);
+    } else if (e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    } else {
       return ContentService
         .createTextOutput(JSON.stringify({ success: false, message: 'Permintaan tidak sah.' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var body   = JSON.parse(e.postData.contents);
     var action = (body.action || '').toString().trim();
 
     if (ALLOWED_ACTIONS.indexOf(action) === -1) {
