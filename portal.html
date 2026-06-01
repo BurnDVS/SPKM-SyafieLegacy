@@ -1496,6 +1496,66 @@
     .auto-refresh-badge.refreshing { animation: refreshPulse 1s ease-in-out; }
 
   } /* end @media prefers-reduced-motion */
+
+  #bottomNav { display: none; }
+
+  @media (max-width: 1024px) {
+    #bottomNav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 200;
+      background: #ffffff;
+      border-top: 1px solid #E2D9C5;
+      height: 64px;
+      padding-bottom: env(safe-area-inset-bottom);
+      align-items: stretch;
+    }
+    .bnav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 6px 0;
+      position: relative;
+    }
+    .bnav-item.active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 25%; right: 25%;
+      height: 2.5px;
+      background: #FFD700;
+      border-radius: 0 0 2px 2px;
+    }
+    .bnav-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+    .bnav-label {
+      font-size: 10px;
+      color: #aaa;
+      line-height: 1;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .bnav-item.active .bnav-label {
+      color: #0A1F44;
+      font-weight: 600;
+    }
+    .main {
+      padding-bottom: 80px;
+    }
+    footer {
+      padding-bottom: 80px;
+    }
+    .nav-bar {
+      display: none;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2566,6 +2626,29 @@
 </section>
 
 </main>
+
+<nav id="bottomNav" aria-label="Navigasi bawah">
+  <button class="bnav-item active" id="bnav-utama" onclick="showPanel('utama')">
+    <span class="bnav-icon">🏠</span>
+    <span class="bnav-label">Utama</span>
+  </button>
+  <button class="bnav-item" id="bnav-daftar" onclick="showPanel('daftar')">
+    <span class="bnav-icon">📋</span>
+    <span class="bnav-label">Daftar</span>
+  </button>
+  <button class="bnav-item" id="bnav-kehadiran" onclick="showPanel('kehadiran')">
+    <span class="bnav-icon">📅</span>
+    <span class="bnav-label">Hadir</span>
+  </button>
+  <button class="bnav-item" id="bnav-ebayar" onclick="showPanel('ebayar')">
+    <span class="bnav-icon">💳</span>
+    <span class="bnav-label">eBayar</span>
+  </button>
+  <button class="bnav-item" id="bnav-esemak" onclick="showPanel('esemak')">
+    <span class="bnav-icon">🔍</span>
+    <span class="bnav-label">eSemak</span>
+  </button>
+</nav>
 
 <footer>
   <p>© 2026 Sistem Pengurusan Kelas Mengaji &nbsp;·&nbsp; Dikuasakan oleh <span>Google Apps Script</span></p>
@@ -4358,6 +4441,16 @@
     }
 
   });
+
+  (function() {
+    const _origShowPanel = showPanel;
+    showPanel = function(name) {
+      _origShowPanel(name);
+      document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+      const target = document.getElementById('bnav-' + name);
+      if (target) target.classList.add('active');
+    };
+  })();
 </script>
 
 <!-- IDLE WARNING MODAL -->
