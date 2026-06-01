@@ -1670,6 +1670,7 @@
     font-size: 16px; color: #0A1F44;
     margin-bottom: 16px;
   }
+  #loginEmail::placeholder,
   #loginEmailModal::placeholder { color: rgba(255,255,255,0.6); }
 
   @media (max-width: 1024px) {
@@ -1718,9 +1719,9 @@
         <div class="header-dropdown" id="headerLoginDropdown">
           <div class="hdr-form-pad">
             <label class="hdr-label" for="loginEmail">E-mel</label>
-            <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()">
+            <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" style="color:#FFFFFF;" onkeydown="if(event.key==='Enter')handleLogin()">
             <label class="hdr-label" for="loginPhone">Kata Laluan</label>
-            <input class="hdr-input" type="text" id="loginPhone" placeholder="6 digit terakhir telefon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')handleLogin()">
+            <input class="hdr-input" type="password" id="loginPhone" placeholder="6 digit terakhir telefon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')handleLogin()">
             <div class="hdr-login-err" id="headerLoginErr"></div>
             <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()" style="margin-top:0; background:var(--gold); color:#0A1F44; border:none;">
               <span class="btn-text">Log Masuk</span>
