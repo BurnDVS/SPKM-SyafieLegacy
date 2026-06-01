@@ -1532,7 +1532,9 @@
       display: none;
     }
     .main {
-      padding: 16px 14px 40px !important;
+      padding: 16px 16px 40px !important;
+      box-sizing: border-box;
+      width: 100%;
     }
   }
   @media (min-width: 1025px) {
@@ -1691,6 +1693,27 @@
   @media (max-width: 1024px) {
     .desktop-hero-photo { display: none; }
     #desktopHomeContent { display: none; }
+    .mob-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #0A1F44;
+      cursor: pointer;
+      margin-bottom: 16px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .mob-back-btn:active {
+      background: var(--green-light);
+    }
+  }
+  @media (min-width: 1025px) {
+    .mob-back-btn { display: none; }
   }
 
 </style>
@@ -1911,6 +1934,7 @@
 <!-- PANEL: HOME (LOGIN + DASHBOARD) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-home">
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
     <h2>Selamat Datang ke Portal Mengaji</h2>
@@ -1969,6 +1993,7 @@
 <!-- ============================================================ -->
 <section class="panel" id="panel-daftar">
 
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <h2>Pendaftaran Murid Baru</h2>
     <p>Isikan maklumat dengan tepat. Semua medan bertanda <span style="color:var(--error)">*</span> adalah wajib.</p>
@@ -2313,6 +2338,7 @@
 <!-- PANEL: KEHADIRAN (login required) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-kehadiran">
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <h2>Kehadiran</h2>
     <p>Statistik dan rekod kehadiran murid</p>
@@ -2458,6 +2484,7 @@
 <!-- PANEL: MURID (login required) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-murid">
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <h2>Senarai Murid</h2>
     <p>Semua murid berdaftar dalam sistem</p>
@@ -2515,6 +2542,7 @@
 <!-- PANEL: GURU (login required) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-guru">
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <h2>Senarai Guru</h2>
     <p>Semua guru berdaftar dalam sistem</p>
@@ -2540,6 +2568,7 @@
 <!-- PANEL: YURAN (login required) -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-yuran">
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <h2>Dashboard Yuran</h2>
     <p>Semak dan rekod bayaran yuran murid</p>
@@ -2697,6 +2726,7 @@
 
 <section class="panel" id="panel-ebayar">
 
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
     <h2>Portal Bayaran Yuran 2026</h2>
@@ -2806,6 +2836,7 @@
 <!-- ============================================================ -->
 <section class="panel" id="panel-esemak">
 
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
     <h2>eSemak Yuran</h2>
