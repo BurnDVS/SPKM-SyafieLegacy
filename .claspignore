@@ -1,0 +1,9 @@
+sw.js
+index.html
+manifest.json
+.nojekyll
+README.md
+Code.js.bak
+portal.html.bak
+*.bat
+*.pdf

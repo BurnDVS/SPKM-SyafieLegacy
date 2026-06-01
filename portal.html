@@ -3017,7 +3017,8 @@
 <!-- ============================================================ -->
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec';
-  const _isGAS  = window.location.hostname.endsWith('google.com');
+  const _isGAS  = window.location.hostname.endsWith('google.com') ||
+                  window.location.hostname.endsWith('googleusercontent.com');
 
   let currentStep    = 1;
   let loggedInGuru   = null;
