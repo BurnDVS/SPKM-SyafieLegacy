@@ -62,7 +62,9 @@ var COL_GURU = {
   TELEFON:    4,
   ALAMAT:     5,
   SAYA_FAHAM: 6,  // G — Saya Faham
-  ROLE:       7   // H — ROLE (GURU / ADMIN)
+  ROLE:       7,  // H — ROLE (GURU / ADMIN)
+  JAWATAN:    8,  // I — Pengasas / AJK / Guru
+  GAMBAR:     9   // J — URL gambar passport dari Google Drive
 };
 
 // Kolum tab Kehadiran (0-indexed)
@@ -92,13 +94,15 @@ var ALLOWED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
   'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
-  'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran'
+  'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
-  'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran'
+  'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart'
 ];
 
 function doPost(e) {
@@ -151,6 +155,9 @@ function doPost(e) {
     else if (action === 'getKehadiranRekod')      result = getKehadiranRekod(body);
     else if (action === 'getMuridByGuru')         result = getMuridByGuru(body);
     else if (action === 'simpanKehadiran')        result = simpanKehadiran(body);
+    else if (action === 'uploadGuruGambar')       result = uploadGuruGambar(body);
+    else if (action === 'updateGuru')             result = updateGuru(body);
+    else if (action === 'getOrgChart')            result = getOrgChart();
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -210,6 +217,9 @@ function doAction(action, payload) {
   else if (action === 'getKehadiranRekod')     return getKehadiranRekod(payload);
   else if (action === 'getMuridByGuru')        return getMuridByGuru(payload);
   else if (action === 'simpanKehadiran')       return simpanKehadiran(payload);
+  else if (action === 'uploadGuruGambar')      return uploadGuruGambar(payload);
+  else if (action === 'updateGuru')            return updateGuru(payload);
+  else if (action === 'getOrgChart')           return getOrgChart();
 }
 
 // ============================================================
@@ -970,20 +980,156 @@ function getGuru() {
     var sheet = ss.getSheetByName(TAB.GURU);
     if (!sheet || sheet.getLastRow() < 2) return { success: true, rows: [] };
 
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
     var rows = data
       .map(function(r) {
         return {
-          nama:    (r[COL_GURU.NAMA]    || '').toString().trim(),
-          email:   (r[COL_GURU.EMAIL]   || '').toString().trim(),
-          telefon: (r[COL_GURU.TELEFON] || '').toString().trim()
+          nama:      (r[COL_GURU.NAMA]    || '').toString().trim(),
+          email:     (r[COL_GURU.EMAIL]   || '').toString().trim(),
+          telefon:   (r[COL_GURU.TELEFON] || '').toString().trim(),
+          alamat:    (r[COL_GURU.ALAMAT]  || '').toString().trim(),
+          jawatan:   (r[COL_GURU.JAWATAN] || '').toString().trim(),
+          gambarUrl: (r[COL_GURU.GAMBAR]  || '').toString().trim(),
+          role:      (r[COL_GURU.ROLE]    || '').toString().trim()
         };
       })
-      .filter(function(r) { return r.nama; });
+      .filter(function(r) { return r.nama !== ''; });
 
     return { success: true, rows: rows };
   } catch (err) {
     Logger.log('getGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 20. uploadGuruGambar
+// Input: { token, base64Data, mimeType, fileName }
+// Output: { success, url, fileId }
+// ============================================================
+function uploadGuruGambar(params) {
+  params = params || {};
+  try {
+    var auth = validateToken(params.token);
+    if (!auth.valid) return { success: false, message: 'Token tidak sah.' };
+
+    if (!params.base64Data || !params.mimeType || !params.fileName) {
+      return { success: false, message: 'base64Data, mimeType dan fileName diperlukan.' };
+    }
+
+    var blob   = Utilities.newBlob(Utilities.base64Decode(params.base64Data), params.mimeType, params.fileName);
+    var folder = DriveApp.getFolderById('1-Z0lnG7uT9_6BnxSy9TKp1ixmMJigTNX');
+    var file   = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    var url = 'https://lh3.googleusercontent.com/d/' + file.getId();
+    return { success: true, url: url, fileId: file.getId() };
+  } catch (err) {
+    Logger.log('uploadGuruGambar error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 21. updateGuru
+// Input: { token, targetEmail, nama, telefon, alamat, jawatan, gambarUrl }
+// Output: { success, message }
+// ============================================================
+function updateGuru(params) {
+  params = params || {};
+  try {
+    var auth = validateToken(params.token);
+    if (!auth.valid) return { success: false, message: 'Token tidak sah atau tamat tempoh.' };
+
+    var loginEmail = auth.user.email;
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.GURU);
+    if (!sheet) return { success: false, message: 'Tab Maklumat Guru tidak dijumpai.' };
+
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+
+    // Cari row login user untuk dapat role
+    var loginRole = 'GURU';
+    for (var j = 0; j < data.length; j++) {
+      if ((data[j][COL_GURU.EMAIL] || '').toString().trim().toLowerCase() === loginEmail.toLowerCase()) {
+        loginRole = (data[j][COL_GURU.ROLE] || 'GURU').toString().trim().toUpperCase();
+        break;
+      }
+    }
+
+    // Role check
+    if (loginRole === 'GURU') {
+      if (loginEmail.toLowerCase() !== (params.targetEmail || '').toString().trim().toLowerCase()) {
+        return { success: false, message: 'Anda hanya boleh kemaskini maklumat sendiri.' };
+      }
+    }
+
+    // Cari row target
+    var targetEmail = (params.targetEmail || '').toString().trim().toLowerCase();
+    var targetRow   = -1;
+    for (var k = 0; k < data.length; k++) {
+      var rowEmail = (data[k][COL_GURU.EMAIL] || '').toString().trim().toLowerCase();
+      if (targetEmail === '' && rowEmail === '') {
+        // Placeholder tanpa email — match by nama
+        var rowNama = (data[k][COL_GURU.NAMA] || '').toString().trim();
+        if (rowNama && rowNama === (params.nama || '').toString().trim()) {
+          targetRow = k + 2; // +2 sebab data mula dari row 2
+          break;
+        }
+      } else if (rowEmail === targetEmail) {
+        targetRow = k + 2;
+        break;
+      }
+    }
+
+    if (targetRow === -1) return { success: false, message: 'Rekod guru tidak dijumpai.' };
+
+    sheet.getRange(targetRow, COL_GURU.NAMA    + 1).setValue((params.nama    || '').toString().trim());
+    sheet.getRange(targetRow, COL_GURU.TELEFON + 1).setValue((params.telefon || '').toString().trim());
+    sheet.getRange(targetRow, COL_GURU.ALAMAT  + 1).setValue((params.alamat  || '').toString().trim());
+    sheet.getRange(targetRow, COL_GURU.JAWATAN + 1).setValue((params.jawatan || '').toString().trim());
+    if ((params.gambarUrl || '').toString().trim() !== '') {
+      sheet.getRange(targetRow, COL_GURU.GAMBAR + 1).setValue(params.gambarUrl.toString().trim());
+    }
+
+    return { success: true, message: 'Maklumat berjaya dikemaskini.' };
+  } catch (err) {
+    Logger.log('updateGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 22. getOrgChart
+// Returns { success, rows: [{nama, jawatan, gambarUrl}] } sorted by jawatan
+// ============================================================
+function getOrgChart() {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.GURU);
+    if (!sheet || sheet.getLastRow() < 2) return { success: true, rows: [] };
+
+    var data  = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+    var ORDER = { 'PENGASAS': 0, 'AJK': 1, 'GURU': 2 };
+
+    var rows = data
+      .map(function(r) {
+        return {
+          nama:      (r[COL_GURU.NAMA]    || '').toString().trim(),
+          jawatan:   (r[COL_GURU.JAWATAN] || '').toString().trim(),
+          gambarUrl: (r[COL_GURU.GAMBAR]  || '').toString().trim()
+        };
+      })
+      .filter(function(r) { return r.nama !== ''; })
+      .sort(function(a, b) {
+        var oa = ORDER[a.jawatan.toUpperCase()] !== undefined ? ORDER[a.jawatan.toUpperCase()] : 99;
+        var ob = ORDER[b.jawatan.toUpperCase()] !== undefined ? ORDER[b.jawatan.toUpperCase()] : 99;
+        return oa - ob;
+      });
+
+    return { success: true, rows: rows };
+  } catch (err) {
+    Logger.log('getOrgChart error: ' + err.message);
     return { success: false, message: err.message };
   }
 }

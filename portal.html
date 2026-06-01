@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co; connect-src https://script.google.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src https://script.google.com;">
 <meta name="application-name" content="SPKM">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1693,6 +1693,7 @@
   @media (max-width: 1024px) {
     .desktop-hero-photo { display: none; }
     #desktopHomeContent { display: none; }
+    #orgChartSection { display: none !important; }
     .mob-back-btn {
       display: inline-flex;
       align-items: center;
@@ -1815,6 +1816,17 @@
 
       <div class="landing-hero-img">
         <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full desktop-hero-photo">
+      </div>
+    </div>
+
+    <div id="orgChartSection" style="margin-top:48px; padding-bottom:40px;">
+      <div style="text-align:center; margin-bottom:32px;">
+        <div class="divider-ornament"><span>✦</span></div>
+        <h2 style="font-family:'Lora',serif; color:var(--green); margin-top:16px; font-size:22px; font-weight:600;">Carta Organisasi</h2>
+        <p style="color:var(--text-muted); font-size:14px; margin-top:6px;">Pasukan Pengajar Syafie Legacy</p>
+      </div>
+      <div id="orgChartContent">
+        <p style="text-align:center; color:var(--text-muted); font-size:14px;">Memuatkan...</p>
       </div>
     </div>
   </div>
@@ -2548,20 +2560,65 @@
     <p>Semua guru berdaftar dalam sistem</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
-
   <div class="card">
     <div class="card-body" style="padding:0; overflow-x:auto;">
       <table class="data-table" id="guruTable">
         <thead>
-          <tr><th>Bil</th><th>Nama Penuh</th><th>Email</th><th>Telefon</th></tr>
+          <tr>
+            <th>Bil</th>
+            <th>Gambar</th>
+            <th>Nama Penuh</th>
+            <th>Jawatan</th>
+            <th>Email</th>
+            <th>Telefon</th>
+            <th>Tindakan</th>
+          </tr>
         </thead>
         <tbody id="guruBody">
-          <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Memuatkan data...</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </section>
+
+<div id="modalKemaskiniGuru" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:var(--radius); padding:28px 24px; width:92%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow);">
+    <h3 style="font-family:'Lora',serif; color:var(--green); margin-bottom:20px; font-size:18px;">Kemaskini Maklumat Guru</h3>
+    <input type="hidden" id="kmsTargetEmail">
+
+    <div style="text-align:center; margin-bottom:20px;">
+      <div id="kmsGambarPreview" style="width:80px; height:80px; border-radius:50%; background:var(--green); color:var(--gold); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; margin:0 auto 10px; overflow:hidden; border:3px solid var(--gold);"></div>
+      <label style="cursor:pointer; color:var(--green-mid); font-size:13px; text-decoration:underline;">
+        📷 Tukar Gambar Passport
+        <input type="file" id="kmsGambarFile" accept="image/*" style="display:none;" onchange="previewKmsGambar(this)">
+      </label>
+    </div>
+
+    <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Nama Penuh</label>
+    <input type="text" id="kmsNama" class="form-control" style="margin-bottom:14px;">
+
+    <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Nombor Telefon (WhatsApp)</label>
+    <input type="text" id="kmsTelefon" class="form-control" style="margin-bottom:14px;">
+
+    <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Alamat Penuh</label>
+    <textarea id="kmsAlamat" class="form-control" rows="3" style="margin-bottom:14px;"></textarea>
+
+    <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Jawatan</label>
+    <select id="kmsJawatan" class="form-control" style="margin-bottom:20px;">
+      <option value="Pengasas">Pengasas</option>
+      <option value="AJK">AJK</option>
+      <option value="Guru">Guru</option>
+    </select>
+
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="kmsSimpanBtn" style="flex:1;" onclick="simpanKemaskiniGuru()">💾 Simpan</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="tutupModalKemaskini()">Batal</button>
+    </div>
+    <div id="kmsError" style="display:none; margin-top:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
+    <div id="kmsSuccess" style="display:none; margin-top:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
+  </div>
+</div>
 
 
 <!-- ============================================================ -->
@@ -2971,6 +3028,7 @@
     if (name === 'guru') loadGuruList();
     if (name === 'yuran') loadYuranPanel();
     if (name === 'esemak') initEsemak();
+    if (name === 'utama' && loggedInGuru) loadOrgChart();
   }
 
   function updateNav(isLoggedIn) {
@@ -3226,6 +3284,7 @@
           setLoginState(true);
           updateNav(true);
           loadDashboardStats();
+          loadOrgChart();
           resetIdleTimer();
           const gEl = document.getElementById('hadirGuru');
           if (gEl) gEl.value = data.user;
@@ -3564,21 +3623,245 @@
   // =====================
   function loadGuruList() {
     const tbody = document.getElementById('guruBody');
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Memuatkan data...</td></tr>';
     callGAS('getGuru', {},
       function(data) {
         if (!data.success || !data.rows || data.rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada data guru.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Tiada data guru.</td></tr>';
           return;
         }
-        tbody.innerHTML = data.rows.map((r, i) =>
-          `<tr>
+        tbody.innerHTML = data.rows.map((r, i) => {
+          const initials = (r.nama || '?').split(' ').filter(w=>w).map(w=>w[0]).join('').substring(0,2).toUpperCase();
+          const gambarHtml = r.gambarUrl
+            ? `<img src="${escHtml(r.gambarUrl)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);">`
+            : `<div style="width:40px;height:40px;border-radius:50%;background:var(--green);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid var(--gold);">${initials}</div>`;
+
+          const isSelf = loggedInGuru && r.nama && r.nama === loggedInGuru;
+          const canEdit = currentRole === 'ADMIN' || isSelf;
+          const btnStyle = canEdit
+            ? 'cursor:pointer; padding:5px 12px; border-radius:8px; border:1px solid var(--green); background:var(--green-light); color:var(--green); font-size:12px;'
+            : 'cursor:not-allowed; padding:5px 12px; border-radius:8px; border:1px solid var(--border); background:#f5f5f5; color:var(--text-muted); font-size:12px; opacity:0.5;';
+
+          const rowData = {
+            email: r.email || '',
+            nama: r.nama || '',
+            telefon: r.telefon || '',
+            alamat: r.alamat || '',
+            jawatan: r.jawatan || '',
+            gambarUrl: r.gambarUrl || ''
+          };
+          const dataAttr = `data-guru='${JSON.stringify(rowData).replace(/'/g, "&#39;")}'`;
+
+          return `<tr>
             <td>${i + 1}</td>
+            <td style="text-align:center;">${gambarHtml}</td>
             <td>${escHtml(r.nama)}</td>
-            <td>${escHtml(r.email)}</td>
-            <td>${escHtml(r.telefon)}</td>
-          </tr>`
-        ).join('');
+            <td><span style="font-size:12px; padding:3px 10px; border-radius:20px; background:var(--gold-light); color:var(--gold-dark); font-weight:500;">${escHtml(r.jawatan || '—')}</span></td>
+            <td style="font-size:13px;">${escHtml(r.email || '—')}</td>
+            <td style="font-size:13px;">${escHtml(r.telefon || '—')}</td>
+            <td><button style="${btnStyle}" ${canEdit ? '' : 'disabled'} ${canEdit ? dataAttr : ''} onclick="${canEdit ? 'openModalKemaskiniFromBtn(this)' : ''}">✏️ Kemaskini</button></td>
+          </tr>`;
+        }).join('');
+      },
+      function() {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--error);padding:20px;">Ralat memuatkan data.</td></tr>';
+      }
+    );
+  }
+
+  function openModalKemaskiniFromBtn(btn) {
+    try {
+      const d = JSON.parse(btn.getAttribute('data-guru').replace(/&#39;/g, "'"));
+      openModalKemaskini(d.email, d.nama, d.telefon, d.alamat, d.jawatan, d.gambarUrl);
+    } catch(e) {}
+  }
+
+  function openModalKemaskini(email, nama, telefon, alamat, jawatan, gambarUrl) {
+    document.getElementById('kmsTargetEmail').value = email || '';
+    document.getElementById('kmsNama').value = nama || '';
+    document.getElementById('kmsTelefon').value = telefon || '';
+    document.getElementById('kmsAlamat').value = alamat || '';
+    document.getElementById('kmsJawatan').value = jawatan || 'Guru';
+    document.getElementById('kmsGambarFile').value = '';
+    document.getElementById('kmsError').style.display = 'none';
+    document.getElementById('kmsSuccess').style.display = 'none';
+    document.getElementById('kmsSimpanBtn').disabled = false;
+    document.getElementById('kmsSimpanBtn').textContent = '💾 Simpan';
+    const preview = document.getElementById('kmsGambarPreview');
+    if (gambarUrl) {
+      preview.innerHTML = `<img src="${escHtml(gambarUrl)}" style="width:100%;height:100%;object-fit:cover;">`;
+    } else {
+      const initials = (nama || '?').split(' ').filter(w=>w).map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      preview.style.display = 'flex';
+      preview.innerHTML = initials;
+    }
+    const modal = document.getElementById('modalKemaskiniGuru');
+    modal.style.display = 'flex';
+  }
+
+  function tutupModalKemaskini() {
+    document.getElementById('modalKemaskiniGuru').style.display = 'none';
+  }
+
+  function previewKmsGambar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('kmsGambarPreview').innerHTML =
+        `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function simpanKemaskiniGuru() {
+    const btn = document.getElementById('kmsSimpanBtn');
+    const targetEmail = document.getElementById('kmsTargetEmail').value;
+    const nama     = document.getElementById('kmsNama').value.trim();
+    const telefon  = document.getElementById('kmsTelefon').value.trim();
+    const alamat   = document.getElementById('kmsAlamat').value.trim();
+    const jawatan  = document.getElementById('kmsJawatan').value;
+    const fileInput = document.getElementById('kmsGambarFile');
+    const errEl    = document.getElementById('kmsError');
+    const sucEl    = document.getElementById('kmsSuccess');
+
+    errEl.style.display = 'none';
+    sucEl.style.display = 'none';
+
+    if (!nama) {
+      errEl.textContent = 'Nama tidak boleh kosong.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const doUpdate = function(gambarUrl) {
+      callGAS('updateGuru', {
+        token: sessionStorage.getItem('spkm_token'),
+        targetEmail, nama, telefon, alamat, jawatan,
+        gambarUrl: gambarUrl
+      },
+      function(data) {
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan';
+        if (data.success) {
+          sucEl.textContent = '✓ Maklumat berjaya dikemaskini!';
+          sucEl.style.display = 'block';
+          setTimeout(() => { tutupModalKemaskini(); loadGuruList(); }, 1500);
+        } else {
+          errEl.textContent = data.message || 'Ralat semasa kemaskini.';
+          errEl.style.display = 'block';
+        }
+      },
+      function() {
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan';
+        errEl.textContent = 'Ralat sambungan. Sila cuba semula.';
+        errEl.style.display = 'block';
+      });
+    };
+
+    if (fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Data = e.target.result.split(',')[1];
+        callGAS('uploadGuruGambar', {
+          token: sessionStorage.getItem('spkm_token'),
+          base64Data: base64Data,
+          mimeType: file.type,
+          fileName: 'guru_' + Date.now() + '_' + file.name
+        },
+        function(uploadData) {
+          if (uploadData.success) {
+            doUpdate(uploadData.url);
+          } else {
+            btn.disabled = false;
+            btn.textContent = '💾 Simpan';
+            errEl.textContent = uploadData.message || 'Ralat upload gambar.';
+            errEl.style.display = 'block';
+          }
+        },
+        function() {
+          btn.disabled = false;
+          btn.textContent = '💾 Simpan';
+          errEl.textContent = 'Ralat sambungan semasa upload gambar.';
+          errEl.style.display = 'block';
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      doUpdate('');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalKemaskiniGuru');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) tutupModalKemaskini();
+      });
+    }
+  });
+
+  // =====================
+  // CARTA ORGANISASI
+  // =====================
+  function loadOrgChart() {
+    const container = document.getElementById('orgChartContent');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:14px;">Memuatkan...</p>';
+
+    callGAS('getOrgChart', {},
+      function(data) {
+        if (!data.success || !data.rows || data.rows.length === 0) {
+          container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Tiada data.</p>';
+          return;
+        }
+
+        const groups = { PENGASAS: [], AJK: [], GURU: [] };
+        data.rows.forEach(r => {
+          const j = (r.jawatan || '').toUpperCase();
+          if (groups[j]) groups[j].push(r);
+          else groups['GURU'].push(r);
+        });
+
+        const renderKad = (r, isPengasas) => {
+          const size = isPengasas ? '100px' : '72px';
+          const fontSize = isPengasas ? '28px' : '20px';
+          const namaSize = isPengasas ? '15px' : '13px';
+          const initials = (r.nama || '?').split(' ').filter(w=>w).map(w=>w[0]).join('').substring(0,2).toUpperCase();
+          const borderTop = isPengasas ? '3px solid var(--gold)' : (r.jawatan && r.jawatan.toUpperCase()==='AJK' ? '3px solid var(--green-mid)' : '2px solid var(--border)');
+          const gambar = r.gambarUrl
+            ? `<img src="${escHtml(r.gambarUrl)}" style="width:${size};height:${size};border-radius:50%;object-fit:cover;border:3px solid var(--gold);">`
+            : `<div style="width:${size};height:${size};border-radius:50%;background:var(--green);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:${fontSize};font-weight:700;border:3px solid var(--gold);">${initials}</div>`;
+          return `
+            <div style="text-align:center; padding:20px 16px; background:var(--white); border-radius:var(--radius); border-top:${borderTop}; box-shadow:var(--shadow); min-width:140px; max-width:160px; flex:0 0 auto;">
+              <div style="display:flex;justify-content:center;margin-bottom:12px;">${gambar}</div>
+              <p style="font-size:${namaSize};font-weight:600;color:var(--green);line-height:1.3;margin-bottom:4px;">${escHtml(r.nama || '—')}</p>
+              <p style="font-size:11px;color:var(--text-muted);">${escHtml(r.jawatan || '')}</p>
+            </div>`;
+        };
+
+        const renderGroup = (label, members, isPengasas) => {
+          if (members.length === 0) return '';
+          return `
+            <div style="margin-bottom:32px;">
+              <p style="text-align:center;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:16px;text-transform:uppercase;">— ${label} —</p>
+              <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;">
+                ${members.map(r => renderKad(r, isPengasas)).join('')}
+              </div>
+            </div>`;
+        };
+
+        container.innerHTML =
+          renderGroup('Pengasas', groups.PENGASAS, true) +
+          renderGroup('AJK', groups.AJK, false) +
+          renderGroup('Guru', groups.GURU, false);
+      },
+      function() {
+        container.innerHTML = '<p style="text-align:center;color:var(--error);">Ralat memuatkan carta organisasi.</p>';
       }
     );
   }
@@ -4749,6 +5032,7 @@
           document.getElementById('guruMenu').style.display = 'block';
           document.getElementById('mobileLoginBtn').style.display = 'none';
         }
+        loadOrgChart();
       } else {
         document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
         document.getElementById('loginModalError').classList.add('show');
