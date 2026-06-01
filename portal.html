@@ -1532,12 +1532,12 @@
     border: none;
     background: none;
     cursor: pointer;
-    padding: 6px 0;
+    padding: 8px 0;
     position: relative;
     font-family: 'DM Sans', sans-serif;
   }
-  .bnav-icon  { font-size: 20px; line-height: 1; }
-  .bnav-label { font-size: 9px; color: #aaa; line-height: 1; }
+  .bnav-icon  { font-size: 26px; line-height: 1; }
+  .bnav-label { font-size: 11px; color: #aaa; line-height: 1; margin-top: 3px; }
   .bnav-item.active .bnav-label { color: #0A1F44; font-weight: 600; }
   .bnav-item.active::before {
     content: '';
@@ -1608,11 +1608,16 @@
       z-index: 200;
       background: #fff;
       border-top: 1px solid #E2D9C5;
-      height: 58px;
-      padding-bottom: env(safe-area-inset-bottom);
+      height: 72px;
+      padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
     }
-    .main { padding: 16px 16px 80px; }
-    .section-heading { margin-bottom: 20px; }
+    .main { padding: 16px 16px 90px; }
+    .section-heading { margin-bottom: 16px; }
+    .section-heading .arabic { font-size: 20px; }
+    .section-heading h2 { font-size: 17px; }
+    .section-heading p  { font-size: 13px; }
+    .info-panel { padding: 20px; }
+    .ustaz-card { width: 100%; max-width: 100%; box-sizing: border-box; }
 
     /* Part 4 — Form & input fixes (prevent iOS auto-zoom + touch targets) */
     input[type="text"],
@@ -1628,17 +1633,17 @@
     .btn       { padding: 14px 24px; font-size: 15px; }
     .tab-btn   { padding: 12px; }
     .card-body { padding: 16px; }
-    .section-heading .arabic { font-size: 22px; }
+    /* section-heading typography set above */
     .step-dot  { width: 32px; height: 32px; }
     .checkbox-group input[type="checkbox"] { width: 22px; height: 22px; }
 
     /* Part 5 — Single-column card grid */
-    .card-grid { grid-template-columns: 1fr; }
+    .card-grid { grid-template-columns: 1fr; gap: 16px; }
 
     /* Part 5b — Footer clears bottom nav */
     footer {
       padding-top: 16px;
-      padding-bottom: 80px;
+      padding-bottom: 90px;
       font-size: 12px;
       text-align: center;
       border-top: 1px solid var(--border);
