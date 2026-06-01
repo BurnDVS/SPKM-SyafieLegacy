@@ -1540,10 +1540,12 @@
   }
 
   /* ===== TASK 4: MOBILE HOME CARDS ===== */
-  #mobileHomeContent { display: none; }
+  @media (min-width: 1025px) {
+    #mobileHomeContent { display: none !important; }
+  }
 
   @media (max-width: 1024px) {
-    #mobileHomeContent { display: block; }
+    #mobileHomeContent { display: block !important; }
 
     .mob-hero {
       background: #0A1F44;
@@ -1795,7 +1797,7 @@
   </div>
 
   <!-- MOBILE HOME CONTENT -->
-  <div id="mobileHomeContent" style="display:none;">
+  <div id="mobileHomeContent">
 
     <!-- HERO CARD -->
     <div class="mob-hero">
