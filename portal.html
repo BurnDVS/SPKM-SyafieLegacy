@@ -806,10 +806,9 @@
     gap: 12px;
   }
   .landing-cta .btn { margin-top: 0; flex: 1; }
-  @media (max-width: 1024px) {
+  @media (max-width: 768px) {
     .landing-hero { flex-direction: column; gap: 32px; }
     .landing-hero-img { width: 100%; max-width: 260px; margin: 0 auto; order: -1; }
-    .landing-ustaz-full { max-height: 200px; width: 100%; object-fit: cover; }
     .landing-title { font-size: 26px; }
     .ustaz-card { flex-direction: column; }
   }
@@ -1497,365 +1496,6 @@
     .auto-refresh-badge.refreshing { animation: refreshPulse 1s ease-in-out; }
 
   } /* end @media prefers-reduced-motion */
-
-  /* ============================================================ */
-  /* MOBILE-FIRST RESPONSIVE OVERHAUL                             */
-  /* ============================================================ */
-
-  /* Mobile login pill — hidden on desktop, shown on mobile */
-  #mobileLoginBtn {
-    display: none;
-    background: #FFD700;
-    color: #0A1F44;
-    border: none;
-    border-radius: 16px;
-    padding: 5px 14px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-    font-family: 'DM Sans', sans-serif;
-    margin-left: auto;
-  }
-
-  /* Bottom navigation bar — hidden on desktop */
-  #bottomNav { display: none; }
-  .bnav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    height: 100%;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 8px 0;
-    position: relative;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .bnav-icon  { font-size: 26px; line-height: 1; }
-  .bnav-label { font-size: 11px; color: #aaa; line-height: 1; margin-top: 3px; }
-  .bnav-item.active .bnav-label { color: #0A1F44; font-weight: 600; }
-  .bnav-item.active::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 25%; right: 25%;
-    height: 2.5px;
-    background: #FFD700;
-    border-radius: 0 0 2px 2px;
-  }
-
-  /* Login modal — mobile bottom sheet */
-  #loginModal {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    display: none;
-    align-items: flex-end;
-  }
-  #loginModal.open { display: flex; }
-  #loginModalBackdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(10,31,68,0.55);
-  }
-  #loginModalSheet {
-    position: relative;
-    z-index: 1;
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-    padding: 16px 20px 32px;
-    width: 100%;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-  }
-  #loginModal.open #loginModalSheet { transform: translateY(0); }
-  #loginModalHandle {
-    width: 36px; height: 4px;
-    background: #E2D9C5;
-    border-radius: 2px;
-    margin: 0 auto 16px;
-  }
-  #loginModalTitle {
-    font-family: 'Lora', serif;
-    font-size: 16px;
-    color: #0A1F44;
-    margin-bottom: 16px;
-  }
-
-  /* ============================================================ */
-  /* @media max-width 1024px — all mobile overrides               */
-  /* ============================================================ */
-  @media (max-width: 1024px) {
-
-    /* Part 1 — Compact header */
-    .header-inner   { padding: 10px 14px; }
-    .header-logo    { width: 36px; height: 36px; }
-    .header-text h1 { font-size: 14px; }
-    .header-text p  { font-size: 11px; margin-top: 2px; }
-    .header-login-wrap { display: none; }
-    #mobileLoginBtn    { display: block; }
-
-    /* Part 2 — Bottom nav visible, top nav hidden */
-    .nav-bar { display: none; }
-    #bottomNav {
-      display: flex;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 200;
-      background: #fff;
-      border-top: 1px solid #E2D9C5;
-      height: 72px;
-      padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
-    }
-    .main {
-      padding: 16px 16px 90px;
-      max-width: 100%;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .panel { width: 100%; box-sizing: border-box; }
-    #panel-utama { width: 100%; }
-    .section-heading { margin-bottom: 16px; }
-    .section-heading .arabic { font-size: 20px; }
-    .section-heading h2 { font-size: 17px; }
-    .section-heading p  { font-size: 13px; }
-    .info-panel { padding: 20px; }
-    .ustaz-card { width: 100%; max-width: 100%; box-sizing: border-box; }
-
-    /* Part 4 — Form & input fixes (prevent iOS auto-zoom + touch targets) */
-    input[type="text"],
-    input[type="email"],
-    input[type="tel"],
-    input[type="number"],
-    select,
-    textarea {
-      font-size: 16px;
-      padding: 13px 14px;
-    }
-    .form-row  { grid-template-columns: 1fr; }
-    .btn       { padding: 14px 24px; font-size: 15px; }
-    .tab-btn   { padding: 12px; }
-    .card-body { padding: 16px; }
-    /* section-heading typography set above */
-    .step-dot  { width: 32px; height: 32px; }
-    .checkbox-group input[type="checkbox"] { width: 22px; height: 22px; }
-
-    /* Part 5 — Single-column card grid */
-    .card-grid { grid-template-columns: 1fr; gap: 16px; }
-
-    /* Part 5b — Footer clears bottom nav */
-    footer {
-      padding-top: 16px;
-      padding-bottom: 90px;
-      font-size: 12px;
-      text-align: center;
-      border-top: 1px solid var(--border);
-      margin-top: 20px;
-    }
-  }
-
-  /* HOME QUICK ACTIONS */
-  .home-quick-section {
-    margin-top: 24px;
-  }
-  .home-section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-  }
-  .home-quick-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .home-quick-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .home-quick-card:hover,
-  .home-quick-card:active {
-    background: var(--green-light);
-    border-color: var(--green-mid);
-    transform: translateX(2px);
-  }
-  .home-quick-icon {
-    font-size: 24px;
-    width: 44px;
-    height: 44px;
-    background: var(--green-light);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .home-quick-text {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .home-quick-text strong {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-dark);
-  }
-  .home-quick-text span {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .home-quick-arrow {
-    font-size: 22px;
-    color: var(--text-muted);
-    font-weight: 300;
-    flex-shrink: 0;
-  }
-
-  /* On desktop — hide quick actions (already have card grid) */
-  @media (min-width: 1025px) {
-    .home-quick-section { display: none; }
-  }
-
-  /* ===== MOBILE HOMEPAGE ===== */
-
-  /* Hide new mobile blocks on desktop */
-  @media (min-width: 1025px) {
-    .mob-hero-card,
-    .mob-quick-section { display: none; }
-  }
-
-  /* HERO CARD */
-  .mob-hero-card {
-    background: #0A1F44;
-    border-radius: 16px;
-    padding: 20px 18px;
-    margin: 0 0 20px 0;
-    width: calc(100% - 0px);
-    max-width: 100%;
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-  }
-  .mob-hero-card::after {
-    content: '';
-    position: absolute;
-    right: -20px; bottom: -20px;
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    background: rgba(255,215,0,0.06);
-  }
-  .mob-hero-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #FFD700;
-    letter-spacing: 1.5px;
-    margin-bottom: 8px;
-  }
-  .mob-hero-title {
-    font-family: 'Lora', serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: #FFFFFF;
-    line-height: 1.3;
-    margin-bottom: 16px;
-  }
-  .mob-hero-ustaz {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 10px;
-    padding: 10px 12px;
-  }
-  .mob-hero-avatar {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: #FFD700;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700;
-    color: #0A1F44;
-    flex-shrink: 0;
-  }
-  .mob-hero-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .mob-hero-info strong {
-    font-size: 13px;
-    font-weight: 500;
-    color: #FFFFFF;
-  }
-  .mob-hero-info span {
-    font-size: 11px;
-    color: #FFD700;
-  }
-
-  /* QUICK ACTIONS */
-  .mob-quick-section { margin-bottom: 20px; width: 100%; }
-  .mob-section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-  }
-  .mob-quick-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .mob-quick-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-top: 3px solid var(--border);
-    width: 100%;
-    min-height: 110px;
-    box-sizing: border-box;
-  }
-  .mob-quick-card:active { transform: scale(0.97); }
-  .mob-quick-gold { border-top-color: #FFD700; }
-  .mob-quick-navy { border-top-color: #0A1F44; }
-  .mob-quick-icon { font-size: 26px; }
-  .mob-quick-card strong {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-dark);
-    line-height: 1.2;
-  }
-  .mob-quick-card span {
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.3;
-  }
-
-  /* Hide old desktop elements on mobile */
-  @media (max-width: 1024px) {
-    .home-quick-section { display: none; }
-  }
 </style>
 </head>
 <body>
@@ -1899,7 +1539,6 @@
         </div>
       </div>
     </div>
-    <button id="mobileLoginBtn" onclick="showLoginModal()">🔒 Log Masuk</button>
   </div>
   <div class="header-divider"></div>
 </header>
@@ -1936,48 +1575,25 @@
       <p class="landing-tagline">Portal Rasmi</p>
       <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
 
-      <!-- HERO CARD -->
-      <div class="mob-hero-card">
-        <div class="mob-hero-label">PORTAL RASMI</div>
-        <div class="mob-hero-title">Kelas Pengajian<br>Syafie Legacy</div>
-        <div class="mob-hero-ustaz">
-          <div class="mob-hero-avatar">MS</div>
-          <div class="mob-hero-info">
-            <strong>Ustaz Muhammad Shafie</strong>
-            <span>Pengasas · Berpengalaman sejak 2018</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- QUICK ACTIONS GRID -->
-      <div class="mob-quick-section">
-        <p class="mob-section-label">TINDAKAN PANTAS</p>
-        <div class="mob-quick-grid">
-          <div class="mob-quick-card mob-quick-gold" onclick="showPanel('daftar')">
-            <div class="mob-quick-icon">📝</div>
-            <strong>Daftar Murid</strong>
-            <span>Kanak-kanak &amp; Dewasa</span>
-          </div>
-          <div class="mob-quick-card mob-quick-navy" onclick="showPanel('ebayar')">
-            <div class="mob-quick-icon">💳</div>
-            <strong>eBayar Yuran</strong>
-            <span>Bayar yuran bulanan</span>
-          </div>
-          <div class="mob-quick-card" onclick="showPanel('esemak')">
-            <div class="mob-quick-icon">🔍</div>
-            <strong>eSemak Yuran</strong>
-            <span>Semak status bayaran</span>
-          </div>
-          <div class="mob-quick-card" onclick="showLoginModal()">
-            <div class="mob-quick-icon">🔒</div>
-            <strong>Log Masuk</strong>
-            <span>Guru &amp; Admin</span>
-          </div>
+      <div class="ustaz-card">
+        <img src="https://i.ibb.co/PZZ2t6vq/ustaz-shafie-half.png" alt="Ustaz Muhammad Shafie" class="ustaz-photo">
+        <div>
+          <p class="ustaz-name">USTAZ MUHAMMAD SHAFIE BIN BAHARI</p>
+          <p class="ustaz-role">Pengasas Kelas Pengajian Syafie Legacy</p>
+          <p class="ustaz-since">Berpengalaman Sejak 2018</p>
+          <ul class="ustaz-credentials">
+            <li>Pemegang Tauliah Agama Kawasan Seluruh Negeri Melaka</li>
+            <li>Guru Halaqah JAIM bagi Institusi Penjara dan Kebajikan Masyarakat</li>
+            <li>Guru Pembimbing Muallaf Negeri Melaka</li>
+          </ul>
         </div>
       </div>
 
     </div>
 
+    <div class="landing-hero-img">
+      <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full">
+    </div>
   </div>
 
 </section>
@@ -2951,31 +2567,9 @@
 
 </main>
 
-<nav id="bottomNav" aria-label="Navigasi bawah">
-  <button class="bnav-item active" id="bnav-utama" onclick="showPanel('utama')">
-    <span class="bnav-icon">🏠</span>
-    <span class="bnav-label">Utama</span>
-  </button>
-  <button class="bnav-item" id="bnav-daftar" onclick="showPanel('daftar')">
-    <span class="bnav-icon">📋</span>
-    <span class="bnav-label">Daftar</span>
-  </button>
-  <button class="bnav-item" id="bnav-kehadiran" onclick="showPanel('kehadiran')">
-    <span class="bnav-icon">📅</span>
-    <span class="bnav-label">Hadir</span>
-  </button>
-  <button class="bnav-item" id="bnav-ebayar" onclick="showPanel('ebayar')">
-    <span class="bnav-icon">💳</span>
-    <span class="bnav-label">eBayar</span>
-  </button>
-  <button class="bnav-item" id="bnav-esemak" onclick="showPanel('esemak')">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-label">eSemak</span>
-  </button>
-</nav>
-
 <footer>
-  <p>© 2026 Sistem Pengurusan Kelas Mengaji Syafie Legacy</p>
+  <p>© 2026 Sistem Pengurusan Kelas Mengaji &nbsp;·&nbsp; Dikuasakan oleh <span>Google Apps Script</span></p>
+  <p style="margin-top:4px;">Data disimpan dalam <span>Google Sheets</span> · Slip dijana oleh <span>Autocrat</span></p>
 </footer>
 
 <!-- ============================================================ -->
@@ -4764,113 +4358,7 @@
     }
 
   });
-
-  // =====================
-  // BOTTOM NAV — showPanel wrapper (sync active bnav state)
-  // =====================
-  (function() {
-    var _prev = showPanel;
-    window.showPanel = function(name) {
-      _prev(name);
-      document.querySelectorAll('.bnav-item').forEach(function(b) {
-        b.classList.remove('active');
-      });
-      var bnav = document.getElementById('bnav-' + name);
-      if (bnav) bnav.classList.add('active');
-    };
-  })();
-
-  // =====================
-  // LOGIN MODAL (mobile bottom sheet)
-  // =====================
-  function showLoginModal() {
-    var m = document.getElementById('loginModal');
-    m.style.display = 'flex';
-    requestAnimationFrame(function() { m.classList.add('open'); });
-    document.body.style.overflow = 'hidden';
-  }
-
-  function hideLoginModal() {
-    var m = document.getElementById('loginModal');
-    m.classList.remove('open');
-    setTimeout(function() {
-      m.style.display = 'none';
-      document.body.style.overflow = '';
-    }, 300);
-  }
-
-  async function handleLoginModal() {
-    document.getElementById('loginModalError').classList.remove('show');
-    var email = document.getElementById('loginEmailModal').value.trim();
-    var phone = document.getElementById('loginPhoneModal').value.trim();
-    if (!email || !phone) {
-      document.getElementById('loginModalErrorMsg').textContent = 'Sila isi e-mel dan nombor telefon.';
-      document.getElementById('loginModalError').classList.add('show');
-      return;
-    }
-    var btn = document.getElementById('loginModalBtn');
-    btn.classList.add('loading'); btn.disabled = true;
-    try {
-      var data = await callGASPromise('login', { email: email, phone: phone });
-      if (data.success) {
-        loggedInGuru = data.user;
-        currentRole  = data.role || 'GURU';
-        if (data.token) sessionStorage.setItem('spkm_token', data.token);
-        document.getElementById('guruName').textContent               = data.user;
-        document.getElementById('headerUserName').textContent         = data.user;
-        document.getElementById('headerUserNameDropdown').textContent = data.user;
-        document.getElementById('loginFormWrapper').style.display     = 'none';
-        document.getElementById('dashboardPreview').style.display     = 'block';
-        document.getElementById('headerPreLogin').style.display       = 'none';
-        document.getElementById('headerPostLogin').style.display      = '';
-        document.getElementById('headerLoginDropdown').classList.remove('open');
-        var gEl = document.getElementById('hadirGuru');
-        if (gEl) gEl.value = data.user;
-        setLoginState(true);
-        updateNav(true);
-        loadDashboardStats();
-        resetIdleTimer();
-        hideLoginModal();
-      } else {
-        document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
-        document.getElementById('loginModalError').classList.add('show');
-      }
-    } catch(e) {
-      document.getElementById('loginModalErrorMsg').textContent = 'Ralat sambungan. Sila cuba sebentar lagi.';
-      document.getElementById('loginModalError').classList.add('show');
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
-  }
 </script>
-
-<!-- LOGIN MODAL (mobile bottom sheet) -->
-<div id="loginModal" style="display:none;">
-  <div id="loginModalBackdrop" onclick="hideLoginModal()"></div>
-  <div id="loginModalSheet">
-    <div id="loginModalHandle"></div>
-    <h3 id="loginModalTitle">🔒 Log Masuk Guru / Admin</h3>
-    <div class="form-group">
-      <label for="loginEmailModal">Alamat E-mel <span class="req">*</span></label>
-      <input type="email" id="loginEmailModal" placeholder="guru@example.com" autocomplete="email"
-             onkeydown="if(event.key==='Enter')handleLoginModal()">
-    </div>
-    <div class="form-group">
-      <label for="loginPhoneModal">No. WhatsApp <span class="req">*</span></label>
-      <input type="tel" id="loginPhoneModal" placeholder="0123456789" autocomplete="off"
-             onkeydown="if(event.key==='Enter')handleLoginModal()">
-      <p class="helper">Masukkan nombor telefon WhatsApp anda</p>
-    </div>
-    <div class="alert alert-error" id="loginModalError">
-      <span class="alert-icon">⚠</span>
-      <span id="loginModalErrorMsg">E-mel atau nombor tidak sepadan.</span>
-    </div>
-    <button class="btn btn-primary" id="loginModalBtn" onclick="handleLoginModal()" style="margin-top:16px;">
-      <span class="btn-text">Log Masuk</span>
-      <span class="btn-loader"></span>
-    </button>
-  </div>
-</div>
 
 <!-- IDLE WARNING MODAL -->
 <div class="idle-modal" id="idleWarningModal">
