@@ -127,31 +127,25 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ getYuranStats — statistik per bulan
 
 #### PWA Mobile
-- ✅ manifest.json — nama, icon, tema Navy, start_url
-- ✅ sw.js — service worker, cache shell, offline banner
+- ✅ manifest.json — nama, icon, tema Navy, start_url `/SPKM/`
+- ✅ sw.js — service worker v5, same-origin only, auto-reload on update
 - ✅ .nojekyll — skip Jekyll processing
-- ✅ _isGAS detection — `hostname.endsWith('google.com')`
+- ✅ .claspignore — exclude sw.js/index.html/manifest.json dari GAS
+- ✅ _isGAS detection — `hostname.endsWith('google.com') || hostname.endsWith('googleusercontent.com')`
+- ✅ JSONP approach — `<script>` tag bypass CORS, call `doGet?action=X&callback=cb`
 - ✅ GitHub Pages live — https://shafielegacy.github.io/SPKM
 - ✅ Add to Home Screen — splash screen Navy + Gold + logo Syafie Legacy
-- ✅ Zero impact desktop — GAS deployment tidak terjejas
+- ✅ CORS selesai — JSONP via doGet, tiada fetch() cross-origin
 
-#### Backend (Code.js — 2000+ baris, 50 functions)
-- ✅ doPost — entry point mobile/fetch
+#### Backend (Code.js)
+- ✅ doGet — serve HTML (desktop) ATAU JSONP API (mobile) via `?action=&payload=&callback=`
+- ✅ doPost — entry point fallback (URLSearchParams format)
 - ✅ doAction — entry point desktop/google.script.run
-- ✅ doOptions — CORS preflight handler
 - ✅ Token auth — JWT-like token untuk sesi guru
 - ✅ OTP system — sendOTPKanak, sendOTPDewasa, confirmRegister
 - ✅ syncForms — sync nama murid ke semua Google Forms
-- ✅ URLSearchParams body — simple CORS request
 
 ---
-
-### Dalam Proses / Bug 🔧
-
-- ⚠️ **CORS issue** — fetch() dari `shafielegacy.github.io` ke GAS URL masih dapat "Ralat sambungan"
-  - Approach dah cuba: CORS headers, doOptions(), URLSearchParams, .nojekyll
-  - **Sementara:** Parents guna GAS URL terus dari browser phone
-  - **Fix:** Akan disambung sesi akan datang
 
 ---
 
@@ -159,7 +153,6 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 | Modul | Status | Keutamaan |
 |---|---|---|
-| **Fix CORS PWA Mobile** | 🔧 Dalam fix | Kritikal |
 | **Login Parent (eBayar & eSemak)** | Planned | Tinggi |
 | **Login Guru (eBayar & eSemak)** | Planned | Tinggi |
 | **Sijil Khatam** | Planned | Sederhana |
@@ -173,8 +166,9 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 ## Deploy Workflow
 
 ```bash
-# Deploy ke GAS sahaja
+# Deploy ke GAS sahaja (sw.js/index.html/manifest.json auto-excluded via .claspignore)
 clasp push --force
+# WAJIB: GAS Editor → Deploy → Manage deployments → Edit → New version → Deploy
 
 # Deploy ke GitHub (BurnDVS repo)
 git add . && git commit -m "message" && git push
@@ -182,9 +176,11 @@ git add . && git commit -m "message" && git push
 # Deploy ke GitHub Pages (shafielegacy/SPKM)
 git push pages main
 
-# Deploy semua sekaligus (guna SPKM.bat → Pilihan 6)
-# Nota: Lepas clasp push, kena GAS Editor → Deploy → New version
+# Deploy semua sekaligus
+git add . && git commit -m "message" && git push && git push pages main && clasp push --force
 ```
+
+> **Penting:** Jangan create "New deployment" dalam GAS — sentiasa **edit deployment sedia ada** dan pilih "New version". New deployment akan dapat ID baru yang berbeza dari GAS_URL dalam code.
 
 ---
 
@@ -194,13 +190,15 @@ git push pages main
 - Screenshot error → paste terus dalam Claude Code
 - Claude Code untuk: debug, fix, git push, clasp push, baca/tulis fail
 - Claude.ai untuk: planning, architecture, strategy, review
-- Prompt CORS untuk sesi akan datang:
-
-  "CORS issue - fetch() dari shafielegacy.github.io/SPKM 
-   ke GAS URL dapat Ralat sambungan pada semua fungsi.
-   Approach dah cuba: CORS headers, doOptions(), URLSearchParams, .nojekyll
-   Cari dan implement proven solution sampai confirmed working."
 ```
+
+### CORS Mobile — Penyelesaian (selesai ✅)
+
+Masalah CORS GitHub Pages → GAS diselesaikan dengan **JSONP via doGet**:
+- `fetch()` cross-origin ke GAS exec URL TIDAK BOLEH — 302 redirect tiada CORS headers
+- `<script>` tag JSONP bypass CORS — GAS doGet return `callback(data)` sebagai JavaScript
+- `sw.js` MESTI excluded dari GAS via `.claspignore` — kalau masuk GAS, `self is not defined` block semua functions
+- `_isGAS` mesti check `googleusercontent.com` jugak — GAS desktop served dari sana, bukan `google.com`
 
 ---
 
