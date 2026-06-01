@@ -1650,6 +1650,78 @@
       margin-top: 20px;
     }
   }
+
+  /* HOME QUICK ACTIONS */
+  .home-quick-section {
+    margin-top: 24px;
+  }
+  .home-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .home-quick-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .home-quick-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .home-quick-card:hover,
+  .home-quick-card:active {
+    background: var(--green-light);
+    border-color: var(--green-mid);
+    transform: translateX(2px);
+  }
+  .home-quick-icon {
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    background: var(--green-light);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .home-quick-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .home-quick-text strong {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dark);
+  }
+  .home-quick-text span {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .home-quick-arrow {
+    font-size: 22px;
+    color: var(--text-muted);
+    font-weight: 300;
+    flex-shrink: 0;
+  }
+
+  /* On desktop — hide quick actions (already have card grid) */
+  @media (min-width: 1025px) {
+    .home-quick-section { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -1741,6 +1813,45 @@
             <li>Guru Halaqah JAIM bagi Institusi Penjara dan Kebajikan Masyarakat</li>
             <li>Guru Pembimbing Muallaf Negeri Melaka</li>
           </ul>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="home-quick-section">
+        <p class="home-section-label">TINDAKAN PANTAS</p>
+        <div class="home-quick-grid">
+          <div class="home-quick-card" onclick="showPanel('daftar')">
+            <div class="home-quick-icon">📝</div>
+            <div class="home-quick-text">
+              <strong>Daftar Murid</strong>
+              <span>Kanak-kanak &amp; Dewasa</span>
+            </div>
+            <div class="home-quick-arrow">›</div>
+          </div>
+          <div class="home-quick-card" onclick="showPanel('ebayar')">
+            <div class="home-quick-icon">💳</div>
+            <div class="home-quick-text">
+              <strong>eBayar Yuran</strong>
+              <span>Bayar yuran bulanan</span>
+            </div>
+            <div class="home-quick-arrow">›</div>
+          </div>
+          <div class="home-quick-card" onclick="showPanel('esemak')">
+            <div class="home-quick-icon">🔍</div>
+            <div class="home-quick-text">
+              <strong>eSemak Yuran</strong>
+              <span>Semak status bayaran</span>
+            </div>
+            <div class="home-quick-arrow">›</div>
+          </div>
+          <div class="home-quick-card" onclick="showPanel('kehadiran')">
+            <div class="home-quick-icon">📅</div>
+            <div class="home-quick-text">
+              <strong>Kehadiran</strong>
+              <span>Rekod kehadiran murid</span>
+            </div>
+            <div class="home-quick-arrow">›</div>
+          </div>
         </div>
       </div>
 
