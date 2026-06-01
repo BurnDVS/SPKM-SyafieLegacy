@@ -1,0 +1,25 @@
+{
+  "name": "Sistem Pengurusan Kelas Mengaji",
+  "short_name": "SPKM",
+  "description": "Portal Guru & Pendaftaran Murid — Syafie Legacy",
+  "start_url": "/SPKM/",
+  "scope": "/SPKM/",
+  "display": "standalone",
+  "background_color": "#0A1F44",
+  "theme_color": "#0A1F44",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/93rXrkZq/LOGO-SL.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.ibb.co/93rXrkZq/LOGO-SL.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

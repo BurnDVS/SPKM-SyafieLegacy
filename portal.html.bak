@@ -3,17 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src 'self' https://script.google.com; worker-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src https://script.google.com;">
 <meta name="application-name" content="SPKM">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SPKM">
 <meta name="theme-color" content="#0A1F44">
 <link rel="apple-touch-icon" href="https://i.ibb.co/93rXrkZq/LOGO-SL.png">
-<link rel="manifest" href="./manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-touch-fullscreen" content="yes">
-<link rel="apple-touch-startup-image" href="https://i.ibb.co/93rXrkZq/LOGO-SL.png">
 <title>Sistem Pengurusan Kelas Mengaji</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -1706,66 +1702,6 @@
 </head>
 <body>
 
-<!-- PWA SPLASH SCREEN -->
-<div id="splashScreen" style="
-  display:none;
-  position:fixed;
-  inset:0;
-  background:#0A1F44;
-  z-index:99999;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-">
-  <div style="
-    width:90px;height:90px;
-    border-radius:20px;
-    background:#fff;
-    display:flex;align-items:center;justify-content:center;
-    border:3px solid #FFD700;
-  ">
-    <img src="https://i.ibb.co/93rXrkZq/LOGO-SL.png"
-         style="width:72px;height:72px;border-radius:14px;">
-  </div>
-  <div style="text-align:center;">
-    <div style="font-family:'Lora',serif;font-size:20px;
-                color:#FFD700;font-weight:600;margin-bottom:6px;">
-      SPKM
-    </div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.7);">
-      Sistem Pengurusan Kelas Mengaji
-    </div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">
-      Syafie Legacy
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:8px;">
-    <div style="width:8px;height:8px;border-radius:50%;
-                background:#FFD700;" id="dot1"></div>
-    <div style="width:8px;height:8px;border-radius:50%;
-                background:rgba(255,215,0,0.3);" id="dot2"></div>
-    <div style="width:8px;height:8px;border-radius:50%;
-                background:rgba(255,215,0,0.3);" id="dot3"></div>
-  </div>
-</div>
-
-<!-- PWA OFFLINE BANNER -->
-<div id="offlineBanner" style="
-  display:none;
-  background:#C0392B;
-  color:#fff;
-  padding:10px 16px;
-  text-align:center;
-  font-size:13px;
-  font-weight:500;
-  position:fixed;
-  top:0;left:0;right:0;
-  z-index:9998;
-">
-  📡 Anda Sedang Offline — Sila semak sambungan internet
-</div>
-
 <!-- HEADER -->
 <header class="site-header">
   <div class="header-inner">
@@ -3016,8 +2952,7 @@
 <!-- SCRIPT -->
 <!-- ============================================================ -->
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec';
-  const _isGAS  = window.location.hostname.endsWith('google.com');
+  // GAS_URL removed — portal diservis oleh GAS, gunakan google.script.run
 
   let currentStep    = 1;
   let loggedInGuru   = null;
@@ -3261,27 +3196,14 @@
   // =====================
   // API CALL HELPER
   // =====================
-  function _fetchGAS(action, payload) {
-    return fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(Object.assign({ action: action }, payload))
-    }).then(function(r) { return r.json(); });
-  }
-
   function callGAS(action, payload, onSuccess, onError) {
     const p = Object.assign({}, payload);
     const tok = sessionStorage.getItem('spkm_token');
     if (tok) p.token = tok;
-    if (_isGAS) {
-      google.script.run
-        .withSuccessHandler(onSuccess || function() {})
-        .withFailureHandler(onError  || function(err) { console.error('GAS error:', err); })
-        .doAction(action, p);
-    } else {
-      _fetchGAS(action, p)
-        .then(onSuccess || function() {})
-        .catch(onError  || function(err) { console.error('API error:', err); });
-    }
+    google.script.run
+      .withSuccessHandler(onSuccess || function() {})
+      .withFailureHandler(onError  || function(err) { console.error('GAS error:', err); })
+      .doAction(action, p);
   }
 
   function callGASPromise(action, payload) {
@@ -3289,14 +3211,10 @@
       const p = Object.assign({}, payload);
       const tok = sessionStorage.getItem('spkm_token');
       if (tok) p.token = tok;
-      if (_isGAS) {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          .doAction(action, p);
-      } else {
-        _fetchGAS(action, p).then(resolve).catch(reject);
-      }
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .doAction(action, p);
     });
   }
 
@@ -5110,65 +5028,6 @@
     }
   }
 
-  // PWA — Splash screen (mobile standalone sahaja)
-  function initPWA() {
-    var isMobile = window.innerWidth <= 1024;
-    var isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                    || window.navigator.standalone === true;
-
-    if (isMobile && isStandalone) {
-      var splash = document.getElementById('splashScreen');
-      if (splash) {
-        splash.style.display = 'flex';
-        var active = 0;
-        var dots = [
-          document.getElementById('dot1'),
-          document.getElementById('dot2'),
-          document.getElementById('dot3')
-        ];
-        var dotInterval = setInterval(function() {
-          dots.forEach(function(d, i) {
-            if (d) d.style.background = i === active
-              ? '#FFD700' : 'rgba(255,215,0,0.3)';
-          });
-          active = (active + 1) % 3;
-        }, 400);
-        setTimeout(function() {
-          clearInterval(dotInterval);
-          splash.style.opacity = '0';
-          splash.style.transition = 'opacity 0.5s ease';
-          setTimeout(function() {
-            splash.style.display = 'none';
-            splash.style.opacity = '1';
-            splash.style.transition = '';
-          }, 500);
-        }, 2000);
-      }
-    }
-
-    if (isMobile) {
-      var banner = document.getElementById('offlineBanner');
-      function updateOnlineStatus() {
-        if (banner) {
-          banner.style.display = navigator.onLine ? 'none' : 'block';
-          var header = document.querySelector('.site-header');
-          if (header) {
-            header.style.marginTop = navigator.onLine ? '0' : '44px';
-          }
-        }
-      }
-      window.addEventListener('online', updateOnlineStatus);
-      window.addEventListener('offline', updateOnlineStatus);
-      updateOnlineStatus();
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPWA);
-  } else {
-    initPWA();
-  }
-
 </script>
 
 <div id="loginModal" style="display:none;">
@@ -5205,17 +5064,6 @@
     <button class="idle-modal-btn" onclick="extendSession()">OK, Teruskan Sesi</button>
   </div>
 </div>
-
-
-<script>
-  if ('serviceWorker' in navigator && !_isGAS) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('./sw.js')
-        .then(function(reg) { console.log('SW registered, scope:', reg.scope); })
-        .catch(function(err) { console.warn('SW registration failed:', err); });
-    });
-  }
-</script>
 
 </body>
 </html>
