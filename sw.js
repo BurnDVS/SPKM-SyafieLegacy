@@ -1,14 +1,10 @@
-const CACHE = 'spkm-v3';
-const SHELL = ['./', './manifest.json'];
+const CACHE    = 'spkm-v4';
 const GAS_ORIGIN = 'https://script.google.com';
 const GAS_CDN    = 'https://script.googleusercontent.com';
 
 self.addEventListener('install', function(e) {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(function(c) { return c.addAll(SHELL); })
-      .then(function() { return self.skipWaiting(); })
-  );
+  // Jangan pre-cache shell — elak SW stuck dengan versi lama
+  e.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', function(e) {
@@ -21,7 +17,6 @@ self.addEventListener('activate', function(e) {
     })
     .then(function() { return self.clients.claim(); })
     .then(function() {
-      // Beritahu semua tab untuk reload supaya dapatkan kod terbaru
       return self.clients.matchAll({ type: 'window' }).then(function(clients) {
         clients.forEach(function(client) {
           client.postMessage({ type: 'SW_UPDATED' });
@@ -34,25 +29,25 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
 
-  // GAS API calls (JSONP script tags & fetch) — network only, never cache
-  if (url.origin === GAS_ORIGIN || url.origin === GAS_CDN) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
+  // GAS & CDN — jangan intercept langsung, biar browser handle terus
+  if (url.origin === GAS_ORIGIN || url.origin === GAS_CDN) return;
 
-  // Google Fonts — network first, fall back to cache
+  // Google Fonts — cache
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(
-      fetch(e.request).then(function(resp) {
-        var clone = resp.clone();
-        caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
-        return resp;
-      }).catch(function() { return caches.match(e.request); })
+      caches.match(e.request).then(function(cached) {
+        if (cached) return cached;
+        return fetch(e.request).then(function(resp) {
+          var clone = resp.clone();
+          caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
+          return resp;
+        });
+      })
     );
     return;
   }
 
-  // Shell (HTML, manifest) — network first supaya sentiasa dapat versi terkini
+  // Shell & assets — network first, cache fallback
   e.respondWith(
     fetch(e.request).then(function(resp) {
       if (resp.ok) {
