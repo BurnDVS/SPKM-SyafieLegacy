@@ -180,10 +180,26 @@ function doPost(e) {
 // doGet — serve portal HTML, atau JSONP API call via ?action=&payload=&callback=
 function doGet(e) {
   try {
-    if (e.parameter && e.parameter.action) {
-      var action   = (e.parameter.action || '').toString().trim();
-      var callback = (e.parameter.callback || '').toString().trim();
-      var payload  = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
+    // Parse params dari e.parameter ATAU e.queryString (fallback)
+    var params = {};
+    if (e && e.parameter) {
+      Object.keys(e.parameter).forEach(function(k) { params[k] = e.parameter[k]; });
+    }
+    if (!params.action && e && e.queryString) {
+      e.queryString.split('&').forEach(function(pair) {
+        var idx = pair.indexOf('=');
+        if (idx > 0) {
+          var k = decodeURIComponent(pair.slice(0, idx));
+          var v = decodeURIComponent(pair.slice(idx + 1).replace(/\+/g, ' '));
+          params[k] = v;
+        }
+      });
+    }
+
+    if (params.action) {
+      var action   = params.action.toString().trim();
+      var callback = (params.callback || '').toString().trim();
+      var payload  = params.payload ? JSON.parse(params.payload) : {};
       payload.action = action;
 
       if (ALLOWED_ACTIONS.indexOf(action) === -1) {
@@ -210,7 +226,7 @@ function doGet(e) {
   } catch (err) {
     Logger.log('doGet API error: ' + err.message);
     var srvErr = JSON.stringify({ success: false, message: 'Ralat pelayan: ' + err.message });
-    var cb = (e.parameter && e.parameter.callback) ? e.parameter.callback : '';
+    var cb = params.callback || '';
     return ContentService
       .createTextOutput(cb ? cb + '(' + srvErr + ')' : srvErr)
       .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
