@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self';">
 <meta name="application-name" content="SPKM">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3262,18 +3262,29 @@
   // API CALL HELPER
   // =====================
   function _fetchGAS(action, payload) {
-    // uploadGuruGambar guna POST (base64 terlalu besar untuk URL)
-    if (action === 'uploadGuruGambar') {
-      var data = Object.assign({ action: action }, payload);
-      return fetch(GAS_URL, {
-        method: 'POST',
-        body: new URLSearchParams({ data: JSON.stringify(data) })
-      }).then(function(r) { return r.json(); });
-    }
-    // Semua action lain guna GET — GAS GET responses ada CORS headers
-    var params = new URLSearchParams({ action: action, payload: JSON.stringify(payload) });
-    return fetch(GAS_URL + '?' + params.toString())
-      .then(function(r) { return r.json(); });
+    // JSONP — <script> tag bypass CORS, follow GAS redirect automatik
+    return new Promise(function(resolve, reject) {
+      var cbName = 'gasJSONP_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      var script = document.createElement('script');
+      var timer  = setTimeout(function() { cleanup(); reject(new Error('Timeout')); }, 30000);
+
+      function cleanup() {
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[cbName] = function(data) { cleanup(); resolve(data); };
+      script.onerror = function() { cleanup(); reject(new Error('JSONP gagal')); };
+
+      var params = new URLSearchParams({
+        action:   action,
+        payload:  JSON.stringify(payload),
+        callback: cbName
+      });
+      script.src = GAS_URL + '?' + params.toString();
+      document.head.appendChild(script);
+    });
   }
 
   function callGAS(action, payload, onSuccess, onError) {

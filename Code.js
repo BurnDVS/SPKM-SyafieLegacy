@@ -177,36 +177,43 @@ function doPost(e) {
   }
 }
 
-// doGet — serve portal HTML, atau API call via ?action=&payload=
+// doGet — serve portal HTML, atau JSONP API call via ?action=&payload=&callback=
 function doGet(e) {
   try {
     if (e.parameter && e.parameter.action) {
-      var action  = (e.parameter.action || '').toString().trim();
-      var payload = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
+      var action   = (e.parameter.action || '').toString().trim();
+      var callback = (e.parameter.callback || '').toString().trim();
+      var payload  = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
       payload.action = action;
 
       if (ALLOWED_ACTIONS.indexOf(action) === -1) {
+        var errJson = JSON.stringify({ success: false, message: 'Tindakan tidak dibenarkan.' });
         return ContentService
-          .createTextOutput(JSON.stringify({ success: false, message: 'Tindakan tidak dibenarkan.' }))
-          .setMimeType(ContentService.MimeType.JSON);
+          .createTextOutput(callback ? callback + '(' + errJson + ')' : errJson)
+          .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
       }
       if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
         var authCheck = validateToken(payload.token);
         if (!authCheck.valid) {
+          var authErr = JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' });
           return ContentService
-            .createTextOutput(JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' }))
-            .setMimeType(ContentService.MimeType.JSON);
+            .createTextOutput(callback ? callback + '(' + authErr + ')' : authErr)
+            .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
         }
       }
+
+      var result  = JSON.stringify(doAction(action, payload));
       return ContentService
-        .createTextOutput(JSON.stringify(doAction(action, payload)))
-        .setMimeType(ContentService.MimeType.JSON);
+        .createTextOutput(callback ? callback + '(' + result + ')' : result)
+        .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
   } catch (err) {
     Logger.log('doGet API error: ' + err.message);
+    var srvErr = JSON.stringify({ success: false, message: 'Ralat pelayan: ' + err.message });
+    var cb = (e.parameter && e.parameter.callback) ? e.parameter.callback : '';
     return ContentService
-      .createTextOutput(JSON.stringify({ success: false, message: 'Ralat pelayan: ' + err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+      .createTextOutput(cb ? cb + '(' + srvErr + ')' : srvErr)
+      .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
   }
 
   return HtmlService.createHtmlOutputFromFile('portal')
