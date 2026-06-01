@@ -3264,6 +3264,7 @@
   function _fetchGAS(action, payload) {
     return fetch(GAS_URL, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify(Object.assign({ action: action }, payload))
     }).then(function(r) { return r.json(); });
   }

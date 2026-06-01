@@ -178,6 +178,15 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// doOptions — preflight CORS handler (GAS mungkin tak route OPTIONS ke sini,
+// tapi ContentService pun tak support setHeader — CORS headers ditambah
+// automatik oleh Google infrastructure bila deployment = "Anyone" access)
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
 // Dipanggil oleh google.script.run dari portal.html
 function doAction(action, payload) {
   payload = payload || {};
