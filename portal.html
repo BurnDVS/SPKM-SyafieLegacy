@@ -1497,65 +1497,195 @@
 
   } /* end @media prefers-reduced-motion */
 
-  #bottomNav { display: none; }
-
+  /* ===== TASK 2: COMPACT HEADER + MOBILE LOGIN BTN ===== */
   @media (max-width: 1024px) {
-    #bottomNav {
-      display: flex;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 200;
-      background: #ffffff;
-      border-top: 1px solid #E2D9C5;
-      height: 72px;
-      padding-bottom: env(safe-area-inset-bottom);
-      align-items: stretch;
+    .site-header .header-inner {
+      padding: 24px 14px 10px;
+      gap: 10px;
     }
-    .bnav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    .header-logo {
+      width: 34px;
+      height: 34px;
+    }
+    .header-text h1 {
+      font-size: 14px;
+    }
+    .header-text p {
+      font-size: 10px;
+    }
+    #mobileLoginBtn {
+      display: flex !important;
       align-items: center;
-      justify-content: center;
-      gap: 3px;
-      border: none;
-      background: none;
-      cursor: pointer;
-      padding: 6px 0;
-      position: relative;
-    }
-    .bnav-item.active::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 25%; right: 25%;
-      height: 2.5px;
+      gap: 5px;
       background: #FFD700;
-      border-radius: 0 0 2px 2px;
-    }
-    .bnav-icon {
-      font-size: 26px;
-      line-height: 1;
-    }
-    .bnav-label {
-      font-size: 11px;
-      color: #aaa;
-      line-height: 1;
-      font-family: 'DM Sans', sans-serif;
-    }
-    .bnav-item.active .bnav-label {
       color: #0A1F44;
-      font-weight: 600;
-    }
-    .main {
-      padding-bottom: 90px;
-    }
-    footer {
-      padding-bottom: 90px;
+      border: none;
+      border-radius: 16px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-family: 'DM Sans', sans-serif;
     }
     .nav-bar {
       display: none;
     }
+    .main {
+      padding: 16px 14px 40px;
+    }
   }
+  @media (min-width: 1025px) {
+    #mobileLoginBtn { display: none !important; }
+  }
+
+  /* ===== TASK 4: MOBILE HOME CARDS ===== */
+  #mobileHomeContent { display: none; }
+
+  @media (max-width: 1024px) {
+    #mobileHomeContent { display: block; }
+
+    .mob-hero {
+      background: #0A1F44;
+      border-radius: 14px;
+      padding: 18px 16px;
+      margin-bottom: 18px;
+    }
+    .mob-hero-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: #FFD700;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+    .mob-hero-title {
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: #FFFFFF;
+      line-height: 1.3;
+      margin-bottom: 14px;
+    }
+    .mob-hero-ustaz {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .mob-hero-av {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #FFD700;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #0A1F44;
+      flex-shrink: 0;
+    }
+    .mob-hero-info strong {
+      display: block;
+      font-size: 12px; font-weight: 500; color: #fff;
+    }
+    .mob-hero-info span {
+      font-size: 10px; color: #FFD700;
+    }
+
+    .mob-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .mob-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .mob-card {
+      background: #FFFFFF;
+      border: 0.5px solid var(--border);
+      border-top: 2.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .mob-card:active { transform: scale(0.97); }
+    .mob-card-gold  { border-top-color: #FFD700 !important; }
+    .mob-card-navy  { border-top-color: #0A1F44 !important; }
+    .mob-card-green { border-top-color: #1A5C3A !important; }
+    .mob-card-red   { border-top-color: #C0392B !important; }
+
+    .mob-card-icon { font-size: 22px; margin-bottom: 4px; }
+    .mob-card strong { font-size: 13px; font-weight: 500; color: var(--text-dark); line-height: 1.2; }
+    .mob-card span   { font-size: 11px; color: var(--text-muted); }
+
+    .mob-logged-badge {
+      background: var(--green-light);
+      border: 1px solid rgba(26,92,58,0.15);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .mob-logged-av {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; color: #fff;
+      flex-shrink: 0;
+    }
+    .mob-logged-badge p {
+      margin: 0;
+      font-size: 12px; font-weight: 500; color: var(--green);
+    }
+    .mob-logged-badge span {
+      font-size: 10px; color: var(--green-mid);
+    }
+  }
+
+  /* ===== TASK 6: LOGIN MODAL ===== */
+  #loginModal {
+    position: fixed; inset: 0; z-index: 300;
+    display: none; align-items: flex-end;
+  }
+  #loginModalBackdrop {
+    position: absolute; inset: 0;
+    background: rgba(10,31,68,0.55);
+  }
+  #loginModalSheet {
+    position: relative; z-index: 1;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 16px 20px 36px;
+    width: 100%;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  #loginModal.open { display: flex; }
+  #loginModal.open #loginModalSheet { transform: translateY(0); }
+  #loginModalHandle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  #loginModalTitle {
+    font-family: 'Lora', serif;
+    font-size: 16px; color: #0A1F44;
+    margin-bottom: 16px;
+  }
+
 </style>
 </head>
 <body>
@@ -1568,6 +1698,7 @@
       <h1>Sistem Pengurusan Kelas Mengaji</h1>
       <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
     </div>
+    <button id="mobileLoginBtn" onclick="showLoginModal()" style="display:none;">🔒 Log Masuk</button>
     <div class="header-login-wrap" id="headerLoginWrap">
       <!-- Sebelum login -->
       <div id="headerPreLogin">
@@ -1654,6 +1785,108 @@
     <div class="landing-hero-img">
       <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full">
     </div>
+  </div>
+
+  <!-- MOBILE HOME CONTENT -->
+  <div id="mobileHomeContent" style="display:none;">
+
+    <!-- HERO CARD -->
+    <div class="mob-hero">
+      <div class="mob-hero-label">PORTAL RASMI</div>
+      <div class="mob-hero-title">Kelas Pengajian<br>Syafie Legacy</div>
+      <div class="mob-hero-ustaz">
+        <div class="mob-hero-av">MS</div>
+        <div class="mob-hero-info">
+          <strong>Ustaz Muhammad Shafie</strong>
+          <span>Pengasas · Berpengalaman sejak 2018</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GUEST MENU (shown when not logged in) -->
+    <div id="guestMenu">
+      <p class="mob-section-label">TINDAKAN PANTAS</p>
+      <div class="mob-card-grid">
+        <div class="mob-card mob-card-gold" onclick="showPanel('daftar')">
+          <div class="mob-card-icon">📝</div>
+          <strong>Daftar Murid</strong>
+          <span>Kanak-kanak &amp; Dewasa</span>
+        </div>
+        <div class="mob-card mob-card-navy" onclick="showPanel('ebayar')">
+          <div class="mob-card-icon">💳</div>
+          <strong>eBayar Yuran</strong>
+          <span>Bayar yuran bulanan</span>
+        </div>
+        <div class="mob-card" onclick="showPanel('esemak')">
+          <div class="mob-card-icon">🔍</div>
+          <strong>eSemak Yuran</strong>
+          <span>Semak status bayaran</span>
+        </div>
+        <div class="mob-card" onclick="showLoginModal()">
+          <div class="mob-card-icon">🔒</div>
+          <strong>Log Masuk</strong>
+          <span>Guru &amp; Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GURU MENU (shown after login) -->
+    <div id="guruMenu" style="display:none;">
+      <div class="mob-logged-badge" id="mobLoggedBadge">
+        <div class="mob-logged-av" id="mobLoggedAv">MS</div>
+        <div>
+          <p id="mobLoggedName">Nama Guru</p>
+          <span>Log masuk sebagai Guru/Admin</span>
+        </div>
+      </div>
+      <p class="mob-section-label">MENU GURU</p>
+      <div class="mob-card-grid">
+        <div class="mob-card mob-card-gold" onclick="showPanel('kehadiran')">
+          <div class="mob-card-icon">📅</div>
+          <strong>Kehadiran</strong>
+          <span>Rekod kehadiran</span>
+        </div>
+        <div class="mob-card mob-card-navy" onclick="showPanel('murid')">
+          <div class="mob-card-icon">👥</div>
+          <strong>Senarai Murid</strong>
+          <span>Urus data murid</span>
+        </div>
+        <div class="mob-card mob-card-green" onclick="showPanel('guru')">
+          <div class="mob-card-icon">👨‍🏫</div>
+          <strong>Senarai Guru</strong>
+          <span>Urus data guru</span>
+        </div>
+        <div class="mob-card mob-card-red" onclick="showPanel('yuran')">
+          <div class="mob-card-icon">💰</div>
+          <strong>Yuran</strong>
+          <span>Urus pembayaran</span>
+        </div>
+      </div>
+      <p class="mob-section-label">PORTAL AWAM</p>
+      <div class="mob-card-grid">
+        <div class="mob-card" onclick="showPanel('daftar')">
+          <div class="mob-card-icon">📝</div>
+          <strong>Daftar Murid</strong>
+          <span>Form pendaftaran</span>
+        </div>
+        <div class="mob-card" onclick="showPanel('ebayar')">
+          <div class="mob-card-icon">💳</div>
+          <strong>eBayar</strong>
+          <span>Status bayaran</span>
+        </div>
+        <div class="mob-card" onclick="showPanel('esemak')">
+          <div class="mob-card-icon">🔍</div>
+          <strong>eSemak</strong>
+          <span>Semak yuran</span>
+        </div>
+        <div class="mob-card mob-card-red" onclick="handleLogout()">
+          <div class="mob-card-icon">🚪</div>
+          <strong>Log Keluar</strong>
+          <span>Tamat sesi</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </section>
@@ -2627,29 +2860,6 @@
 
 </main>
 
-<nav id="bottomNav" aria-label="Navigasi bawah">
-  <button class="bnav-item active" id="bnav-utama" onclick="showPanel('utama')">
-    <span class="bnav-icon">🏠</span>
-    <span class="bnav-label">Utama</span>
-  </button>
-  <button class="bnav-item" id="bnav-daftar" onclick="showPanel('daftar')">
-    <span class="bnav-icon">📋</span>
-    <span class="bnav-label">Daftar</span>
-  </button>
-  <button class="bnav-item" id="bnav-kehadiran" onclick="showPanel('kehadiran')" style="display:none">
-    <span class="bnav-icon">📅</span>
-    <span class="bnav-label">Hadir</span>
-  </button>
-  <button class="bnav-item" id="bnav-ebayar" onclick="showPanel('ebayar')">
-    <span class="bnav-icon">💳</span>
-    <span class="bnav-label">eBayar</span>
-  </button>
-  <button class="bnav-item" id="bnav-esemak" onclick="showPanel('esemak')">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-label">eSemak</span>
-  </button>
-</nav>
-
 <footer>
   <p>© 2026 Sistem Pengurusan Kelas Mengaji &nbsp;·&nbsp; Dikuasakan oleh <span>Google Apps Script</span></p>
   <p style="margin-top:4px;">Data disimpan dalam <span>Google Sheets</span> · Slip dijana oleh <span>Autocrat</span></p>
@@ -2948,7 +3158,14 @@
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {
           loggedInGuru = data.user;
-          document.getElementById('bnav-kehadiran').style.display = 'flex';
+          if (window.innerWidth <= 1024) {
+            const initials = data.user.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+            document.getElementById('mobLoggedAv').textContent = initials;
+            document.getElementById('mobLoggedName').textContent = data.user;
+            document.getElementById('guestMenu').style.display = 'none';
+            document.getElementById('guruMenu').style.display = 'block';
+            document.getElementById('mobileLoginBtn').style.display = 'none';
+          }
           currentRole  = data.role || 'GURU';
           if (data.token) sessionStorage.setItem('spkm_token', data.token);
           document.getElementById('guruName').textContent = data.user;
@@ -2984,7 +3201,11 @@
   function handleLogout() {
     sessionStorage.removeItem('spkm_token');
     loggedInGuru   = null;
-    document.getElementById('bnav-kehadiran').style.display = 'none';
+    if (window.innerWidth <= 1024) {
+      document.getElementById('guestMenu').style.display = 'block';
+      document.getElementById('guruMenu').style.display = 'none';
+      document.getElementById('mobileLoginBtn').style.display = 'flex';
+    }
     currentRole    = null;
     allMuridKanak  = [];
     allMuridDewasa = [];
@@ -4444,16 +4665,82 @@
 
   });
 
-  (function() {
-    const _origShowPanel = showPanel;
-    showPanel = function(name) {
-      _origShowPanel(name);
-      document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
-      const target = document.getElementById('bnav-' + name);
-      if (target) target.classList.add('active');
-    };
-  })();
+  function showLoginModal() {
+    const m = document.getElementById('loginModal');
+    m.style.display = 'flex';
+    requestAnimationFrame(() => m.classList.add('open'));
+    document.body.style.overflow = 'hidden';
+  }
+  function hideLoginModal() {
+    const m = document.getElementById('loginModal');
+    m.classList.remove('open');
+    setTimeout(() => { m.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+  }
+  async function handleLoginModal() {
+    document.getElementById('loginModalError').classList.remove('show');
+    const email = document.getElementById('loginEmailModal').value.trim();
+    const phone = document.getElementById('loginPhoneModal').value.trim();
+    if (!email || !phone) {
+      document.getElementById('loginModalErrorMsg').textContent = 'Sila isi e-mel dan nombor telefon.';
+      document.getElementById('loginModalError').classList.add('show');
+      return;
+    }
+    const btn = document.getElementById('loginModalBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    try {
+      const data = await callGASPromise('login', { email, phone });
+      if (data.success) {
+        hideLoginModal();
+        loggedInGuru = data.user;
+        document.getElementById('guruName').textContent = data.user;
+        document.getElementById('loginFormWrapper').style.display = 'none';
+        document.getElementById('dashboardPreview').style.display = 'block';
+        if (window.innerWidth <= 1024) {
+          const initials = data.user.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+          document.getElementById('mobLoggedAv').textContent = initials;
+          document.getElementById('mobLoggedName').textContent = data.user;
+          document.getElementById('guestMenu').style.display = 'none';
+          document.getElementById('guruMenu').style.display = 'block';
+          document.getElementById('mobileLoginBtn').style.display = 'none';
+        }
+      } else {
+        document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
+        document.getElementById('loginModalError').classList.add('show');
+      }
+    } catch(e) {
+      document.getElementById('loginModalErrorMsg').textContent = 'Ralat sambungan. Sila cuba sebentar lagi.';
+      document.getElementById('loginModalError').classList.add('show');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  }
+
 </script>
+
+<div id="loginModal" style="display:none;">
+  <div id="loginModalBackdrop" onclick="hideLoginModal()"></div>
+  <div id="loginModalSheet">
+    <div id="loginModalHandle"></div>
+    <h3 id="loginModalTitle">🔒 Log Masuk Guru / Admin</h3>
+    <div class="form-group">
+      <label for="loginEmailModal">Alamat E-mel <span class="req">*</span></label>
+      <input type="email" id="loginEmailModal" placeholder="guru@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="loginPhoneModal">No. WhatsApp <span class="req">*</span></label>
+      <input type="tel" id="loginPhoneModal" placeholder="0123456789" autocomplete="off">
+      <p class="helper">Masukkan nombor telefon WhatsApp anda</p>
+    </div>
+    <div class="alert alert-error" id="loginModalError">
+      <span class="alert-icon">⚠</span>
+      <span id="loginModalErrorMsg">E-mel atau nombor tidak sepadan.</span>
+    </div>
+    <button class="btn btn-primary" id="loginModalBtn" onclick="handleLoginModal()">
+      <span class="btn-text">Log Masuk</span>
+      <span class="btn-loader"></span>
+    </button>
+  </div>
+</div>
 
 <!-- IDLE WARNING MODAL -->
 <div class="idle-modal" id="idleWarningModal">
