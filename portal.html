@@ -1611,7 +1611,13 @@
       height: 72px;
       padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
     }
-    .main { padding: 16px 16px 90px; }
+    .main {
+      padding: 16px 16px 90px;
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .desktop-only-content { display: none; }
     .section-heading { margin-bottom: 16px; }
     .section-heading .arabic { font-size: 20px; }
     .section-heading h2 { font-size: 17px; }
@@ -1737,6 +1743,10 @@
     border-radius: 16px;
     padding: 20px 18px;
     margin-bottom: 20px;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    box-sizing: border-box;
     position: relative;
     overflow: hidden;
   }
@@ -1808,6 +1818,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    width: 100%;
   }
   .mob-quick-card {
     background: var(--white);
@@ -1820,6 +1831,9 @@
     cursor: pointer;
     transition: all 0.2s;
     border-top: 3px solid var(--border);
+    width: 100%;
+    min-height: 110px;
+    box-sizing: border-box;
   }
   .mob-quick-card:active { transform: scale(0.97); }
   .mob-quick-gold { border-top-color: #FFD700; }
@@ -1911,15 +1925,19 @@
 <!-- ============================================================ -->
 <section class="panel active" id="panel-utama">
 
-  <div class="landing-top">
-    <span class="landing-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
-    <div class="landing-divider"><span>✦</span></div>
+  <div class="desktop-only-content">
+    <div class="landing-top">
+      <span class="landing-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+      <div class="landing-divider"><span>✦</span></div>
+    </div>
   </div>
 
   <div class="landing-hero">
     <div class="landing-hero-content">
-      <p class="landing-tagline">Portal Rasmi</p>
-      <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
+      <div class="desktop-only-content">
+        <p class="landing-tagline">Portal Rasmi</p>
+        <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
+      </div>
 
       <!-- HERO CARD -->
       <div class="mob-hero-card">
