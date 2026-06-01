@@ -1127,6 +1127,8 @@ function getOrgChart() {
         return oa - ob;
       });
 
+    Logger.log('getOrgChart total: ' + rows.length);
+    Logger.log('getOrgChart rows: ' + JSON.stringify(rows));
     return { success: true, rows: rows };
   } catch (err) {
     Logger.log('getOrgChart error: ' + err.message);

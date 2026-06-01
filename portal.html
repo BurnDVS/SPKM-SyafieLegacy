@@ -1826,7 +1826,7 @@
         <p style="color:var(--text-muted); font-size:14px; margin-top:6px;">Pasukan Pengajar Syafie Legacy</p>
       </div>
       <div id="orgChartContent">
-        <p style="text-align:center; color:var(--text-muted); font-size:14px;">Memuatkan...</p>
+        <p style="text-align:center; color:var(--text-muted); font-size:14px;">Log masuk untuk melihat carta organisasi.</p>
       </div>
     </div>
   </div>
@@ -3809,14 +3809,20 @@
   // CARTA ORGANISASI
   // =====================
   function loadOrgChart() {
+    console.log('loadOrgChart called, loggedInGuru:', loggedInGuru, 'token:', sessionStorage.getItem('spkm_token') ? 'ada' : 'tiada');
     const container = document.getElementById('orgChartContent');
-    if (!container) return;
+    if (!container) { console.log('loadOrgChart: orgChartContent tidak dijumpai'); return; }
     container.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:14px;">Memuatkan...</p>';
 
     callGAS('getOrgChart', {},
       function(data) {
-        if (!data.success || !data.rows || data.rows.length === 0) {
-          container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Tiada data.</p>';
+        console.log('getOrgChart response:', data);
+        if (!data.success) {
+          container.innerHTML = '<p style="text-align:center;color:var(--error);font-size:13px;">' + (data.message || 'Ralat memuat data.') + '</p>';
+          return;
+        }
+        if (!data.rows || data.rows.length === 0) {
+          container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Tiada data guru.</p>';
           return;
         }
 
