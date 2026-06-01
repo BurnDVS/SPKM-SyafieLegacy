@@ -1686,6 +1686,11 @@
     margin-bottom: 16px;
   }
 
+  @media (max-width: 1024px) {
+    .desktop-hero-photo { display: none; }
+    #desktopHomeContent { display: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -1756,34 +1761,36 @@
 <!-- ============================================================ -->
 <section class="panel active" id="panel-utama">
 
-  <div class="landing-top">
-    <span class="landing-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
-    <div class="landing-divider"><span>✦</span></div>
-  </div>
-
-  <div class="landing-hero">
-    <div class="landing-hero-content">
-      <p class="landing-tagline">Portal Rasmi</p>
-      <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
-
-      <div class="ustaz-card">
-        <img src="https://i.ibb.co/PZZ2t6vq/ustaz-shafie-half.png" alt="Ustaz Muhammad Shafie" class="ustaz-photo">
-        <div>
-          <p class="ustaz-name">USTAZ MUHAMMAD SHAFIE BIN BAHARI</p>
-          <p class="ustaz-role">Pengasas Kelas Pengajian Syafie Legacy</p>
-          <p class="ustaz-since">Berpengalaman Sejak 2018</p>
-          <ul class="ustaz-credentials">
-            <li>Pemegang Tauliah Agama Kawasan Seluruh Negeri Melaka</li>
-            <li>Guru Halaqah JAIM bagi Institusi Penjara dan Kebajikan Masyarakat</li>
-            <li>Guru Pembimbing Muallaf Negeri Melaka</li>
-          </ul>
-        </div>
-      </div>
-
+  <div id="desktopHomeContent">
+    <div class="landing-top">
+      <span class="landing-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+      <div class="landing-divider"><span>✦</span></div>
     </div>
 
-    <div class="landing-hero-img">
-      <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full">
+    <div class="landing-hero">
+      <div class="landing-hero-content">
+        <p class="landing-tagline">Portal Rasmi</p>
+        <h1 class="landing-title">Kelas Pengajian<br>Syafie Legacy</h1>
+
+        <div class="ustaz-card">
+          <img src="https://i.ibb.co/PZZ2t6vq/ustaz-shafie-half.png" alt="Ustaz Muhammad Shafie" class="ustaz-photo">
+          <div>
+            <p class="ustaz-name">USTAZ MUHAMMAD SHAFIE BIN BAHARI</p>
+            <p class="ustaz-role">Pengasas Kelas Pengajian Syafie Legacy</p>
+            <p class="ustaz-since">Berpengalaman Sejak 2018</p>
+            <ul class="ustaz-credentials">
+              <li>Pemegang Tauliah Agama Kawasan Seluruh Negeri Melaka</li>
+              <li>Guru Halaqah JAIM bagi Institusi Penjara dan Kebajikan Masyarakat</li>
+              <li>Guru Pembimbing Muallaf Negeri Melaka</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="landing-hero-img">
+        <img src="https://i.ibb.co/d0wsDdMC/FULL-BODY-USTAZ-SHAFIE.png" alt="Ustaz Syafie Legacy" class="landing-ustaz-full desktop-hero-photo">
+      </div>
     </div>
   </div>
 
