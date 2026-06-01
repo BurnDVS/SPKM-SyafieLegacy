@@ -2636,7 +2636,7 @@
     <span class="bnav-icon">📋</span>
     <span class="bnav-label">Daftar</span>
   </button>
-  <button class="bnav-item" id="bnav-kehadiran" onclick="showPanel('kehadiran')">
+  <button class="bnav-item" id="bnav-kehadiran" onclick="showPanel('kehadiran')" style="display:none">
     <span class="bnav-icon">📅</span>
     <span class="bnav-label">Hadir</span>
   </button>
@@ -2948,6 +2948,7 @@
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {
           loggedInGuru = data.user;
+          document.getElementById('bnav-kehadiran').style.display = 'flex';
           currentRole  = data.role || 'GURU';
           if (data.token) sessionStorage.setItem('spkm_token', data.token);
           document.getElementById('guruName').textContent = data.user;
@@ -2983,6 +2984,7 @@
   function handleLogout() {
     sessionStorage.removeItem('spkm_token');
     loggedInGuru   = null;
+    document.getElementById('bnav-kehadiran').style.display = 'none';
     currentRole    = null;
     allMuridKanak  = [];
     allMuridDewasa = [];
