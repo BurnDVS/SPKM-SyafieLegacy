@@ -1670,8 +1670,6 @@
     font-size: 16px; color: #0A1F44;
     margin-bottom: 16px;
   }
-  #loginEmail::placeholder,
-  #loginEmailModal::placeholder { color: rgba(255,255,255,0.6); }
 
   @media (max-width: 1024px) {
     .desktop-hero-photo { display: none; }
@@ -1719,7 +1717,7 @@
         <div class="header-dropdown" id="headerLoginDropdown">
           <div class="hdr-form-pad">
             <label class="hdr-label" for="loginEmail">E-mel</label>
-            <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" style="color:#FFFFFF;" onkeydown="if(event.key==='Enter')handleLogin()">
+            <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()">
             <label class="hdr-label" for="loginPhone">Kata Laluan</label>
             <input class="hdr-input" type="password" id="loginPhone" placeholder="6 digit terakhir telefon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')handleLogin()">
             <div class="hdr-login-err" id="headerLoginErr"></div>
@@ -5039,7 +5037,7 @@
     <h3 id="loginModalTitle">🔒 Log Masuk Guru / Admin</h3>
     <div class="form-group">
       <label for="loginEmailModal">Alamat E-mel <span class="req">*</span></label>
-      <input type="email" id="loginEmailModal" placeholder="guru@example.com" autocomplete="email" style="color:#FFFFFF;">
+      <input type="email" id="loginEmailModal" placeholder="guru@example.com" autocomplete="email">
     </div>
     <div class="form-group">
       <label for="loginPhoneModal">No. WhatsApp <span class="req">*</span></label>
