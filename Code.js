@@ -107,7 +107,7 @@ var ALLOWED_ACTIONS = [
   'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
-  'queueWABlast', 'getBlastStatus'
+  'queueWABlast', 'getBlastStatus', 'logout'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -183,6 +183,7 @@ function doPost(e) {
     else if (action === 'hantarWAYuran')          result = hantarWAYuran(body);
     else if (action === 'queueWABlast')           result = queueWABlast(body);
     else if (action === 'getBlastStatus')         result = getBlastStatus(body);
+    else if (action === 'logout')                 result = logout(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -817,6 +818,21 @@ function validateToken(token) {
 }
 
 // ============================================================
+// HELPER: Logout — buang session token semasa
+// ============================================================
+function logout(params) {
+  var token = (params && params.token) ? params.token.toString().trim() : '';
+  if (!token) return { success: false, message: 'Token diperlukan.' };
+  var props = PropertiesService.getScriptProperties();
+  var key   = 'session_' + token;
+  if (props.getProperty(key)) {
+    props.deleteProperty(key);
+    Logger.log('Logout: session ' + token.substring(0, 8) + '... dibuang.');
+  }
+  return { success: true };
+}
+
+// ============================================================
 // 11. getDashboardStats
 // Returns { totalKanak, totalDewasa, hadirHariIni }
 // ============================================================
@@ -1176,25 +1192,53 @@ function cleanupExpiredProperties() {
 }
 
 // ============================================================
-// 18c. createCleanupTrigger
-// Pasang trigger harian untuk cleanupExpiredProperties jam 3am.
+// 18c. cleanOldSessions
+// Buang semua session_ yang lebih dari 24 jam (atau expired).
+// Boleh run manual dari editor atau dipanggil oleh trigger.
+// ============================================================
+function cleanOldSessions() {
+  var props   = PropertiesService.getScriptProperties();
+  var all     = props.getProperties();
+  var now     = new Date().getTime();
+  var deleted = 0;
+
+  for (var key in all) {
+    if (!key.startsWith('session_')) continue;
+    try {
+      var data = JSON.parse(all[key]);
+      if (now > data.expiry) { props.deleteProperty(key); deleted++; }
+    } catch(e) { props.deleteProperty(key); deleted++; }
+  }
+
+  Logger.log('cleanOldSessions: ' + deleted + ' session lama dibuang.');
+  return { deleted: deleted };
+}
+
+// ============================================================
+// 18d. createCleanupTrigger
+// Pasang trigger harian untuk cleanupExpiredProperties (3am)
+// dan trigger setiap 24 jam untuk cleanOldSessions.
 // Jalankan SEKALI dari editor.
 // ============================================================
 function createCleanupTrigger() {
   var existing = ScriptApp.getProjectTriggers();
-  var sudahAda = existing.some(function(t) {
-    return t.getHandlerFunction() === 'cleanupExpiredProperties';
-  });
-  if (sudahAda) {
+  var handlers = existing.map(function(t) { return t.getHandlerFunction(); });
+
+  if (handlers.indexOf('cleanupExpiredProperties') === -1) {
+    ScriptApp.newTrigger('cleanupExpiredProperties')
+      .timeBased().atHour(3).everyDays(1).create();
+    Logger.log('Trigger cleanupExpiredProperties dipasang: setiap hari jam 3am.');
+  } else {
     Logger.log('Trigger cleanupExpiredProperties sudah wujud.');
-    return;
   }
-  ScriptApp.newTrigger('cleanupExpiredProperties')
-    .timeBased()
-    .atHour(3)
-    .everyDays(1)
-    .create();
-  Logger.log('Trigger cleanup dipasang: setiap hari jam 3am.');
+
+  if (handlers.indexOf('cleanOldSessions') === -1) {
+    ScriptApp.newTrigger('cleanOldSessions')
+      .timeBased().everyHours(24).create();
+    Logger.log('Trigger cleanOldSessions dipasang: setiap 24 jam.');
+  } else {
+    Logger.log('Trigger cleanOldSessions sudah wujud.');
+  }
 }
 
 // ============================================================
