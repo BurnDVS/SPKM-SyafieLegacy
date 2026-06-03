@@ -120,6 +120,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 #### Senarai Murid & Guru
 - ✅ Senarai Murid — kanak-kanak & dewasa, filter, status AKTIF/TIDAK AKTIF
+- ✅ Search murid — filter nama/telefon, fix `String(telefon)` untuk nombor dari Sheets
 - ✅ Kemaskini status murid — toggle aktif/tidak aktif
 - ✅ Senarai Guru — 7 kolum, gambar thumbnail, badge jawatan
 - ✅ Modal Kemaskini Guru — upload gambar passport ke Drive
@@ -134,6 +135,8 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Button "Hantar WA" — blast WA reminder via Fonnte API (desktop & mobile)
 - ✅ Modal confirm blast WA — Navy+Gold UI, tunjuk bilangan murid
 - ✅ Modal laporan blast — stats berjaya/gagal/tiada nombor
+- ✅ Textarea custom mesej WA — admin boleh edit mesej sebelum blast, `[BULAN]` auto-replace
+- ✅ Timestamp blast WA — "Makluman terakhir dihantar pada DD/MM/YYYY, HH:MM" (sessionStorage)
 
 #### WhatsApp Blast (Fonnte)
 - ✅ Fonnte API connected — WA Business `601162875136` linked
@@ -156,6 +159,8 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Bottom nav sebelum login — 4 item: Utama, Daftar, eBayar, eSemak
 - ✅ Bottom nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
 - ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
+- ✅ Footer ringkas — satu baris `© 2026 Sistem Pengurusan Kelas Mengaji`
+- ✅ SW cache bump v6 — force reload bila GAS_URL bertukar
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
