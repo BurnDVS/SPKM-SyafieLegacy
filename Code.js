@@ -935,9 +935,9 @@ function getMuridList() {
 // ============================================================
 function normalizePhoneForWA(phone) {
   var c = (phone || '').toString().replace(/[\s\-\(\)]/g, '');
-  if (c.startsWith('+60')) return '60' + c.substring(3);
-  if (c.startsWith('0'))   return '60' + c.substring(1);
-  if (c.startsWith('60'))  return c;
+  if (c.startsWith('+60')) return c.substring(3);
+  if (c.startsWith('60'))  return c.substring(2);
+  if (c.startsWith('0'))   return c.substring(1);
   return c;
 }
 
@@ -954,9 +954,10 @@ function hantarWhatsApp(noTelefon, mesej) {
       return false;
     }
     var options = {
-      method:           'post',
-      headers:          { 'Authorization': token },
-      payload:          { target: normalizePhoneForWA(noTelefon), message: mesej },
+      method:      'post',
+      headers:     { 'Authorization': token },
+      payload:     JSON.stringify({ target: normalizePhoneForWA(noTelefon), message: mesej, countryCode: '60' }),
+      contentType: 'application/json',
       muteHttpExceptions: true
     };
     var resp   = UrlFetchApp.fetch('https://api.fonnte.com/send', options);
@@ -1075,6 +1076,17 @@ function notifikasiKetidakhadiran() {
 function setFonnteToken() {
   PropertiesService.getScriptProperties().setProperty('FONNTE_TOKEN', 'GANTI_DENGAN_TOKEN_FONNTE');
   Logger.log('FONNTE_TOKEN telah disimpan dalam Script Properties.');
+}
+
+// ============================================================
+// 17b. testFonnteToken
+// Jalankan dari editor untuk test token — hantar pada nombor anda sahaja.
+// ============================================================
+function testFonnteToken() {
+  var token = PropertiesService.getScriptProperties().getProperty('FONNTE_TOKEN');
+  Logger.log('Token dalam Properties: [' + token + '] (panjang: ' + (token ? token.length : 0) + ')');
+  var result = hantarWhatsApp('60172875136', '[TEST] Token Fonnte berjaya. Boleh abaikan mesej ini.');
+  Logger.log('Test result: ' + result);
 }
 
 // ============================================================
