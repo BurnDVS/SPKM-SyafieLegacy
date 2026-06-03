@@ -2735,6 +2735,24 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
+  <div class="dash-stat-row" style="max-width:500px; margin:0 auto 32px;">
+    <div class="dash-stat-card kanak">
+      <span class="dash-stat-emoji">👦</span>
+      <div class="dash-stat-num js-stat-kanak">—</div>
+      <div class="dash-stat-lbl">Kanak-kanak</div>
+    </div>
+    <div class="dash-stat-card dewasa">
+      <span class="dash-stat-emoji">👤</span>
+      <div class="dash-stat-num js-stat-dewasa">—</div>
+      <div class="dash-stat-lbl">Dewasa</div>
+    </div>
+    <div class="dash-stat-card jumlah">
+      <span class="dash-stat-emoji">📊</span>
+      <div class="dash-stat-num js-stat-jumlah">—</div>
+      <div class="dash-stat-lbl">Jumlah Murid</div>
+    </div>
+  </div>
+
   <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; align-items:center;">
     <div style="flex:1; min-width:180px; max-width:300px;">
       <input type="text" id="muridSearch" placeholder="🔍 Cari nama, telefon..." oninput="filterMurid()" style="margin:0;">
@@ -3617,6 +3635,7 @@
           });
           document.querySelectorAll('.js-stat-kanak').forEach(function(el) { el.textContent = kanak; });
           document.querySelectorAll('.js-stat-dewasa').forEach(function(el) { el.textContent = dewasa; });
+          document.querySelectorAll('.js-stat-jumlah').forEach(function(el) { el.textContent = jumlah; });
         }
       }
     );
