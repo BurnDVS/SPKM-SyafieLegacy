@@ -1887,6 +1887,63 @@
 
   } /* end @media (max-width: 1024px) */
 
+  /* === MURID STAT CARDS === */
+  .dash-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px;
+    margin: 0 0 32px;
+  }
+  .dash-stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px 16px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dash-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .dash-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .dash-stat-card.kanak::before  { background: var(--green); }
+  .dash-stat-card.dewasa::before { background: var(--gold-dark); }
+  .dash-stat-card.jumlah::before { background: linear-gradient(90deg, var(--green), var(--gold-dark)); }
+  .dash-stat-emoji { font-size: 28px; margin-bottom: 10px; display: block; }
+  .dash-stat-num {
+    font-size: 48px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+  .dash-stat-card.kanak  .dash-stat-num { color: var(--green); }
+  .dash-stat-card.dewasa .dash-stat-num { color: var(--gold-dark); }
+  .dash-stat-card.jumlah .dash-stat-num { color: var(--green); }
+  .dash-stat-lbl {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  @media (max-width: 700px) {
+    .dash-stat-row { gap: 10px; }
+    .dash-stat-num { font-size: 32px; }
+    .dash-stat-emoji { font-size: 22px; }
+  }
+
 </style>
 </head>
 <body>
@@ -2729,6 +2786,24 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
+  <div class="dash-stat-row">
+    <div class="dash-stat-card kanak">
+      <span class="dash-stat-emoji">👦</span>
+      <div class="dash-stat-num js-stat-kanak">—</div>
+      <div class="dash-stat-lbl">Kanak-kanak</div>
+    </div>
+    <div class="dash-stat-card dewasa">
+      <span class="dash-stat-emoji">👤</span>
+      <div class="dash-stat-num js-stat-dewasa">—</div>
+      <div class="dash-stat-lbl">Dewasa</div>
+    </div>
+    <div class="dash-stat-card jumlah">
+      <span class="dash-stat-emoji">📊</span>
+      <div class="dash-stat-num js-stat-jumlah">—</div>
+      <div class="dash-stat-lbl">Jumlah Murid</div>
+    </div>
+  </div>
+
   <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; align-items:center;">
     <div style="flex:1; min-width:180px; max-width:300px;">
       <input type="text" id="muridSearch" placeholder="🔍 Cari nama, telefon..." oninput="filterMurid()" style="margin:0;">
@@ -3296,6 +3371,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (name === 'kehadiran') loadKehadiranPanel();
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
+    if (name === 'murid') loadDashboardStats();
     if (name === 'guru') loadGuruList();
     if (name === 'yuran') loadYuranPanel();
     if (name === 'esemak') initEsemak();
@@ -3590,7 +3666,6 @@
           setLoginState(true);
           updateNav(true);
           updateMobileBottomNav(true);
-          loadDashboardStats();
           loadOrgChart();
           resetIdleTimer();
           const gEl = document.getElementById('hadirGuru');
@@ -5527,7 +5602,6 @@
         setLoginState(true);
         updateNav(true);
         updateMobileBottomNav(true);
-        loadDashboardStats();
         resetIdleTimer();
         const gEl = document.getElementById('hadirGuru');
         if (gEl) gEl.value = data.user;
