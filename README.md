@@ -102,7 +102,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Nav bar desktop — tab Utama, Daftar, Kehadiran, Murid, Guru, Yuran, eBayar, eSemak
 - ✅ Mobile nav — bottom nav bar (4 item sebelum login: Utama, Daftar, eBayar, eSemak)
 - ✅ Mobile nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
-- ✅ Dashboard stats — jumlah murid kanak-kanak & dewasa
+- ✅ Dashboard stats — jumlah murid kanak-kanak & dewasa (dalam panel Murid → Senarai Murid)
 - ✅ Idle timer — auto logout selepas tempoh tidak aktif
 - ✅ Custom toast & modal — ganti browser alert() dengan UI Navy+Gold
 
@@ -166,7 +166,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
 - ✅ Footer ringkas — satu baris `© 2026 Sistem Pengurusan Kelas Mengaji`
 - ✅ SW cache bump v8 — force reload bila GAS_URL bertukar
-- ✅ Stat cards jumlah murid (kanak/dewasa) dalam #guruMenu selepas login — clay style, class-based JS update
+- ✅ Stat cards jumlah murid (Kanak-kanak / Dewasa / Jumlah) dalam panel Murid (Senarai Murid) — desktop & mobile, rolling number animation `animateCountUp`
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
