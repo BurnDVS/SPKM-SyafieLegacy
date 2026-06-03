@@ -137,6 +137,9 @@ function doPost(e) {
       }
     }
 
+    // Cleanup automatik ~10% request — elak Properties penuh
+    if (Math.random() < 0.1) { try { cleanupExpiredProperties(); } catch(e) {} }
+
     var result;
     if      (action === 'login')                  result = loginGuru(body);
     else if (action === 'registerKanak')          result = registerKanak(body);
@@ -1036,6 +1039,75 @@ function createWhatsAppTriggers() {
     .everyDays(1)
     .create();
   Logger.log('Trigger WA dipasang: notifikasiKetidakhadiran setiap hari jam 9pm.');
+}
+
+// ============================================================
+// 18b. cleanupExpiredProperties
+// Buang session, OTP & login tracker yang dah tamat tempoh
+// dari Script Properties secara automatik.
+// Dipanggil oleh trigger harian DAN secara rawak dalam doPost.
+// ============================================================
+function cleanupExpiredProperties() {
+  var props  = PropertiesService.getScriptProperties();
+  var all    = props.getProperties();
+  var now    = new Date().getTime();
+  var deleted = 0;
+
+  for (var key in all) {
+    // Session token — expired jika now > expiry
+    if (key.startsWith('session_')) {
+      try {
+        var data = JSON.parse(all[key]);
+        if (now > data.expiry) { props.deleteProperty(key); deleted++; }
+      } catch(e) { props.deleteProperty(key); deleted++; }
+
+    // OTP base key — expired jika >10 minit dari _TIME
+    } else if (key.startsWith('OTP_') && !key.endsWith('_TIME') && !key.endsWith('_ATTEMPTS')) {
+      var timeKey = key + '_TIME';
+      var storedTime = parseInt(all[timeKey] || '0', 10);
+      if (!storedTime || (now - storedTime) > 600000) {
+        props.deleteProperty(key);
+        props.deleteProperty(key + '_TIME');
+        props.deleteProperty(key + '_ATTEMPTS');
+        deleted += 3;
+      }
+
+    // Login attempt tracker — buang jika >15 minit dari first attempt
+    } else if (key.startsWith('login_ts_')) {
+      var firstTs = parseInt(all[key] || '0', 10);
+      if (!firstTs || (now - firstTs) > 900000) {
+        var attKey = 'login_attempts_' + key.substring('login_ts_'.length);
+        props.deleteProperty(key);
+        props.deleteProperty(attKey);
+        deleted += 2;
+      }
+    }
+  }
+
+  Logger.log('cleanupExpiredProperties: ' + deleted + ' entries dibuang.');
+  return deleted;
+}
+
+// ============================================================
+// 18c. createCleanupTrigger
+// Pasang trigger harian untuk cleanupExpiredProperties jam 3am.
+// Jalankan SEKALI dari editor.
+// ============================================================
+function createCleanupTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  var sudahAda = existing.some(function(t) {
+    return t.getHandlerFunction() === 'cleanupExpiredProperties';
+  });
+  if (sudahAda) {
+    Logger.log('Trigger cleanupExpiredProperties sudah wujud.');
+    return;
+  }
+  ScriptApp.newTrigger('cleanupExpiredProperties')
+    .timeBased()
+    .atHour(3)
+    .everyDays(1)
+    .create();
+  Logger.log('Trigger cleanup dipasang: setiap hari jam 3am.');
 }
 
 // ============================================================
