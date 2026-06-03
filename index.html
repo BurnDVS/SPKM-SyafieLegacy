@@ -1595,18 +1595,22 @@
     }
 
     .mob-card {
-      background: #FFFFFF;
-      border: 0.5px solid var(--border);
-      border-top: 2.5px solid var(--border);
-      border-radius: 10px;
+      background: #F5F0E8;
+      border: none;
+      border-top: 3px solid transparent;
+      border-radius: 14px;
       padding: 14px 12px;
       display: flex;
       flex-direction: column;
       gap: 4px;
       cursor: pointer;
-      transition: transform 0.15s;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 5px 5px 14px rgba(10,31,68,.11), -3px -3px 10px rgba(255,255,255,.82), inset 0 1px 0 rgba(255,255,255,.92);
     }
-    .mob-card:active { transform: scale(0.97); }
+    .mob-card:active {
+      transform: scale(0.97);
+      box-shadow: 2px 2px 8px rgba(10,31,68,.12), -1px -1px 5px rgba(255,255,255,.7);
+    }
     .mob-card-gold  { border-top-color: #FFD700 !important; }
     .mob-card-navy  { border-top-color: #0A1F44 !important; }
     .mob-card-green { border-top-color: #1A5C3A !important; }
