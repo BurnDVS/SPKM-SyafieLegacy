@@ -11,7 +11,18 @@ var TAB = {
   GURU:        'Maklumat Guru',
   KANAK:       'PendaftaranBaru',
   DEWASA:      'KelasDewasa',
-  KEHADIRAN:   'Kehadiran'
+  KEHADIRAN:   'Kehadiran',
+  BLAST_QUEUE: 'BlastQueue'
+};
+
+// Kolum tab BlastQueue (0-indexed)
+var COL_BLAST = {
+  TIMESTAMP:  0,  // A — Masa queue dibuat
+  NAMA:       1,  // B — Nama murid
+  TELEFON:    2,  // C — Nombor telefon
+  MESEJ:      3,  // D — Mesej penuh
+  STATUS:     4,  // E — PENDING / SENT / FAILED
+  BLASTED_AT: 5   // F — Masa mesej dihantar
 };
 
 // Kolum tab PendaftaranBaru (0-indexed) — disahkan dari sheet sebenar
@@ -95,14 +106,16 @@ var ALLOWED_ACTIONS = [
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
   'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
-  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran'
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
+  'queueWABlast', 'getBlastStatus'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
   'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
-  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran'
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
+  'queueWABlast', 'getBlastStatus'
 ];
 
 function doPost(e) {
@@ -168,6 +181,8 @@ function doPost(e) {
     else if (action === 'updateGuru')             result = updateGuru(body);
     else if (action === 'getOrgChart')            result = getOrgChart();
     else if (action === 'hantarWAYuran')          result = hantarWAYuran(body);
+    else if (action === 'queueWABlast')           result = queueWABlast(body);
+    else if (action === 'getBlastStatus')         result = getBlastStatus(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -293,6 +308,8 @@ function doAction(action, payload) {
   else if (action === 'updateGuru')            return updateGuru(payload);
   else if (action === 'getOrgChart')           return getOrgChart();
   else if (action === 'hantarWAYuran')         return hantarWAYuran(payload);
+  else if (action === 'queueWABlast')          return queueWABlast(payload);
+  else if (action === 'getBlastStatus')        return getBlastStatus(payload);
 }
 
 // ============================================================
@@ -1844,6 +1861,190 @@ function simpanKehadiran(params) {
 
   } catch (err) {
     Logger.log('simpanKehadiran error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// BLAST QUEUE SYSTEM — Task 1-6
+// ============================================================
+
+// ensureBlastQueueSheet — cipta tab BlastQueue jika belum ada, dengan header
+function ensureBlastQueueSheet(ss) {
+  var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB.BLAST_QUEUE);
+    sheet.getRange(1, 1, 1, 6).setValues([[
+      'Timestamp', 'NamaAnak', 'Telefon', 'Mesej', 'Status', 'BlastedAt'
+    ]]);
+    sheet.setFrozenRows(1);
+    Logger.log('BlastQueue tab dicipta.');
+  }
+  return sheet;
+}
+
+// queueWABlast — masukkan murid ke BlastQueue dan mulakan trigger
+// Input: { token, mesejTemplate, bulan, muridList:[{nama, telefon}] }
+function queueWABlast(params) {
+  params = params || {};
+  try {
+    var mesejTemplate = (params.mesejTemplate || '').toString().trim();
+    var bulan         = (params.bulan         || '').toString().trim();
+    var muridList     = params.muridList       || [];
+
+    if (!mesejTemplate || !bulan || !muridList.length) {
+      return { success: false, message: 'mesejTemplate, bulan, dan muridList diperlukan.' };
+    }
+
+    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet     = ensureBlastQueueSheet(ss);
+    var timestamp = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+
+    var rows = muridList.map(function(m) {
+      var nama     = (m.nama    || '').toString().trim();
+      var telefon  = (m.telefon || '').toString().trim();
+      var mesej    = mesejTemplate
+        .replace(/\[BULAN\]/g, bulan)
+        .replace(/\[NAMA\]/g,  nama);
+      return [timestamp, nama, telefon, mesej, 'PENDING', ''];
+    });
+
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 6).setValues(rows);
+      SpreadsheetApp.flush();
+    }
+
+    var totalQueued  = rows.length;
+    var batchCount   = Math.ceil(totalQueued / 40);
+    // 40 mesej × 5 saat = 200 saat = ~3.3 min per batch + 8 min gap antara batch
+    var estimasiMinit = Math.ceil((totalQueued * 5) / 60) + (batchCount - 1) * 8;
+
+    setupBlastTrigger();
+
+    Logger.log('queueWABlast: ' + totalQueued + ' mesej diqueue untuk ' + bulan);
+    return {
+      success:       true,
+      totalQueued:   totalQueued,
+      batchCount:    batchCount,
+      estimasiMinit: estimasiMinit
+    };
+
+  } catch (err) {
+    Logger.log('queueWABlast error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// blastQueueProcessor — proses max 40 PENDING rows, trigger semula jika ada lagi
+function blastQueueProcessor() {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
+    if (!sheet || sheet.getLastRow() < 2) {
+      deleteBlastTrigger();
+      return;
+    }
+
+    var data     = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+    var now      = new Date();
+    var processed = 0;
+
+    for (var i = 0; i < data.length && processed < 40; i++) {
+      var status = (data[i][COL_BLAST.STATUS] || '').toString().trim().toUpperCase();
+      if (status !== 'PENDING') continue;
+
+      var telefon = (data[i][COL_BLAST.TELEFON] || '').toString().trim();
+      var mesej   = (data[i][COL_BLAST.MESEJ]   || '').toString().trim();
+      var rowNum  = i + 2; // 1-based, header on row 1
+
+      var ok = false;
+      if (telefon && mesej) {
+        ok = hantarWhatsApp(telefon, mesej);
+      }
+
+      var blastedAt = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+      sheet.getRange(rowNum, COL_BLAST.STATUS    + 1).setValue(ok ? 'SENT' : 'FAILED');
+      sheet.getRange(rowNum, COL_BLAST.BLASTED_AT + 1).setValue(blastedAt);
+
+      processed++;
+      if (processed < 40) Utilities.sleep(5000);
+    }
+
+    SpreadsheetApp.flush();
+    Logger.log('blastQueueProcessor: ' + processed + ' mesej diproses.');
+
+    // Semak ada lagi PENDING — jika ya, trigger akan dicetuskan semula oleh jadual
+    // Jika tiada, padam trigger
+    var remaining = sheet.getRange(2, COL_BLAST.STATUS + 1, sheet.getLastRow() - 1, 1)
+      .getValues()
+      .filter(function(r) { return (r[0] || '').toString().trim().toUpperCase() === 'PENDING'; })
+      .length;
+
+    if (remaining === 0) {
+      deleteBlastTrigger();
+      Logger.log('blastQueueProcessor: Semua mesej selesai. Trigger dipadam.');
+    }
+
+  } catch (err) {
+    Logger.log('blastQueueProcessor error: ' + err.message);
+  }
+}
+
+// setupBlastTrigger — pasang time-based trigger setiap 8 minit jika belum ada
+function setupBlastTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  var sudahAda = existing.some(function(t) {
+    return t.getHandlerFunction() === 'blastQueueProcessor';
+  });
+  if (!sudahAda) {
+    ScriptApp.newTrigger('blastQueueProcessor')
+      .timeBased()
+      .everyMinutes(8)
+      .create();
+    Logger.log('setupBlastTrigger: Trigger blastQueueProcessor dipasang (8 minit).');
+  }
+}
+
+// deleteBlastTrigger — padam semua trigger blastQueueProcessor
+function deleteBlastTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'blastQueueProcessor') {
+      ScriptApp.deleteTrigger(t);
+      Logger.log('deleteBlastTrigger: Trigger dipadam.');
+    }
+  });
+}
+
+// getBlastStatus — return stats semasa BlastQueue
+// Output: { success, pending, sent, failed, total }
+function getBlastStatus(params) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, pending: 0, sent: 0, failed: 0, total: 0 };
+    }
+
+    var data    = sheet.getRange(2, COL_BLAST.STATUS + 1, sheet.getLastRow() - 1, 1).getValues();
+    var pending = 0, sent = 0, failed = 0;
+
+    data.forEach(function(r) {
+      var s = (r[0] || '').toString().trim().toUpperCase();
+      if      (s === 'PENDING') pending++;
+      else if (s === 'SENT')    sent++;
+      else if (s === 'FAILED')  failed++;
+    });
+
+    return {
+      success: true,
+      pending: pending,
+      sent:    sent,
+      failed:  failed,
+      total:   pending + sent + failed
+    };
+
+  } catch (err) {
+    Logger.log('getBlastStatus error: ' + err.message);
     return { success: false, message: err.message };
   }
 }

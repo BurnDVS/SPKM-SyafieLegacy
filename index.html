@@ -2955,11 +2955,14 @@
       </div>
       <div style="padding:16px 24px; border-top:1px solid var(--border);">
         <label style="display:block; font-size:12px; font-weight:500; color:var(--text-mid); margin-bottom:6px; letter-spacing:0.4px; text-transform:uppercase;">✏️ Mesej WA (boleh edit)</label>
-        <textarea id="waCustomMesej" style="width:100%; min-height:80px; margin-bottom:10px; font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--cream); color:var(--text-dark); resize:vertical; line-height:1.5;">Assalamualaikum, yuran [BULAN] belum dikemaskini.
-Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
+        <textarea id="waCustomMesej" style="width:100%; min-height:80px; margin-bottom:10px; font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--cream); color:var(--text-dark); resize:vertical; line-height:1.5;">Assalamualaikum, yuran [BULAN] bagi [NAMA] belum dikemaskini. Sila kemaskini di portal SPKM. Sebarang masalah hubungi Ustaz Shafie atau AJK bertugas. Terima kasih — Kelas Mengaji &amp; Fardhu Ain Syafie Legacy 🕌</textarea>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
           <button class="btn btn-primary btn-sm" id="btnHantarWA" onclick="hantarWAYuran()" style="margin-top:0;">📤 Hantar WA</button>
+          <button class="btn btn-ghost btn-sm" id="btnBlastStatus" onclick="checkBlastStatus()" style="margin-top:0; display:none;">📊 Status Blast</button>
+        </div>
+        <div id="blastActiveBadge" style="display:none; margin-top:10px; padding:8px 12px; background:#E8F4FD; border:1px solid #B3D4ED; border-radius:8px; font-size:12px; color:#0A1F44;">
+          <span id="blastActiveBadgeText">📤 Blast aktif: — sent / — total</span>
         </div>
         <div id="waLastSentInfo" style="display:none; margin-top:10px; font-size:12px; color:var(--text-muted); align-items:center; gap:6px;">
           <span>✅</span><span id="waLastSentText"></span>
@@ -4573,10 +4576,31 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
     el._t = setTimeout(function() { el.classList.remove('show'); }, 4000);
   }
 
-  function waConfirm(count, bulan) {
+  function waConfirm(count, bulan, mesejTemplate) {
     return new Promise(function(resolve) {
       document.getElementById('waConfirmCount').textContent = count + ' murid';
       document.getElementById('waConfirmBulan').textContent = bulan;
+
+      var previewMesej = (mesejTemplate || '')
+        .replace(/\[BULAN\]/g, bulan)
+        .replace(/\[NAMA\]/g, '...');
+      var lines = previewMesej.split('\n').slice(0, 3);
+      if (previewMesej.split('\n').length > 3) lines.push('...');
+      document.getElementById('waConfirmPreview').textContent = lines.join('\n');
+
+      var batchCount = Math.ceil(count / 40);
+      var batchHtml  = '';
+      for (var b = 0; b < batchCount; b++) {
+        var start = b * 40 + 1;
+        var end   = Math.min((b + 1) * 40, count);
+        var masa  = b === 0 ? 'Sekarang' : (b * 8) + ' minit lagi';
+        batchHtml += '<div style="display:flex;justify-content:space-between;align-items:center;' +
+          'padding:5px 8px;background:#F0F4FF;border-radius:6px;font-size:12px;">' +
+          '<span style="color:#0A1F44;font-weight:500;">Batch ' + (b+1) + ': ' + start + '–' + end + ' orang</span>' +
+          '<span style="color:#666;">' + masa + '</span></div>';
+      }
+      document.getElementById('waConfirmBatchList').innerHTML = batchHtml;
+
       var modal = document.getElementById('waConfirmModal');
       modal.style.display = 'flex';
       document.getElementById('waConfirmYa').onclick = function() {
@@ -4624,28 +4648,94 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
     if (!currentBelumBayar.length) { waToast('Tiada murid belum bayar untuk dihantar WA.', 'warn'); return; }
     if (!bulan) { waToast('Sila pilih bulan dahulu.', 'warn'); return; }
 
-    const confirmed = await waConfirm(currentBelumBayar.length, bulan);
+    const mesejTemplate = (document.getElementById('waCustomMesej').value || '').trim();
+    const confirmed = await waConfirm(currentBelumBayar.length, bulan, mesejTemplate);
     if (!confirmed) return;
 
     const btn = document.getElementById('btnHantarWA');
     btn.classList.add('loading'); btn.disabled = true;
 
     try {
-      const res = await callGASPromise('hantarWAYuran', {
+      const muridList = currentBelumBayar.map(function(m) {
+        return { nama: m.nama, telefon: String(m.telefon || '') };
+      });
+      const res = await callGASPromise('queueWABlast', {
         token:          sessionStorage.getItem('spkm_token'),
+        mesejTemplate:  mesejTemplate,
         bulan:          bulan,
-        namaBelumBayar: currentBelumBayar.map(m => m.nama)
+        muridList:      muridList
       });
       if (res.success) {
-        waShowResult(res.berjaya, res.gagal, res.tidakJumpa);
+        waToast('✅ ' + res.totalQueued + ' mesej dijadualkan. Blast akan selesai dalam lebih kurang ' + res.estimasiMinit + ' minit.', 'ok');
+        waUpdateLastSent();
+        showBlastBadge();
+        startBlastPolling();
       } else {
-        waToast(res.message || 'Tidak dapat hantar WA.', 'error');
+        waToast(res.message || 'Tidak dapat queue WA.', 'error');
       }
     } catch(e) {
       waToast('Ralat sambungan: ' + e.message, 'error');
     } finally {
       btn.classList.remove('loading'); btn.disabled = false;
     }
+  }
+
+  var _blastPollInterval = null;
+
+  function showBlastBadge() {
+    var badge = document.getElementById('blastActiveBadge');
+    var btn   = document.getElementById('btnBlastStatus');
+    if (badge) badge.style.display = 'block';
+    if (btn)   btn.style.display   = '';
+  }
+
+  function hideBlastBadge() {
+    var badge = document.getElementById('blastActiveBadge');
+    if (badge) badge.style.display = 'none';
+  }
+
+  function startBlastPolling() {
+    if (_blastPollInterval) clearInterval(_blastPollInterval);
+    _blastPollInterval = setInterval(refreshBlastStatus, 30000);
+    refreshBlastStatus();
+  }
+
+  function stopBlastPolling() {
+    if (_blastPollInterval) { clearInterval(_blastPollInterval); _blastPollInterval = null; }
+  }
+
+  function refreshBlastStatus() {
+    callGASPromise('getBlastStatus', { token: sessionStorage.getItem('spkm_token') })
+      .then(function(data) {
+        if (!data || !data.success) return;
+        var txt = document.getElementById('blastActiveBadgeText');
+        if (txt) txt.textContent = '📤 Blast aktif: ' + data.sent + ' sent / ' + data.total + ' total' +
+          (data.failed > 0 ? ' (' + data.failed + ' gagal)' : '') +
+          (data.pending > 0 ? ' — ' + data.pending + ' lagi dalam queue' : ' ✅ Selesai');
+        if (data.pending === 0) stopBlastPolling();
+      })
+      .catch(function() {});
+  }
+
+  function checkBlastStatus() {
+    var btn = document.getElementById('btnBlastStatus');
+    if (btn) { btn.textContent = '⏳ Menyemak...'; btn.disabled = true; }
+    callGASPromise('getBlastStatus', { token: sessionStorage.getItem('spkm_token') })
+      .then(function(data) {
+        if (btn) { btn.textContent = '📊 Status Blast'; btn.disabled = false; }
+        if (!data || !data.success) { waToast('Gagal ambil status.', 'error'); return; }
+        var msg = '📊 Status Blast: ' + data.sent + ' sent, ' + data.failed + ' gagal, ' + data.pending + ' pending (jumlah: ' + data.total + ')';
+        waToast(msg, 'ok');
+        showBlastBadge();
+        var txt = document.getElementById('blastActiveBadgeText');
+        if (txt) txt.textContent = '📤 Blast: ' + data.sent + ' sent / ' + data.total + ' total' +
+          (data.failed > 0 ? ' (' + data.failed + ' gagal)' : '') +
+          (data.pending > 0 ? ' — ' + data.pending + ' lagi dalam queue' : ' ✅ Selesai');
+      })
+      .catch(function() {
+        if (btn) { btn.textContent = '📊 Status Blast'; btn.disabled = false; }
+        waToast('Ralat sambungan.', 'error');
+      });
   }
 
   function submitCashPayment() {
@@ -5549,18 +5639,18 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
 
 <!-- WA CONFIRM MODAL -->
 <div id="waConfirmModal">
-  <div class="wa-modal-box">
+  <div class="wa-modal-box" style="max-width:480px;">
     <div class="wa-modal-hdr">
       <div class="wa-modal-hdr-icon">📤</div>
       <div>
-        <div class="wa-modal-hdr-title">Hantar WA Peringatan Yuran</div>
+        <div class="wa-modal-hdr-title">Pengesahan Blast WA</div>
         <div class="wa-modal-hdr-sub">Kelas Pengajian Syafie Legacy</div>
       </div>
     </div>
     <div class="wa-modal-body">
       <div class="wa-modal-info">
         <div class="wa-modal-info-row">
-          <span class="wa-modal-info-label">Bilangan murid</span>
+          <span class="wa-modal-info-label">Jumlah penerima</span>
           <span class="wa-modal-info-val" id="waConfirmCount">—</span>
         </div>
         <div class="wa-modal-info-row">
@@ -5568,10 +5658,25 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
           <span class="wa-modal-info-val" id="waConfirmBulan">—</span>
         </div>
       </div>
-      <p class="wa-modal-note">WA peringatan akan dihantar kepada ibu bapa / wali murid yang belum kemaskini yuran.</p>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:600; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Preview Mesej</div>
+        <div id="waConfirmPreview" style="background:#F8F8F8; border:1px solid #E0E0E0; border-radius:8px; padding:10px 12px; font-size:12px; color:#333; line-height:1.6; white-space:pre-wrap; max-height:80px; overflow:hidden;"></div>
+      </div>
+
+      <div id="waConfirmSchedule" style="margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:600; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Jadual Penghantaran</div>
+        <div id="waConfirmBatchList" style="display:flex; flex-direction:column; gap:4px;"></div>
+      </div>
+
+      <div style="background:#E8F4FD; border:1px solid #B3D4ED; border-radius:8px; padding:10px 12px; font-size:12px; color:#0A1F44; margin-bottom:14px;">
+        ✅ Sistem akan sambung automatik walaupun anda logout atau tutup browser<br>
+        ⏱ Delay 5 saat antara setiap mesej
+      </div>
+
       <div class="wa-modal-actions">
         <button class="wa-btn-batal" id="waConfirmBatal">✕ Batal</button>
-        <button class="wa-btn-ya" id="waConfirmYa">📤 Ya, Hantar</button>
+        <button class="wa-btn-ya" id="waConfirmYa">📤 Ya, Hantar Sekarang</button>
       </div>
     </div>
   </div>
