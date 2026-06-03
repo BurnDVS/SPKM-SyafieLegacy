@@ -3889,8 +3889,9 @@
     }).join('');
   }
 
-  function filterMurid() {
+  window.filterMurid = function filterMurid() {
     const q = (document.getElementById('muridSearch').value || '').toLowerCase().trim();
+    console.log('filterMurid q=', q, 'kanak=', allMuridKanak.length);
     if (currentMuridTab === 'kanak') {
       let rows = allMuridKanak;
       if (muridStatusFilter === 'aktif')  rows = rows.filter(r => (r.status || 'AKTIF') === 'AKTIF');
@@ -3910,7 +3911,7 @@
         (r.email   || '').toLowerCase().includes(q)
       ) : rows);
     }
-  }
+  };
 
   // =====================
   // SENARAI GURU
