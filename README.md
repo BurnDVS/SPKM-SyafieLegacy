@@ -201,7 +201,6 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 ```bash
 # Deploy ke GAS sahaja
 clasp push --force
-# Lepas push → GAS Editor → Deploy → Manage Deployments → Edit → New version → Web App
 
 # Deploy ke GitHub (BurnDVS repo)
 git add . && git commit -m "message" && git push
@@ -213,7 +212,13 @@ git push pages main
 git add . && git commit -m "message" && git push && git push pages main
 ```
 
-> ⚠️ **PENTING:** Bila GAS URL bertukar (new deployment), kena update `GAS_URL` dalam `portal.html` DAN `index.html`, lepas tu push semula.
+> ⚠️ **PENTING — SELEPAS CLASP PUSH:**
+> Setiap kali lepas `clasp push --force`, MESTI redeploy manual dari GAS Editor:
+> **Deploy → Manage Deployments → SPKM Web App → Edit (✏️) → New version → Deploy**
+>
+> ❌ **JANGAN guna `clasp deploy`** — ia akan rosak Web App URL dan buat URL baru setiap kali.
+
+> ⚠️ **PENTING:** Bila GAS URL bertukar (new deployment), kena update `GAS_URL` dalam `portal.html` DAN `index.html`, lepas tu push semula + bump `sw.js` cache version.
 
 ---
 
