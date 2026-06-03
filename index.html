@@ -1702,6 +1702,85 @@
     .mob-back-btn { display: none; }
   }
 
+  /* === WA HANTAR MODAL === */
+  #waConfirmModal, #waResultModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 9998;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .wa-modal-box {
+    background: #fff; border-radius: 16px;
+    width: 100%; max-width: 400px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: waModalIn .2s ease;
+  }
+  @keyframes waModalIn {
+    from { transform: scale(.95); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  .wa-modal-hdr {
+    background: #0A1F44; padding: 18px 22px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 3px solid #FFD700;
+  }
+  .wa-modal-hdr-icon  { font-size: 26px; }
+  .wa-modal-hdr-title { font-family:'Lora',serif; font-size:16px; font-weight:600; color:#fff; }
+  .wa-modal-hdr-sub   { font-size:11px; color:rgba(255,255,255,0.65); margin-top:2px; }
+  .wa-modal-body { padding: 22px; }
+  .wa-modal-info {
+    background: #F0F4FF; border: 1px solid #C5D0E8;
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;
+  }
+  .wa-modal-info-row {
+    display: flex; justify-content: space-between;
+    align-items: center; font-size: 14px;
+  }
+  .wa-modal-info-row + .wa-modal-info-row {
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid #D8DCE8;
+  }
+  .wa-modal-info-label { color: #666; }
+  .wa-modal-info-val   { font-weight: 600; color: #0A1F44; }
+  .wa-modal-note { font-size:13px; color:#777; margin-bottom:18px; }
+  .wa-modal-actions { display: flex; gap: 10px; }
+  .wa-modal-actions button {
+    flex: 1; padding: 12px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    border: none; font-family: inherit; transition: opacity .2s;
+  }
+  .wa-modal-actions button:hover { opacity: .85; }
+  .wa-btn-ya    { background: #0A1F44; color: #FFD700; }
+  .wa-btn-batal { background: #EBEBEB; color: #444; }
+  .wa-result-stats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .wa-stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-radius: 8px; font-size: 14px;
+  }
+  .wa-stat-row.ok   { background: #E8F5E9; }
+  .wa-stat-row.err  { background: #FDECEA; }
+  .wa-stat-row.warn { background: #FFF8E1; }
+  .wa-stat-label { color: #555; }
+  .wa-stat-val   { font-weight: 700; font-size: 18px; }
+  .wa-stat-row.ok   .wa-stat-val { color: #2E7D32; }
+  .wa-stat-row.err  .wa-stat-val { color: #C0392B; }
+  .wa-stat-row.warn .wa-stat-val { color: #B8860B; }
+  /* === WA TOAST === */
+  #waToast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #0A1F44; color: #fff;
+    padding: 13px 20px; border-radius: 12px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    z-index: 9999; opacity: 0;
+    transition: transform .3s ease, opacity .3s ease;
+    max-width: calc(100vw - 40px); text-align: center;
+    border-left: 4px solid #FFD700;
+    pointer-events: none;
+  }
+  #waToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #waToast.t-error   { border-left-color: #C0392B; }
+  #waToast.t-success { border-left-color: #27AE60; }
+
 </style>
 </head>
 <body>
@@ -4341,11 +4420,47 @@
     alert('Senarai WA berjaya disalin! (' + currentBelumBayar.length + ' murid)');
   }
 
+  function waToast(msg, type) {
+    var el = document.getElementById('waToast');
+    if (!el) { alert(msg); return; }
+    el.textContent = msg;
+    el.className = type ? 't-' + type : '';
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function() { el.classList.remove('show'); }, 4000);
+  }
+
+  function waConfirm(count, bulan) {
+    return new Promise(function(resolve) {
+      document.getElementById('waConfirmCount').textContent = count + ' murid';
+      document.getElementById('waConfirmBulan').textContent = bulan;
+      var modal = document.getElementById('waConfirmModal');
+      modal.style.display = 'flex';
+      document.getElementById('waConfirmYa').onclick = function() {
+        modal.style.display = 'none'; resolve(true);
+      };
+      document.getElementById('waConfirmBatal').onclick = function() {
+        modal.style.display = 'none'; resolve(false);
+      };
+    });
+  }
+
+  function waShowResult(berjaya, gagal, tidakJumpa) {
+    document.getElementById('waResBerjaya').textContent = berjaya;
+    document.getElementById('waResGagal').textContent   = gagal;
+    document.getElementById('waResTiada').textContent   = tidakJumpa;
+    var modal = document.getElementById('waResultModal');
+    modal.style.display = 'flex';
+    document.getElementById('waResultOk').onclick = function() { modal.style.display = 'none'; };
+  }
+
   async function hantarWAYuran() {
     const bulan = document.getElementById('yuranBulan').value;
-    if (!currentBelumBayar.length) { alert('Tiada murid belum bayar untuk dihantar WA.'); return; }
-    if (!bulan) { alert('Sila pilih bulan dahulu.'); return; }
-    if (!confirm('Hantar WA peringatan yuran kepada ' + currentBelumBayar.length + ' murid untuk bulan ' + bulan + '?')) return;
+    if (!currentBelumBayar.length) { waToast('Tiada murid belum bayar untuk dihantar WA.', 'warn'); return; }
+    if (!bulan) { waToast('Sila pilih bulan dahulu.', 'warn'); return; }
+
+    const confirmed = await waConfirm(currentBelumBayar.length, bulan);
+    if (!confirmed) return;
 
     const btn = document.getElementById('btnHantarWA');
     btn.classList.add('loading'); btn.disabled = true;
@@ -4357,12 +4472,12 @@
         namaBelumBayar: currentBelumBayar.map(m => m.nama)
       });
       if (res.success) {
-        alert('WA dihantar!\n✅ Berjaya: ' + res.berjaya + '\n❌ Gagal: ' + res.gagal + '\n⚠️ Tiada nombor: ' + res.tidakJumpa);
+        waShowResult(res.berjaya, res.gagal, res.tidakJumpa);
       } else {
-        alert('Ralat: ' + (res.message || 'Tidak dapat hantar WA.'));
+        waToast(res.message || 'Tidak dapat hantar WA.', 'error');
       }
     } catch(e) {
-      alert('Ralat sambungan: ' + e.message);
+      waToast('Ralat sambungan: ' + e.message, 'error');
     } finally {
       btn.classList.remove('loading'); btn.disabled = false;
     }
@@ -5253,6 +5368,71 @@
   </div>
 </div>
 
+
+<!-- WA CONFIRM MODAL -->
+<div id="waConfirmModal">
+  <div class="wa-modal-box">
+    <div class="wa-modal-hdr">
+      <div class="wa-modal-hdr-icon">📤</div>
+      <div>
+        <div class="wa-modal-hdr-title">Hantar WA Peringatan Yuran</div>
+        <div class="wa-modal-hdr-sub">Kelas Pengajian Syafie Legacy</div>
+      </div>
+    </div>
+    <div class="wa-modal-body">
+      <div class="wa-modal-info">
+        <div class="wa-modal-info-row">
+          <span class="wa-modal-info-label">Bilangan murid</span>
+          <span class="wa-modal-info-val" id="waConfirmCount">—</span>
+        </div>
+        <div class="wa-modal-info-row">
+          <span class="wa-modal-info-label">Bulan</span>
+          <span class="wa-modal-info-val" id="waConfirmBulan">—</span>
+        </div>
+      </div>
+      <p class="wa-modal-note">WA peringatan akan dihantar kepada ibu bapa / wali murid yang belum kemaskini yuran.</p>
+      <div class="wa-modal-actions">
+        <button class="wa-btn-batal" id="waConfirmBatal">✕ Batal</button>
+        <button class="wa-btn-ya" id="waConfirmYa">📤 Ya, Hantar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WA RESULT MODAL -->
+<div id="waResultModal">
+  <div class="wa-modal-box">
+    <div class="wa-modal-hdr">
+      <div class="wa-modal-hdr-icon">✅</div>
+      <div>
+        <div class="wa-modal-hdr-title">Laporan Penghantaran WA</div>
+        <div class="wa-modal-hdr-sub">Status mesej yang dihantar</div>
+      </div>
+    </div>
+    <div class="wa-modal-body">
+      <div class="wa-result-stats">
+        <div class="wa-stat-row ok">
+          <span class="wa-stat-label">✅ Berjaya dihantar</span>
+          <span class="wa-stat-val" id="waResBerjaya">—</span>
+        </div>
+        <div class="wa-stat-row err">
+          <span class="wa-stat-label">❌ Gagal dihantar</span>
+          <span class="wa-stat-val" id="waResGagal">—</span>
+        </div>
+        <div class="wa-stat-row warn">
+          <span class="wa-stat-label">⚠️ Tiada nombor</span>
+          <span class="wa-stat-val" id="waResTiada">—</span>
+        </div>
+      </div>
+      <div class="wa-modal-actions">
+        <button class="wa-btn-ya" id="waResultOk">Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WA TOAST -->
+<div id="waToast"></div>
 
 <script>
   if ('serviceWorker' in navigator && !_isGAS) {
