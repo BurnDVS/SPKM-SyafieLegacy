@@ -139,10 +139,10 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Fonnte API connected — WA Business `601162875136` linked
 - ✅ FONNTE_TOKEN setup dalam GAS Script Properties
 - ✅ hantarWhatsApp() function dalam Code.js
-- ✅ normalizePhoneForWA() — normalize nombor untuk Fonnte (tanpa 60 prefix, Fonnte auto tambah)
+- ✅ normalizePhoneForWA() — normalize nombor untuk Fonnte (tanpa 60 prefix)
 - ✅ Tab WARemind dalam Sheets — nama murid + nombor normalize
 - ✅ Formula normalize nombor — buang space, handle format 60x/0x/x
-- ✅ Country code fix — hantar nombor tanpa prefix 60, Fonnte tambah +60 auto
+- ✅ Country code fix — payload JSON.stringify + `countryCode: '60'` dalam hantarWhatsApp()
 
 #### PWA Mobile
 - ✅ manifest.json — nama, icon, tema Navy, start_url
