@@ -4483,11 +4483,10 @@
             '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Ralat memuatkan data.</td></tr>';
           return;
         }
-        const totalMurid = yuranMuridList.length;
         const sudahBayar = data.sudahBayar || 0;
-        const belumCount = Math.max(0, totalMurid - sudahBayar);
+        currentBelumBayar = data.belumBayar || [];
         document.getElementById('statDahBayar').textContent   = sudahBayar;
-        document.getElementById('statBelumBayar').textContent = belumCount;
+        document.getElementById('statBelumBayar').textContent = currentBelumBayar.length;
         document.getElementById('statKutipan').textContent    = 'RM ' + (parseFloat(data.totalKutipan) || 0).toFixed(2);
 
         const noticeSel = document.getElementById('yuranEmptyNotice');
@@ -4497,11 +4496,6 @@
         const resitMap  = {};
         (data.listResit || []).forEach(r => { resitMap[r.nama.toUpperCase().trim()] = r.resitUrl; });
         renderSudahKemaskini(sudahList, resitMap);
-
-        const namaBayarSet = new Set((data.listNamaBayar || []).map(n => n.toUpperCase().trim()));
-        currentBelumBayar = yuranMuridList
-          .filter(m => !namaBayarSet.has((m.nama || '').toUpperCase().trim()))
-          .sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
         renderBelumBayar(currentBelumBayar);
       }
     );

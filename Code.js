@@ -1460,34 +1460,110 @@ function getYuranStats(params) {
 
     var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
     var sheet   = yuranSS.getSheetByName(bulan);
-
     if (!sheet) return { success: false, message: 'Tab tidak dijumpai' };
-    if (sheet.getLastRow() < 2) return { success: true, sudahBayar: 0, totalKutipan: 0, listNamaBayar: [], listResit: [] };
 
-    var data          = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+    // 1. Sudah bayar — baca dari tab bulan berkenaan
     var totalKutipan  = 0;
     var seenNames     = {};
     var listNamaBayar = [];
     var listResit     = [];
+    var sudahBayarSet = {};
 
-    data.forEach(function(r) {
-      var rawNama  = (r[2]  || '').toString().trim(); // Col C
-      if (!rawNama) return;
-      var jumlah   = parseFloat(r[6]);                // Col G
-      if (!isNaN(jumlah)) totalKutipan += jumlah;
-      var resitUrl = (r[11] || '').toString().trim(); // Col L
-
-      rawNama.split(',').forEach(function(n) {
-        var nama = n.trim().toUpperCase();
-        if (!nama || seenNames[nama]) return;
-        seenNames[nama] = true;
-        listNamaBayar.push(nama);
-        listResit.push({ nama: nama, resitUrl: resitUrl });
+    if (sheet.getLastRow() >= 2) {
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+      data.forEach(function(r) {
+        var rawNama  = (r[2]  || '').toString().trim();
+        if (!rawNama) return;
+        var jumlah   = parseFloat(r[6]);
+        if (!isNaN(jumlah)) totalKutipan += jumlah;
+        var resitUrl = (r[11] || '').toString().trim();
+        rawNama.split(',').forEach(function(n) {
+          var nama = n.trim().toUpperCase();
+          if (!nama || seenNames[nama]) return;
+          seenNames[nama]      = true;
+          sudahBayarSet[nama]  = true;
+          listNamaBayar.push(nama);
+          listResit.push({ nama: nama, resitUrl: resitUrl });
+        });
       });
-    });
+    }
 
-    var sudahBayar = listNamaBayar.length;
-    return { success: true, sudahBayar: sudahBayar, totalKutipan: totalKutipan, listNamaBayar: listNamaBayar, listResit: listResit };
+    // 2. Master list — tab NAMA MURID (sumber tunggal, sama seperti eSemak)
+    var BULAN_2026    = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
+                         'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
+    var bulanMonthIdx = BULAN_2026.indexOf(bulan);
+    var activeMurid   = [];
+
+    try {
+      var nmSheet = yuranSS.getSheetByName('NAMA MURID');
+      if (nmSheet && nmSheet.getLastRow() > 1) {
+        var nmData = nmSheet.getRange(2, 2, nmSheet.getLastRow() - 1, 5).getValues();
+        for (var nm = 0; nm < nmData.length; nm++) {
+          var nmNama = (nmData[nm][0] || '').toString().trim().toUpperCase();
+          if (!nmNama) continue;
+
+          var tarikhRaw   = nmData[nm][4];
+          var regMonthIdx = -1;
+          if (tarikhRaw) {
+            var d = null;
+            if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
+              d = tarikhRaw;
+            } else {
+              var ts = tarikhRaw.toString().trim();
+              var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+              if (m1) d = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+              if (!d) {
+                var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (m2) d = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10));
+              }
+            }
+            if (d && !isNaN(d.getTime())) {
+              var yr = d.getFullYear();
+              if      (yr < 2026)  regMonthIdx = -1;
+              else if (yr === 2026) regMonthIdx = d.getMonth();
+              else                 regMonthIdx = 999;
+            }
+          }
+
+          // Skip murid daftar selepas bulan berkenaan
+          if (bulanMonthIdx !== -1 && regMonthIdx !== -1 && regMonthIdx > bulanMonthIdx) continue;
+          if (regMonthIdx === 999 && bulanMonthIdx !== -1) continue;
+
+          activeMurid.push(nmNama);
+        }
+      }
+    } catch (nmErr) {
+      Logger.log('getYuranStats NAMA MURID error: ' + nmErr.message);
+    }
+
+    // 3. Telefon dari WARemind
+    var mainSS    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var waSheet   = mainSS.getSheetByName('WARemind');
+    var telefonMap = {};
+    if (waSheet && waSheet.getLastRow() >= 3) {
+      var waData = waSheet.getRange(3, 2, waSheet.getLastRow() - 2, 3).getValues();
+      waData.forEach(function(r) {
+        var nama = (r[0] || '').toString().trim().toUpperCase();
+        var tel  = (r[2] || '').toString().trim();
+        if (nama && tel) telefonMap[nama] = tel;
+      });
+    }
+
+    // 4. Cross-check belum bayar
+    var belumBayar = activeMurid
+      .filter(function(nama) { return !sudahBayarSet[nama]; })
+      .map(function(nama)    { return { nama: nama, telefon: telefonMap[nama] || '' }; })
+      .sort(function(a, b)   { return a.nama.localeCompare(b.nama); });
+
+    return {
+      success:       true,
+      sudahBayar:    listNamaBayar.length,
+      totalKutipan:  totalKutipan,
+      listNamaBayar: listNamaBayar,
+      listResit:     listResit,
+      belumBayar:    belumBayar,
+      totalMurid:    activeMurid.length
+    };
 
   } catch (err) {
     Logger.log('getYuranStats error: ' + err.message);
