@@ -3899,7 +3899,7 @@
       renderMuridKanak(q ? rows.filter(r =>
         (r.namaAnak || '').toLowerCase().includes(q) ||
         (r.namaIbu  || '').toLowerCase().includes(q) ||
-        (r.telefon  || '').includes(q)
+        String(r.telefon || '').includes(q)
       ) : rows);
     } else {
       let rows = allMuridDewasa;
@@ -3907,7 +3907,7 @@
       else if (muridStatusFilter === 'tidak') rows = rows.filter(r => r.status === 'TIDAK AKTIF');
       renderMuridDewasa(q ? rows.filter(r =>
         (r.nama    || '').toLowerCase().includes(q) ||
-        (r.telefon || '').includes(q) ||
+        String(r.telefon || '').includes(q) ||
         (r.email   || '').toLowerCase().includes(q)
       ) : rows);
     }
