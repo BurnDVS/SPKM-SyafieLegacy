@@ -70,6 +70,7 @@ SPKM/
 | `Yuran [Bulan]` | Bayaran bulanan | Tab berasingan per bulan (cth: JAN2026, FEB2026) |
 | `NAMA MURID` | Senarai murid aktif | Nama, Tarikh Daftar (untuk cross-check yuran) |
 | `WARemind` | Blast WA reminder yuran | Col A: Raw data, Col B: Nama Murid, Col C: No Tel Asal, Col D: No Tel Normalize (60xxxxxxxxx) |
+| `BlastQueue` | Queue mesej WA blast | Col A: Timestamp, Col B: NamaAnak, Col C: Telefon, Col D: Mesej, Col E: Status (PENDING/SENT/FAILED), Col F: BlastedAt — **dicipta automatik pada blast pertama** |
 
 ---
 
@@ -146,6 +147,10 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Tab WARemind dalam Sheets — nama murid + nombor normalize
 - ✅ Formula normalize nombor — buang space, handle format 60x/0x/x
 - ✅ Country code fix — payload JSON.stringify + `countryCode: '60'` dalam hantarWhatsApp()
+- ✅ WA Blast Queue System — queue mesej ke tab BlastQueue, GAS trigger setiap 8 minit, batch 40 mesej, auto-stop bila selesai
+- ✅ Mesej WA peribadi — `[NAMA]` auto-replace nama murid setiap mesej
+- ✅ Modal pengesahan blast — preview mesej, jadual batch, nota auto-sambung walaupun logout
+- ✅ Blast status badge — auto-refresh setiap 30 saat, button "📊 Status Blast"
 
 #### PWA Mobile
 - ✅ manifest.json — nama, icon, tema Navy, start_url
@@ -160,7 +165,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Bottom nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
 - ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
 - ✅ Footer ringkas — satu baris `© 2026 Sistem Pengurusan Kelas Mengaji`
-- ✅ SW cache bump v6 — force reload bila GAS_URL bertukar
+- ✅ SW cache bump v8 — force reload bila GAS_URL bertukar
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
