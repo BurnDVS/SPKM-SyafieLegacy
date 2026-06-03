@@ -1781,6 +1781,108 @@
   #waToast.t-error   { border-left-color: #C0392B; }
   #waToast.t-success { border-left-color: #27AE60; }
 
+  /* ============================================================ */
+  /* 3D CLAY UI MOBILE — @media (max-width: 1024px) SAHAJA        */
+  /* Zero impact desktop                                          */
+  /* ============================================================ */
+  #mobileBottomNav { display: none; }
+
+  @media (max-width: 1024px) {
+
+    /* Clay background */
+    body { background: #E8E4DA; }
+
+    /* Main content — bagi ruang untuk bottom nav */
+    .main { padding-bottom: 84px !important; }
+
+    /* Clay card shadows */
+    .card {
+      border: none;
+      box-shadow: 5px 5px 14px rgba(10,31,68,.11), -3px -3px 10px rgba(255,255,255,.82), inset 0 1px 0 rgba(255,255,255,.92);
+      background: #FFFFFF;
+    }
+
+    /* Clay gold buttons */
+    .btn-gold {
+      color: #0A1F44;
+      box-shadow: 3px 3px 10px rgba(176,140,0,.4), -2px -2px 6px rgba(255,255,220,.6);
+    }
+
+    /* Clay primary buttons */
+    .btn-primary {
+      box-shadow: 3px 3px 10px rgba(10,31,68,.25), -2px -2px 6px rgba(255,255,255,.5);
+    }
+
+    /* Clay home menu cards (inline-styled divs dalam guestMenu & guruMenu) */
+    #guestMenu [onclick],
+    #guruMenu [onclick] {
+      background: #FAFAF8 !important;
+      border-left: none !important;
+      border-right: none !important;
+      border-bottom: none !important;
+      box-shadow: 5px 5px 14px rgba(10,31,68,.09), -3px -3px 10px rgba(255,255,255,.85), inset 0 1px 0 rgba(255,255,255,.95) !important;
+      border-radius: 14px !important;
+    }
+    #guestMenu [onclick]:active,
+    #guruMenu [onclick]:active {
+      transform: scale(0.97);
+      box-shadow: 2px 2px 8px rgba(10,31,68,.12), -1px -1px 5px rgba(255,255,255,.7) !important;
+    }
+
+    /* Clay hero card (Navy block) */
+    #mobileHomeContent > div:nth-child(2) {
+      box-shadow: 5px 5px 18px rgba(10,31,68,.3), -2px -2px 8px rgba(255,255,255,.15);
+    }
+
+    /* Clay login modal sheet */
+    #loginModalSheet {
+      box-shadow: 0 -8px 32px rgba(10,31,68,.18), -3px 0 12px rgba(255,255,255,.6);
+    }
+
+    /* Clay stat cards */
+    .yuran-stat-card, .ebayar-card {
+      box-shadow: 5px 5px 14px rgba(10,31,68,.11), -3px -3px 10px rgba(255,255,255,.82) !important;
+    }
+
+    /* === MOBILE BOTTOM NAV === */
+    #mobileBottomNav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 62px;
+      background: #0A1F44;
+      align-items: stretch;
+      z-index: 200;
+      border-top: 2px solid #FFD700;
+      box-shadow: 0 -4px 20px rgba(10,31,68,.35), 0 -1px 0 rgba(255,215,0,.2);
+    }
+    .mob-bnav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 8px 2px 6px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.2s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mob-bnav-item.active { opacity: 1; }
+    .mob-bnav-item:active { background: rgba(255,215,0,.1); }
+    .mob-bnav-icon { font-size: 19px; line-height: 1; }
+    .mob-bnav-label {
+      font-size: 9px;
+      font-weight: 600;
+      color: rgba(255,215,0,.85);
+      letter-spacing: 0.3px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .mob-bnav-item.active .mob-bnav-label { color: #FFD700; }
+
+  } /* end @media (max-width: 1024px) */
+
 </style>
 </head>
 <body>
@@ -3137,6 +3239,38 @@
   }
 
   // =====================
+  // MOBILE BOTTOM NAV
+  // =====================
+  function mobileNav(panel) {
+    showPanel(panel);
+  }
+
+  function updateMobileBottomNav(isLoggedIn) {
+    document.querySelectorAll('.mob-bnav-guest').forEach(function(el) {
+      el.style.display = isLoggedIn ? 'none' : 'flex';
+    });
+    document.querySelectorAll('.mob-bnav-guru').forEach(function(el) {
+      el.style.display = isLoggedIn ? 'flex' : 'none';
+    });
+  }
+
+  function syncMobileNavActive(panel) {
+    const map = {
+      utama: 'bnav-utama', daftar: 'bnav-daftar',
+      ebayar: 'bnav-ebayar', esemak: 'bnav-esemak',
+      kehadiran: 'bnav-hadir', murid: 'bnav-murid', yuran: 'bnav-yuran'
+    };
+    document.querySelectorAll('.mob-bnav-item').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    const id = map[panel];
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+  }
+
+  // =====================
   // NAVIGATION
   // =====================
   function showPanel(name) {
@@ -3147,6 +3281,7 @@
     const tabId = name === 'home' ? 'tabLogMasuk' : name === 'yuran' ? 'tabYuran' : 'nav-' + name;
     const tab = document.getElementById(tabId);
     if (tab) tab.classList.add('active');
+    syncMobileNavActive(name);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (name === 'kehadiran') loadKehadiranPanel();
     if (name === 'murid' && allMuridKanak.length === 0 && allMuridDewasa.length === 0) loadMuridList();
@@ -3443,6 +3578,7 @@
           if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
           setLoginState(true);
           updateNav(true);
+          updateMobileBottomNav(true);
           loadDashboardStats();
           loadOrgChart();
           resetIdleTimer();
@@ -3491,6 +3627,7 @@
     if (iModal) iModal.classList.remove('show');
     setLoginState(false);
     updateNav(false);
+    updateMobileBottomNav(false);
     showPanel('utama');
   }
 
@@ -5259,6 +5396,19 @@
           document.getElementById('guestMenu').style.display = 'none';
           document.getElementById('guruMenu').style.display = 'block';
         }
+        if (data.token) sessionStorage.setItem('spkm_token', data.token);
+        document.getElementById('headerUserName').textContent = data.user;
+        document.getElementById('headerUserNameDropdown').textContent = data.user;
+        document.getElementById('headerPreLogin').style.display = 'none';
+        document.getElementById('headerPostLogin').style.display = '';
+        currentRole = data.role || 'GURU';
+        setLoginState(true);
+        updateNav(true);
+        updateMobileBottomNav(true);
+        loadDashboardStats();
+        resetIdleTimer();
+        const gEl = document.getElementById('hadirGuru');
+        if (gEl) gEl.value = data.user;
         loadOrgChart();
       } else {
         document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
@@ -5433,6 +5583,41 @@
 
 <!-- WA TOAST -->
 <div id="waToast"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav id="mobileBottomNav" aria-label="Navigasi bawah">
+  <!-- Utama & Daftar — sentiasa ada -->
+  <div class="mob-bnav-item active" id="bnav-utama" onclick="mobileNav('utama')">
+    <span class="mob-bnav-icon">🏠</span>
+    <span class="mob-bnav-label">Utama</span>
+  </div>
+  <div class="mob-bnav-item" id="bnav-daftar" onclick="mobileNav('daftar')">
+    <span class="mob-bnav-icon">📝</span>
+    <span class="mob-bnav-label">Daftar</span>
+  </div>
+  <!-- Guest-only -->
+  <div class="mob-bnav-item mob-bnav-guest" id="bnav-ebayar" onclick="mobileNav('ebayar')">
+    <span class="mob-bnav-icon">💳</span>
+    <span class="mob-bnav-label">eBayar</span>
+  </div>
+  <div class="mob-bnav-item mob-bnav-guest" id="bnav-esemak" onclick="mobileNav('esemak')">
+    <span class="mob-bnav-icon">🔍</span>
+    <span class="mob-bnav-label">eSemak</span>
+  </div>
+  <!-- Guru-only (tersembunyi sebelum login) -->
+  <div class="mob-bnav-item mob-bnav-guru" id="bnav-hadir" onclick="mobileNav('kehadiran')" style="display:none">
+    <span class="mob-bnav-icon">✅</span>
+    <span class="mob-bnav-label">Hadir</span>
+  </div>
+  <div class="mob-bnav-item mob-bnav-guru" id="bnav-murid" onclick="mobileNav('murid')" style="display:none">
+    <span class="mob-bnav-icon">👥</span>
+    <span class="mob-bnav-label">Murid</span>
+  </div>
+  <div class="mob-bnav-item mob-bnav-guru" id="bnav-yuran" onclick="mobileNav('yuran')" style="display:none">
+    <span class="mob-bnav-icon">💰</span>
+    <span class="mob-bnav-label">Yuran</span>
+  </div>
+</nav>
 
 <script>
   if ('serviceWorker' in navigator && !_isGAS) {
