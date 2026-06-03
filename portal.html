@@ -2773,8 +2773,9 @@
           </tbody>
         </table>
       </div>
-      <div style="padding:16px 24px; border-top:1px solid var(--border);">
+      <div style="padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
+        <button class="btn btn-primary btn-sm" id="btnHantarWA" onclick="hantarWAYuran()" style="margin-top:0;">📤 Hantar WA</button>
       </div>
     </div>
 
@@ -4321,6 +4322,33 @@
     document.execCommand('copy');
     document.body.removeChild(ta);
     alert('Senarai WA berjaya disalin! (' + currentBelumBayar.length + ' murid)');
+  }
+
+  async function hantarWAYuran() {
+    const bulan = document.getElementById('yuranBulan').value;
+    if (!currentBelumBayar.length) { alert('Tiada murid belum bayar untuk dihantar WA.'); return; }
+    if (!bulan) { alert('Sila pilih bulan dahulu.'); return; }
+    if (!confirm('Hantar WA peringatan yuran kepada ' + currentBelumBayar.length + ' murid untuk bulan ' + bulan + '?')) return;
+
+    const btn = document.getElementById('btnHantarWA');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    try {
+      const res = await callGASPromise('hantarWAYuran', {
+        token:          sessionStorage.getItem('spkm_token'),
+        bulan:          bulan,
+        namaBelumBayar: currentBelumBayar.map(m => m.nama)
+      });
+      if (res.success) {
+        alert('WA dihantar!\n✅ Berjaya: ' + res.berjaya + '\n❌ Gagal: ' + res.gagal + '\n⚠️ Tiada nombor: ' + res.tidakJumpa);
+      } else {
+        alert('Ralat: ' + (res.message || 'Tidak dapat hantar WA.'));
+      }
+    } catch(e) {
+      alert('Ralat sambungan: ' + e.message);
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
   }
 
   function submitCashPayment() {

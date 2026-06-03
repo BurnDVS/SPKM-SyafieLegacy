@@ -95,14 +95,14 @@ var ALLOWED_ACTIONS = [
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
   'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
-  'uploadGuruGambar', 'updateGuru', 'getOrgChart'
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
   'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
-  'uploadGuruGambar', 'updateGuru', 'getOrgChart'
+  'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran'
 ];
 
 function doPost(e) {
@@ -167,6 +167,7 @@ function doPost(e) {
     else if (action === 'uploadGuruGambar')       result = uploadGuruGambar(body);
     else if (action === 'updateGuru')             result = updateGuru(body);
     else if (action === 'getOrgChart')            result = getOrgChart();
+    else if (action === 'hantarWAYuran')          result = hantarWAYuran(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -291,6 +292,7 @@ function doAction(action, payload) {
   else if (action === 'uploadGuruGambar')      return uploadGuruGambar(payload);
   else if (action === 'updateGuru')            return updateGuru(payload);
   else if (action === 'getOrgChart')           return getOrgChart();
+  else if (action === 'hantarWAYuran')         return hantarWAYuran(payload);
 }
 
 // ============================================================
@@ -964,6 +966,62 @@ function hantarWhatsApp(noTelefon, mesej) {
   } catch (err) {
     Logger.log('hantarWhatsApp error: ' + err.message);
     return false;
+  }
+}
+
+// ============================================================
+// 15b. hantarWAYuran
+// Hantar WA peringatan yuran belum bayar via Fonnte
+// Nombor telefon diambil dari tab WARemind (B3:B=nama, D3:D=telefon)
+// Input:  { token, bulan, namaBelumBayar: ['NAMA1','NAMA2',...] }
+// Output: { success, berjaya, gagal, tidakJumpa }
+// ============================================================
+function hantarWAYuran(params) {
+  params = params || {};
+  try {
+    var bulan          = (params.bulan || '').toString().trim();
+    var namaBelumBayar = params.namaBelumBayar || [];
+
+    if (!bulan || !namaBelumBayar.length) {
+      return { success: false, message: 'bulan dan namaBelumBayar diperlukan.' };
+    }
+
+    // Baca tab WARemind — B3:D (nama=col B, telefon=col D)
+    var ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var waSheet = ss.getSheetByName('WARemind');
+    if (!waSheet) return { success: false, message: 'Tab WARemind tidak dijumpai.' };
+
+    var lastRow = waSheet.getLastRow();
+    if (lastRow < 3) return { success: false, message: 'Tiada data dalam tab WARemind.' };
+
+    var waData = waSheet.getRange(3, 2, lastRow - 2, 3).getValues(); // B3:D
+    var telefonMap = {};
+    waData.forEach(function(r) {
+      var nama = (r[0] || '').toString().trim().toUpperCase(); // col B
+      var tel  = (r[2] || '').toString().trim();               // col D
+      if (nama && tel) telefonMap[nama] = tel;
+    });
+
+    var portalUrl = ScriptApp.getService().getUrl();
+    var berjaya = 0, gagal = 0, tidakJumpa = 0;
+
+    namaBelumBayar.forEach(function(nama) {
+      var namaUpper = (nama || '').toString().trim().toUpperCase();
+      var telefon   = telefonMap[namaUpper];
+      if (!telefon) { tidakJumpa++; return; }
+
+      var mesej = 'Assalamualaikum, yuran ' + bulan + ' belum dikemaskini.\n' +
+                  'Sila kemaskini bayaran di: ' + portalUrl;
+      var ok = hantarWhatsApp(telefon, mesej);
+      if (ok) berjaya++; else gagal++;
+    });
+
+    Logger.log('hantarWAYuran ' + bulan + ': ' + berjaya + ' berjaya, ' + gagal + ' gagal, ' + tidakJumpa + ' tidak jumpa');
+    return { success: true, berjaya: berjaya, gagal: gagal, tidakJumpa: tidakJumpa };
+
+  } catch (err) {
+    Logger.log('hantarWAYuran error: ' + err.message);
+    return { success: false, message: err.message };
   }
 }
 
