@@ -2852,9 +2852,14 @@
           </tbody>
         </table>
       </div>
-      <div style="padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
-        <button class="btn btn-primary btn-sm" id="btnHantarWA" onclick="hantarWAYuran()" style="margin-top:0;">📤 Hantar WA</button>
+      <div style="padding:16px 24px; border-top:1px solid var(--border);">
+        <label style="display:block; font-size:12px; font-weight:500; color:var(--text-mid); margin-bottom:6px; letter-spacing:0.4px; text-transform:uppercase;">✏️ Mesej WA (boleh edit)</label>
+        <textarea id="waCustomMesej" style="width:100%; min-height:80px; margin-bottom:10px; font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--cream); color:var(--text-dark); resize:vertical; line-height:1.5;">Assalamualaikum, yuran [BULAN] belum dikemaskini.
+Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
+          <button class="btn btn-primary btn-sm" id="btnHantarWA" onclick="hantarWAYuran()" style="margin-top:0;">📤 Hantar WA</button>
+        </div>
       </div>
     </div>
 
@@ -4373,11 +4378,9 @@
 
   function copyWaList() {
     const bulan = document.getElementById('yuranBulan').value;
-    const url   = window.location.href.split('?')[0];
-    const lines = [
-      'Assalamualaikum, yuran ' + bulan + ' belum dikemaskini.',
-      'Sila kemaskini bayaran di: ' + url
-    ];
+    const customMesej = (document.getElementById('waCustomMesej').value || '').trim()
+                          .replace('[BULAN]', bulan);
+    const lines = [customMesej, ''];
     currentBelumBayar.forEach(function(m, i) {
       lines.push((i + 1) + '. ' + m.nama + ' - ' + (m.telefon || '-'));
     });
