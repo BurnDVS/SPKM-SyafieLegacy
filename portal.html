@@ -2860,6 +2860,9 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
           <button class="btn btn-ghost btn-sm" onclick="copyWaList()" style="margin-top:0;">📋 Copy Senarai WA</button>
           <button class="btn btn-primary btn-sm" id="btnHantarWA" onclick="hantarWAYuran()" style="margin-top:0;">📤 Hantar WA</button>
         </div>
+        <div id="waLastSentInfo" style="display:none; margin-top:10px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+          <span>✅</span><span id="waLastSentText"></span>
+        </div>
       </div>
     </div>
 
@@ -4250,6 +4253,7 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
   // YURAN PANEL
   // =====================
   function loadYuranPanel() {
+    waLoadLastSent();
     if (yuranMuridList.length === 0) {
       callGAS('getMuridList', {},
         function(data) {
@@ -4431,10 +4435,32 @@ Sila hubungi kami untuk maklumat lanjut. Terima kasih.</textarea>
     });
   }
 
+  function waUpdateLastSent() {
+    var now = new Date();
+    var dd = String(now.getDate()).padStart(2,'0');
+    var mm = String(now.getMonth()+1).padStart(2,'0');
+    var yyyy = now.getFullYear();
+    var hh = String(now.getHours()).padStart(2,'0');
+    var min = String(now.getMinutes()).padStart(2,'0');
+    var ts = dd+'/'+mm+'/'+yyyy+', '+hh+':'+min;
+    sessionStorage.setItem('spkm_wa_last_sent', ts);
+    var el = document.getElementById('waLastSentInfo');
+    var txt = document.getElementById('waLastSentText');
+    if (el && txt) { txt.textContent = 'Makluman terakhir dihantar pada '+ts; el.style.display = 'flex'; }
+  }
+
+  function waLoadLastSent() {
+    var ts = sessionStorage.getItem('spkm_wa_last_sent');
+    var el = document.getElementById('waLastSentInfo');
+    var txt = document.getElementById('waLastSentText');
+    if (ts && el && txt) { txt.textContent = 'Makluman terakhir dihantar pada '+ts; el.style.display = 'flex'; }
+  }
+
   function waShowResult(berjaya, gagal, tidakJumpa) {
     document.getElementById('waResBerjaya').textContent = berjaya;
     document.getElementById('waResGagal').textContent   = gagal;
     document.getElementById('waResTiada').textContent   = tidakJumpa;
+    waUpdateLastSent();
     var modal = document.getElementById('waResultModal');
     modal.style.display = 'flex';
     document.getElementById('waResultOk').onclick = function() { modal.style.display = 'none'; };
