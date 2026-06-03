@@ -3625,17 +3625,17 @@
           var dewasa = data.totalDewasa || 0;
           var jumlah = kanak + dewasa;
           ['statKanak', 'statKanakBig', 'statKanakMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) el.textContent = kanak;
+            var el = document.getElementById(id); if (el) animateCountUp(el, String(kanak), 800);
           });
           ['statDewasa', 'statDewasaBig', 'statDewasaMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) el.textContent = dewasa;
+            var el = document.getElementById(id); if (el) animateCountUp(el, String(dewasa), 800);
           });
           ['statJumlahBig', 'statJumlahMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) el.textContent = jumlah;
+            var el = document.getElementById(id); if (el) animateCountUp(el, String(jumlah), 800);
           });
-          document.querySelectorAll('.js-stat-kanak').forEach(function(el) { el.textContent = kanak; });
-          document.querySelectorAll('.js-stat-dewasa').forEach(function(el) { el.textContent = dewasa; });
-          document.querySelectorAll('.js-stat-jumlah').forEach(function(el) { el.textContent = jumlah; });
+          document.querySelectorAll('.js-stat-kanak').forEach(function(el) { animateCountUp(el, String(kanak), 800); });
+          document.querySelectorAll('.js-stat-dewasa').forEach(function(el) { animateCountUp(el, String(dewasa), 800); });
+          document.querySelectorAll('.js-stat-jumlah').forEach(function(el) { animateCountUp(el, String(jumlah), 800); });
         }
       }
     );
