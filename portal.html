@@ -1973,24 +1973,6 @@
       <div class="landing-divider"><span>✦</span></div>
     </div>
 
-    <!-- STAT CARDS -->
-    <div class="dash-stat-row">
-      <div class="dash-stat-card kanak">
-        <span class="dash-stat-emoji">👦</span>
-        <div class="dash-stat-num" id="statKanakBig">—</div>
-        <div class="dash-stat-lbl">Kanak-kanak</div>
-      </div>
-      <div class="dash-stat-card dewasa">
-        <span class="dash-stat-emoji">👤</span>
-        <div class="dash-stat-num" id="statDewasaBig">—</div>
-        <div class="dash-stat-lbl">Dewasa</div>
-      </div>
-      <div class="dash-stat-card jumlah">
-        <span class="dash-stat-emoji">📊</span>
-        <div class="dash-stat-num" id="statJumlahBig">—</div>
-        <div class="dash-stat-lbl">Jumlah Murid</div>
-      </div>
-    </div>
 
     <div class="landing-hero">
       <div class="landing-hero-content">
@@ -2050,24 +2032,6 @@
       </div>
     </div>
 
-    <!-- MOB STAT CARDS -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:18px;">
-      <div style="background:#fff; border-radius:12px; border:0.5px solid #E2D9C5; border-top:3px solid #0A1F44; padding:14px 8px; text-align:center;">
-        <div style="font-size:20px; margin-bottom:4px;">👦</div>
-        <div id="statKanakMob" style="font-size:28px; font-weight:600; color:#0A1F44; line-height:1; font-variant-numeric:tabular-nums;">—</div>
-        <div style="font-size:9px; color:#888; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Kanak</div>
-      </div>
-      <div style="background:#fff; border-radius:12px; border:0.5px solid #E2D9C5; border-top:3px solid #B8860B; padding:14px 8px; text-align:center;">
-        <div style="font-size:20px; margin-bottom:4px;">👤</div>
-        <div id="statDewasaMob" style="font-size:28px; font-weight:600; color:#B8860B; line-height:1; font-variant-numeric:tabular-nums;">—</div>
-        <div style="font-size:9px; color:#888; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Dewasa</div>
-      </div>
-      <div style="background:#fff; border-radius:12px; border:0.5px solid #E2D9C5; border-top:3px solid #1A3A6B; padding:14px 8px; text-align:center;">
-        <div style="font-size:20px; margin-bottom:4px;">📊</div>
-        <div id="statJumlahMob" style="font-size:28px; font-weight:600; color:#1A3A6B; line-height:1; font-variant-numeric:tabular-nums;">—</div>
-        <div style="font-size:9px; color:#888; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Jumlah</div>
-      </div>
-    </div>
 
     <!-- GUEST MENU -->
     <div id="guestMenu">
@@ -2106,19 +2070,6 @@
         </div>
       </div>
 
-      <!-- GURU STAT CARDS -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
-        <div style="background:#E8EEF8; border-radius:12px; border:0.5px solid #C5D0E8; padding:14px; text-align:center; box-shadow:3px 3px 8px rgba(10,31,68,.08),-2px -2px 6px rgba(255,255,255,.7);">
-          <div style="font-size:10px; font-weight:600; color:#0A1F44; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">👦 Kanak-kanak</div>
-          <div class="js-stat-kanak" style="font-size:30px; font-weight:600; color:#0A1F44; line-height:1; font-variant-numeric:tabular-nums;">—</div>
-          <div style="font-size:10px; color:#666; margin-top:3px;">murid</div>
-        </div>
-        <div style="background:#FFF8DC; border-radius:12px; border:0.5px solid #E8D5A0; padding:14px; text-align:center; box-shadow:3px 3px 8px rgba(10,31,68,.08),-2px -2px 6px rgba(255,255,255,.7);">
-          <div style="font-size:10px; font-weight:600; color:#B8860B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">👤 Dewasa</div>
-          <div class="js-stat-dewasa" style="font-size:30px; font-weight:600; color:#B8860B; line-height:1; font-variant-numeric:tabular-nums;">—</div>
-          <div style="font-size:10px; color:#666; margin-top:3px;">murid</div>
-        </div>
-      </div>
 
       <p style="font-size:10px; font-weight:700; color:#888; letter-spacing:1px; margin-bottom:10px;">MENU GURU</p>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
@@ -3624,14 +3575,9 @@
           var kanak  = data.totalKanak  || 0;
           var dewasa = data.totalDewasa || 0;
           var jumlah = kanak + dewasa;
-          ['statKanak', 'statKanakBig', 'statKanakMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) animateCountUp(el, String(kanak), 800);
-          });
-          ['statDewasa', 'statDewasaBig', 'statDewasaMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) animateCountUp(el, String(dewasa), 800);
-          });
-          ['statJumlahBig', 'statJumlahMob'].forEach(function(id) {
-            var el = document.getElementById(id); if (el) animateCountUp(el, String(jumlah), 800);
+          ['statKanak', 'statDewasa'].forEach(function(id) {
+            var val = id === 'statDewasa' ? dewasa : kanak;
+            var el = document.getElementById(id); if (el) animateCountUp(el, String(val), 800);
           });
           document.querySelectorAll('.js-stat-kanak').forEach(function(el) { animateCountUp(el, String(kanak), 800); });
           document.querySelectorAll('.js-stat-dewasa').forEach(function(el) { animateCountUp(el, String(dewasa), 800); });
@@ -5429,7 +5375,7 @@
     observeCountUp('dewasaBilBadge');
 
     // Count-up for dashboard stat numbers
-    ['statKanak', 'statDewasa', 'statKanakBig', 'statDewasaBig', 'statJumlahBig', 'statKanakMob', 'statDewasaMob', 'statJumlahMob'].forEach(function(id) {
+    ['statKanak', 'statDewasa'].forEach(function(id) {
       var el = document.getElementById(id);
       if (!el) return;
       var busy = false;
