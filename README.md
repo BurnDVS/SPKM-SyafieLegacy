@@ -4,7 +4,7 @@
 
 > **Versi:** Fasa 1 (Aktif) · Fasa 2 (Dalam Perancangan)  
 > **Platform:** Google Apps Script + Google Sheets + Google Drive + PWA  
-> **URL Portal (Desktop):** https://script.google.com/macros/s/AKfycbwcUEWFT4vIp6cU8pp-8NbAe-ACXaNeK1OL0to7uhufbd4YjxqTCq7R5SPEgtvaxXuW/exec  
+> **URL Portal (Desktop):** https://script.google.com/macros/s/AKfycbxHGipRFrwWn365x6r4zsd0cpw-kOgMjsmLQ8CKQ_uMDbj18TLSqlw3KMc3ztCP_HjU/exec  
 > **URL Portal (Mobile PWA):** https://shafielegacy.github.io/SPKM ✅ Live  
 > **Spreadsheet ID:** `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU`
 
@@ -40,7 +40,7 @@ SPKM/
 |---|---|
 | **Repo Utama** | https://github.com/BurnDVS/SPKM-SyafieLegacy |
 | **Repo GitHub Pages** | https://github.com/shafielegacy/SPKM |
-| **Live GAS (Desktop)** | https://script.google.com/macros/s/AKfycbwcUEWFT4vIp6cU8pp-8NbAe-ACXaNeK1OL0to7uhufbd4YjxqTCq7R5SPEgtvaxXuW/exec |
+| **Live GAS (Desktop)** | https://script.google.com/macros/s/AKfycbxHGipRFrwWn365x6r4zsd0cpw-kOgMjsmLQ8CKQ_uMDbj18TLSqlw3KMc3ztCP_HjU/exec |
 | **Live PWA (Mobile)** | https://shafielegacy.github.io/SPKM |
 | **Deploy GAS** | `clasp push --force` → GAS Manage Deployments → **New Web App version** |
 | **Deploy Mobile** | `git push && git push pages main` |
@@ -102,7 +102,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Nav bar desktop — tab Utama, Daftar, Kehadiran, Murid, Guru, Yuran, eBayar, eSemak
 - ✅ Mobile nav — bottom nav bar (4 item sebelum login: Utama, Daftar, eBayar, eSemak)
 - ✅ Mobile nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
-- ✅ Dashboard stats — jumlah murid kanak-kanak & dewasa (dalam panel Murid → Senarai Murid)
+- ✅ Dashboard stats — 3 kad (Kanak-kanak / Dewasa / Jumlah) dalam panel **Senarai Murid** sahaja; dimuatkan bila panel dibuka, bukan masa login
 - ✅ Idle timer — auto logout selepas tempoh tidak aktif
 - ✅ Custom toast & modal — ganti browser alert() dengan UI Navy+Gold
 
@@ -166,13 +166,17 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
 - ✅ Footer ringkas — satu baris `© 2026 Sistem Pengurusan Kelas Mengaji`
 - ✅ SW cache bump v8 — force reload bila GAS_URL bertukar
-- ✅ Stat cards jumlah murid (Kanak-kanak / Dewasa / Jumlah) dalam panel Murid (Senarai Murid) — desktop & mobile, rolling number animation `animateCountUp`
+- ✅ Stat cards jumlah murid (Kanak-kanak / Dewasa / Jumlah) dalam panel **Senarai Murid** sahaja — desktop & mobile, rolling number animation `animateCountUp`
+- ✅ Panel Utama post-login — greeting + butang Rekod Kehadiran & Lihat Senarai Murid sahaja (tanpa stat cards)
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
 - ✅ doAction — entry point desktop/google.script.run
 - ✅ doOptions — CORS preflight handler
-- ✅ Token auth — JWT-like token untuk sesi guru
+- ✅ Token auth — JWT-like token untuk sesi guru (expiry 30 minit)
+- ✅ logout() — delete session token semasa bila guru log keluar
+- ✅ cleanOldSessions() — buang semua `session_` expired dari Script Properties; boleh run manual dari GAS Editor
+- ✅ createCleanupTrigger() — pasang trigger harian (3am) untuk `cleanupExpiredProperties` + trigger setiap 24 jam untuk `cleanOldSessions`; run sekali dari editor
 - ✅ OTP system — sendOTPKanak, sendOTPDewasa, confirmRegister
 - ✅ syncForms — sync nama murid ke semua Google Forms
 - ✅ URLSearchParams body — simple CORS request
