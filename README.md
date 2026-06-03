@@ -4,15 +4,15 @@
 
 > **Versi:** Fasa 1 (Aktif) · Fasa 2 (Dalam Perancangan)  
 > **Platform:** Google Apps Script + Google Sheets + Google Drive + PWA  
-> **URL Portal (Desktop):** https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec  
-> **URL Portal (Mobile PWA):** https://shafielegacy.github.io/SPKM ⚠️ CORS issue — dalam fix  
+> **URL Portal (Desktop):** https://script.google.com/macros/s/AKfycbwcUEWFT4vIp6cU8pp-8NbAe-ACXaNeK1OL0to7uhufbd4YjxqTCq7R5SPEgtvaxXuW/exec  
+> **URL Portal (Mobile PWA):** https://shafielegacy.github.io/SPKM ✅ Live  
 > **Spreadsheet ID:** `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU`
 
 ---
 
 ## Ringkasan Sistem
 
-SPKM ialah sebuah **sistem pengurusan kelas mengaji berasaskan web** yang dibina di atas Google Workspace. Ia menggabungkan portal web (portal.html), backend automatik (Code.js / Apps Script), dan pangkalan data (Google Sheets) untuk mengendalikan pendaftaran murid, rekod kehadiran, penjanaan slip, dan pengurusan yuran.
+SPKM ialah sebuah **sistem pengurusan kelas mengaji berasaskan web** yang dibina di atas Google Workspace. Ia menggabungkan portal web (portal.html), backend automatik (Code.js / Apps Script), dan pangkalan data (Google Sheets) untuk mengendalikan pendaftaran murid, rekod kehadiran, penjanaan slip, pengurusan yuran, dan blast notifikasi WhatsApp.
 
 ---
 
@@ -20,7 +20,7 @@ SPKM ialah sebuah **sistem pengurusan kelas mengaji berasaskan web** yang dibina
 
 ```
 SPKM/
-├── Code.js           → Backend GAS (fungsi login, daftar, kehadiran, yuran)
+├── Code.js           → Backend GAS (fungsi login, daftar, kehadiran, yuran, WA blast)
 ├── portal.html       → Muka depan web untuk GAS (desktop)
 ├── index.html        → Salinan portal.html untuk GitHub Pages (mobile PWA)
 ├── manifest.json     → PWA manifest (icon, nama, tema)
@@ -40,10 +40,12 @@ SPKM/
 |---|---|
 | **Repo Utama** | https://github.com/BurnDVS/SPKM-SyafieLegacy |
 | **Repo GitHub Pages** | https://github.com/shafielegacy/SPKM |
-| **Live GAS (Desktop)** | https://script.google.com/macros/s/AKfycbwV18AAJg37TYv-9UY0jahPOR7KEb0h2m8nonleoErrpvwMV3JdvG8eFkcEeKgrvAp1/exec |
+| **Live GAS (Desktop)** | https://script.google.com/macros/s/AKfycbwcUEWFT4vIp6cU8pp-8NbAe-ACXaNeK1OL0to7uhufbd4YjxqTCq7R5SPEgtvaxXuW/exec |
 | **Live PWA (Mobile)** | https://shafielegacy.github.io/SPKM |
-| **Deploy GAS** | `clasp push --force` → GAS Manage Deployments → New version |
-| **Deploy Mobile** | `git push pages main` (remote `pages` → shafielegacy/SPKM) |
+| **Deploy GAS** | `clasp push --force` → GAS Manage Deployments → **New Web App version** |
+| **Deploy Mobile** | `git push && git push pages main` |
+
+> ⚠️ **PENTING:** Bila deploy GAS, pastikan pilih type **Web App** (bukan Library). Execute as: Me, Who has access: Anyone.
 
 ---
 
@@ -67,6 +69,7 @@ SPKM/
 | `Kehadiran` | Rekod hadir/tidak | Tarikh, Nama Guru, Nama Murid, Status, Kaedah, Masa Mula, Masa Tamat |
 | `Yuran [Bulan]` | Bayaran bulanan | Tab berasingan per bulan (cth: JAN2026, FEB2026) |
 | `NAMA MURID` | Senarai murid aktif | Nama, Tarikh Daftar (untuk cross-check yuran) |
+| `WARemind` | Blast WA reminder yuran | Col A: Raw data, Col B: Nama Murid, Col C: No Tel Asal, Col D: No Tel Normalize (60xxxxxxxxx) |
 
 ---
 
@@ -96,9 +99,11 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Login Guru/Admin — email + nombor telefon, password mask bintang, idle timeout
 - ✅ Header ornamental — Navy + Gold + logo bulat
 - ✅ Nav bar desktop — tab Utama, Daftar, Kehadiran, Murid, Guru, Yuran, eBayar, eSemak
-- ✅ Mobile nav — bottom nav bar, mobile home cards, login button
+- ✅ Mobile nav — bottom nav bar (4 item sebelum login: Utama, Daftar, eBayar, eSemak)
+- ✅ Mobile nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
 - ✅ Dashboard stats — jumlah murid kanak-kanak & dewasa
 - ✅ Idle timer — auto logout selepas tempoh tidak aktif
+- ✅ Custom toast & modal — ganti browser alert() dengan UI Navy+Gold
 
 #### Pendaftaran
 - ✅ Daftar Murid Kanak-kanak — form 3 langkah, OTP email verification
@@ -125,27 +130,46 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ eSemak Yuran — carian nama, senarai belum bayar cross-check NAMA MURID
 - ✅ recordCash — rekod bayaran tunai oleh admin
 - ✅ getYuranStats — statistik per bulan
+- ✅ Button "Copy Senarai WA" — copy senarai belum bayar ke clipboard
+- ✅ Button "Hantar WA" — blast WA reminder via Fonnte API (desktop & mobile)
+- ✅ Modal confirm blast WA — Navy+Gold UI, tunjuk bilangan murid
+- ✅ Modal laporan blast — stats berjaya/gagal/tiada nombor
+
+#### WhatsApp Blast (Fonnte)
+- ✅ Fonnte API connected — WA Business `601162875136` linked
+- ✅ FONNTE_TOKEN setup dalam GAS Script Properties
+- ✅ hantarWhatsApp() function dalam Code.js
+- ✅ normalizePhoneForWA() — normalize nombor untuk Fonnte (tanpa 60 prefix, Fonnte auto tambah)
+- ✅ Tab WARemind dalam Sheets — nama murid + nombor normalize
+- ✅ Formula normalize nombor — buang space, handle format 60x/0x/x
+- ✅ Country code fix — hantar nombor tanpa prefix 60, Fonnte tambah +60 auto
 
 #### PWA Mobile
-- ✅ manifest.json — nama, icon, tema Navy, start_url `/SPKM/`
-- ✅ sw.js — service worker v5, same-origin only, auto-reload on update
+- ✅ manifest.json — nama, icon, tema Navy, start_url
+- ✅ sw.js — service worker, cache shell, offline banner
 - ✅ .nojekyll — skip Jekyll processing
-- ✅ .claspignore — exclude sw.js/index.html/manifest.json dari GAS
-- ✅ _isGAS detection — `hostname.endsWith('google.com') || hostname.endsWith('googleusercontent.com')`
-- ✅ JSONP approach — `<script>` tag bypass CORS, call `doGet?action=X&callback=cb`
+- ✅ CORS fix — fetch() dari GitHub Pages ke GAS berfungsi
 - ✅ GitHub Pages live — https://shafielegacy.github.io/SPKM
 - ✅ Add to Home Screen — splash screen Navy + Gold + logo Syafie Legacy
-- ✅ CORS selesai — JSONP via doGet, tiada fetch() cross-origin
+- ✅ Zero impact desktop — GAS deployment tidak terjejas
 
 #### Backend (Code.js)
-- ✅ doGet — serve HTML (desktop) ATAU JSONP API (mobile) via `?action=&payload=&callback=`
-- ✅ doPost — entry point fallback (URLSearchParams format)
+- ✅ doPost — entry point mobile/fetch
 - ✅ doAction — entry point desktop/google.script.run
+- ✅ doOptions — CORS preflight handler
 - ✅ Token auth — JWT-like token untuk sesi guru
 - ✅ OTP system — sendOTPKanak, sendOTPDewasa, confirmRegister
 - ✅ syncForms — sync nama murid ke semua Google Forms
+- ✅ URLSearchParams body — simple CORS request
+- ✅ hantarWhatsApp() — Fonnte API integration
+- ✅ notifikasiKetidakhadiran() — WA auto ke parents bila murid tak hadir
+- ✅ normalizePhoneForWA() — normalize format nombor telefon
 
 ---
+
+### Dalam Proses / Bug 🔧
+
+- ⚠️ **3D Clay UI mobile** — preview dah siap, belum apply ke index.html
 
 ---
 
@@ -153,11 +177,11 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 | Modul | Status | Keutamaan |
 |---|---|---|
+| **3D Clay UI mobile** | 🔧 Preview siap | Tinggi |
 | **Login Parent (eBayar & eSemak)** | Planned | Tinggi |
 | **Login Guru (eBayar & eSemak)** | Planned | Tinggi |
 | **Sijil Khatam** | Planned | Sederhana |
 | **Laporan Tahunan** | Planned | Sederhana |
-| **Notifikasi WhatsApp** | Planned | Tinggi |
 | **Bayaran Online (Billplz/ToyyibPay)** | Planned | Tinggi |
 | **Pecah Code.js** → multi-file | Planned | Sederhana |
 
@@ -166,9 +190,9 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 ## Deploy Workflow
 
 ```bash
-# Deploy ke GAS sahaja (sw.js/index.html/manifest.json auto-excluded via .claspignore)
+# Deploy ke GAS sahaja
 clasp push --force
-# WAJIB: GAS Editor → Deploy → Manage deployments → Edit → New version → Deploy
+# Lepas push → GAS Editor → Deploy → Manage Deployments → Edit → New version → Web App
 
 # Deploy ke GitHub (BurnDVS repo)
 git add . && git commit -m "message" && git push
@@ -177,10 +201,40 @@ git add . && git commit -m "message" && git push
 git push pages main
 
 # Deploy semua sekaligus
-git add . && git commit -m "message" && git push && git push pages main && clasp push --force
+git add . && git commit -m "message" && git push && git push pages main
 ```
 
-> **Penting:** Jangan create "New deployment" dalam GAS — sentiasa **edit deployment sedia ada** dan pilih "New version". New deployment akan dapat ID baru yang berbeza dari GAS_URL dalam code.
+> ⚠️ **PENTING:** Bila GAS URL bertukar (new deployment), kena update `GAS_URL` dalam `portal.html` DAN `index.html`, lepas tu push semula.
+
+---
+
+## Fonnte WA Blast — Setup
+
+1. Login `fonnte.com` → Device → Add Device → scan QR dengan WA Business
+2. Ambil token dari device settings
+3. GAS Editor → cari `setFonnteToken()` → letak token → Run sekali → tukar balik placeholder
+4. Token disimpan dalam Script Properties: `FONNTE_TOKEN`
+5. Quota: 1000 mesej/bulan (free plan)
+
+```javascript
+// Jalankan sekali untuk set token
+function setFonnteToken() {
+  PropertiesService.getScriptProperties()
+    .setProperty('FONNTE_TOKEN', 'TOKEN_DARI_FONNTE');
+  Logger.log('Done');
+}
+```
+
+---
+
+## Tab WARemind — Setup Formula
+
+```
+Kolum A : Raw data dari copyWaList() (format: "1. NAMA - NOMBOR")
+Kolum B : =TRIM(MID(TRIM(LEFT(A3,FIND(" - ",A3)-1)),FIND(". ",TRIM(LEFT(A3,FIND(" - ",A3)-1)))+2,100))
+Kolum C : =IF(TRIM(MID(A3,FIND(" - ",A3)+3,LEN(A3)))="-","",TRIM(MID(A3,FIND(" - ",A3)+3,LEN(A3))))
+Kolum D : =IF(C3="","",IF(TRIM(C3)="-","","60"&REGEXREPLACE(SUBSTITUTE(TRIM(C3)," ",""),"^(60|0)","")))
+```
 
 ---
 
@@ -192,13 +246,30 @@ git add . && git commit -m "message" && git push && git push pages main && clasp
 - Claude.ai untuk: planning, architecture, strategy, review
 ```
 
-### CORS Mobile — Penyelesaian (selesai ✅)
+### Prompt 3D Clay UI (Isnin):
+```
+Baca index.html dalam folder projek.
+Tukar mobile view UI kepada 3D Clay style. CSS dalam 
+@media (max-width:1024px) SAHAJA. Zero impact desktop.
 
-Masalah CORS GitHub Pages → GAS diselesaikan dengan **JSONP via doGet**:
-- `fetch()` cross-origin ke GAS exec URL TIDAK BOLEH — 302 redirect tiada CORS headers
-- `<script>` tag JSONP bypass CORS — GAS doGet return `callback(data)` sebagai JavaScript
-- `sw.js` MESTI excluded dari GAS via `.claspignore` — kalau masuk GAS, `self is not defined` block semua functions
-- `_isGAS` mesti check `googleusercontent.com` jugak — GAS desktop served dari sana, bukan `google.com`
+TEMA: Navy #0A1F44/#1A3A6B + Gold #FFD700/#B8960C + Clay bg #E8E4DA
+FONT: Lora (heading) + DM Sans (body) — kekalkan
+
+CLAY SHADOWS:
+Card: box-shadow: 5px 5px 14px rgba(10,31,68,.11), -3px -3px 10px rgba(255,255,255,.82), inset 0 1px 0 rgba(255,255,255,.92)
+Button gold: box-shadow: 3px 3px 10px rgba(176,140,0,.4), -2px -2px 6px rgba(255,255,220,.6)
+
+SEBELUM LOGIN:
+- Bottom nav 4 item: Utama, Daftar, eBayar, eSemak
+- Quick cards 3 kad: Daftar Murid, eBayar Yuran, eSemak Yuran
+- Footer: © 2026 Sistem Pengurusan Kelas Mengaji (sahaja)
+
+SELEPAS LOGIN:
+- Bottom nav 5 item: Utama, Daftar, Hadir, Murid, Yuran
+- Menu cards: Daftar Murid, Kehadiran, Senarai Murid, Senarai Guru, Yuran, eSemak
+
+Lepas siap: git push && git push pages main
+```
 
 ---
 
@@ -210,7 +281,7 @@ Masalah CORS GitHub Pages → GAS diselesaikan dengan **JSONP via doGet**:
 4. **Kata laluan guru** = No. WhatsApp — mudah diingat, boleh ditukar bila-bila masa dalam Sheets
 5. **Mobile PWA** — boleh install kat home screen phone, nampak macam app native
 6. **Desktop** guna GAS URL, **mobile** guna GitHub Pages URL — dua-dua sync data yang sama
-7. **Sementara CORS belum fix** — parents guna GAS URL terus dari browser phone
+7. **Blast WA yuran** — button "Hantar WA" dalam tab Yuran, guna Fonnte API
 
 ---
 
