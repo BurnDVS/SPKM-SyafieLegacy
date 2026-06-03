@@ -166,6 +166,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
 - ✅ Footer ringkas — satu baris `© 2026 Sistem Pengurusan Kelas Mengaji`
 - ✅ SW cache bump v8 — force reload bila GAS_URL bertukar
+- ✅ Stat cards jumlah murid (kanak/dewasa) dalam #guruMenu selepas login — clay style, class-based JS update
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
