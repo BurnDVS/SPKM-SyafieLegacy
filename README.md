@@ -4,9 +4,9 @@
 
 > **Versi:** Fasa 1 (Aktif) · Fasa 2 (Dalam Perancangan)  
 > **Platform:** Google Apps Script + Google Sheets + Google Drive + PWA  
-> **URL Portal (Desktop):** https://script.google.com/macros/s/AKfycbxHGipRFrwWn365x6r4zsd0cpw-kOgMjsmLQ8CKQ_uMDbj18TLSqlw3KMc3ztCP_HjU/exec  
+> **URL Portal (Desktop):** [Private — semak CLAUDE.md]  
 > **URL Portal (Mobile PWA):** https://shafielegacy.github.io/SPKM ✅ Live  
-> **Spreadsheet ID:** `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU`
+> **Spreadsheet ID:** [Private — semak CLAUDE.md]
 
 ---
 
@@ -40,7 +40,7 @@ SPKM/
 |---|---|
 | **Repo Utama** | https://github.com/BurnDVS/SPKM-SyafieLegacy |
 | **Repo GitHub Pages** | https://github.com/shafielegacy/SPKM |
-| **Live GAS (Desktop)** | https://script.google.com/macros/s/AKfycbxHGipRFrwWn365x6r4zsd0cpw-kOgMjsmLQ8CKQ_uMDbj18TLSqlw3KMc3ztCP_HjU/exec |
+| **Live GAS (Desktop)** | [Private — semak CLAUDE.md] |
 | **Live PWA (Mobile)** | https://shafielegacy.github.io/SPKM |
 | **Deploy GAS** | `clasp push --force` → GAS Manage Deployments → **New Web App version** |
 | **Deploy Mobile** | `git push && git push pages main` |
