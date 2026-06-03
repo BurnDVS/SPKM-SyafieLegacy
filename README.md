@@ -152,6 +152,10 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ GitHub Pages live — https://shafielegacy.github.io/SPKM
 - ✅ Add to Home Screen — splash screen Navy + Gold + logo Syafie Legacy
 - ✅ Zero impact desktop — GAS deployment tidak terjejas
+- ✅ 3D Clay UI — clay bg #E8E4DA, clay shadows pada card/button, bottom nav bar
+- ✅ Bottom nav sebelum login — 4 item: Utama, Daftar, eBayar, eSemak
+- ✅ Bottom nav selepas login — 5 item: Utama, Daftar, Hadir, Murid, Yuran
+- ✅ Guest menu — 3 kad (Daftar Murid, eBayar, eSemak) tanpa kad Log Masuk
 
 #### Backend (Code.js)
 - ✅ doPost — entry point mobile/fetch
@@ -169,7 +173,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 ### Dalam Proses / Bug 🔧
 
-- ⚠️ **3D Clay UI mobile** — preview dah siap, belum apply ke index.html
+*(Tiada bug aktif buat masa ini)*
 
 ---
 
@@ -177,7 +181,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 | Modul | Status | Keutamaan |
 |---|---|---|
-| **3D Clay UI mobile** | 🔧 Preview siap | Tinggi |
+| **3D Clay UI mobile** | ✅ Selesai | Tinggi |
 | **Login Parent (eBayar & eSemak)** | Planned | Tinggi |
 | **Login Guru (eBayar & eSemak)** | Planned | Tinggi |
 | **Sijil Khatam** | Planned | Sederhana |
