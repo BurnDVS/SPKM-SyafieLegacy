@@ -1,4 +1,4 @@
-const CACHE = 'spkm-v5';
+const CACHE = 'spkm-v6';
 
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
