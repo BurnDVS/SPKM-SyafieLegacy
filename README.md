@@ -122,7 +122,12 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Rekod kehadiran — guru pilih murid (checklist), simpan per sesi
 - ✅ Statistik kehadiran — % per murid, per guru, per bulan
 - ✅ Rekod kehadiran hari ini — papar dalam dashboard
-- ✅ getMuridByGuru — guru hanya nampak murid sendiri
+- ✅ getMuridByGuru — baca senarai murid dari tab `Pecahan Murid Mengikut Guru Kelas` dalam SPREADSHEET_ID
+- ✅ cariTabGuru() — fuzzy-match nama guru ke nama tab yang betul dalam KEHADIRAN_SS_ID
+- ✅ simpanKehadiran() — tulis ke tab nama guru yang betul (7 kolum termasuk `Hari Kelas Pengajian`)
+- ✅ loginGuru() — return `tabKehadiran` dalam response untuk dihantar terus semasa simpan
+- ✅ Kotak carian murid — filter senarai realtime dalam panel Rekod Kehadiran (portal.html & index.html)
+- ✅ loggedInTabKehadiran — disimpan masa login, dihantar dalam payload simpanKehadiran
 
 #### Senarai Murid & Guru
 - ✅ Senarai Murid — kanak-kanak & dewasa, filter, status AKTIF/TIDAK AKTIF
