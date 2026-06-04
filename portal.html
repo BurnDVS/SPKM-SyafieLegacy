@@ -2834,6 +2834,13 @@
               <button class="btn btn-ghost btn-sm" style="margin-top:0;" onclick="pilihSemuaMurid(false)">Nyahpilih Semua</button>
             </div>
           </div>
+          <!-- Kotak carian murid -->
+          <div style="position:relative; margin-bottom:10px;">
+            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;">🔍</span>
+            <input type="text" id="rekodCariMurid" placeholder="Cari nama murid..."
+                   oninput="filterRekodMurid()"
+                   style="margin:0; width:100%; padding-left:34px;">
+          </div>
           <div id="rekodMuridList" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:12px; background:var(--cream);">
             <p style="color:var(--text-muted); text-align:center; padding:20px 0;">Memuatkan senarai murid...</p>
           </div>
@@ -3374,8 +3381,9 @@
                   window.location.hostname.endsWith('googleusercontent.com');
 
   let currentStep    = 1;
-  let loggedInGuru   = null;
-  let currentRole    = null;
+  let loggedInGuru          = null;
+  let loggedInTabKehadiran  = null;
+  let currentRole           = null;
   let allMuridKanak  = [];
   let allMuridDewasa = [];
   let currentMuridTab    = 'kanak';
@@ -3678,7 +3686,8 @@
       function(data) {
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {
-          loggedInGuru = data.user;
+          loggedInGuru         = data.user;
+          loggedInTabKehadiran = data.tabKehadiran || null;
           if (window.innerWidth <= 1024) {
             const initials = data.user.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
             document.getElementById('mobLoggedAv').textContent = initials;
@@ -3721,7 +3730,8 @@
 
   function handleLogout() {
     sessionStorage.removeItem('spkm_token');
-    loggedInGuru   = null;
+    loggedInGuru          = null;
+    loggedInTabKehadiran  = null;
     if (window.innerWidth <= 1024) {
       document.getElementById('guestMenu').style.display = 'block';
       document.getElementById('guruMenu').style.display = 'none';
@@ -5052,8 +5062,11 @@
   function renderGuruMuridChecklist(list) {
     const countEl = document.getElementById('rekodMuridCount');
     if (countEl) countEl.textContent = '(' + list.length + ' murid)';
+    const cariEl = document.getElementById('rekodCariMurid');
+    if (cariEl) cariEl.value = '';
     document.getElementById('rekodMuridList').innerHTML = list.map((nama, i) =>
-      `<div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border);">
+      `<div class="murid-row" data-nama="${escHtml(nama.toLowerCase())}"
+            style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border);">
         <input type="checkbox" id="muridChk_${i}" class="murid-chk" value="${escHtml(nama)}" onchange="updateMuridCount()">
         <label for="muridChk_${i}" style="flex:1; cursor:pointer; font-size:14px;">${escHtml(nama)}</label>
       </div>`
@@ -5061,15 +5074,27 @@
     updateMuridCount();
   }
 
+  function filterRekodMurid() {
+    const q = (document.getElementById('rekodCariMurid').value || '').toLowerCase().trim();
+    document.querySelectorAll('#rekodMuridList .murid-row').forEach(function(row) {
+      const nama = row.getAttribute('data-nama') || '';
+      row.style.display = (!q || nama.includes(q)) ? 'flex' : 'none';
+    });
+    updateMuridCount();
+  }
+
   function updateMuridCount() {
     const checked = document.querySelectorAll('.murid-chk:checked').length;
-    const total   = document.querySelectorAll('.murid-chk').length;
     const el = document.getElementById('rekodPilihCount');
-    if (el) el.textContent = checked + ' / ' + total + ' murid dipilih';
+    if (el) el.textContent = checked + ' / ' + guruMuridList.length + ' murid dipilih';
   }
 
   function pilihSemuaMurid(check) {
-    document.querySelectorAll('.murid-chk').forEach(cb => { cb.checked = check; });
+    document.querySelectorAll('#rekodMuridList .murid-row').forEach(function(row) {
+      if (row.style.display === 'none') return;
+      const cb = row.querySelector('.murid-chk');
+      if (cb) cb.checked = check;
+    });
     updateMuridCount();
   }
 
@@ -5088,7 +5113,7 @@
     const btn = document.getElementById('simpanKehadiranBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    callGAS('simpanKehadiran', { namaGuru: loggedInGuru, emailGuru, muridHadir: selected, kaedah, waktuTamat, tarikh },
+    callGAS('simpanKehadiran', { namaGuru: loggedInGuru, tabKehadiran: loggedInTabKehadiran, emailGuru, muridHadir: selected, kaedah, waktuTamat, tarikh },
       function(data) {
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {
@@ -5098,6 +5123,10 @@
           notifAdd('kehadiran', '✅', 'Kehadiran Direkodkan', (loggedInGuru || 'Guru') + ' — ' + (data.jumlahRekod || 0) + ' murid hadir');
           setTimeout(() => document.getElementById('rekodSuccess').classList.remove('show'), 5000);
           pilihSemuaMurid(false);
+          const cariEl = document.getElementById('rekodCariMurid');
+          if (cariEl) { cariEl.value = ''; filterRekodMurid(); }
+          loadKehadiranHariIni();
+          loadDashboardStats();
         } else {
           showErr('rekodError', data.message || 'Ralat menyimpan kehadiran.');
         }
@@ -5621,7 +5650,8 @@
       const data = await callGASPromise('login', { email, phone });
       if (data.success) {
         hideLoginModal();
-        loggedInGuru = data.user;
+        loggedInGuru         = data.user;
+        loggedInTabKehadiran = data.tabKehadiran || null;
         document.getElementById('guruName').textContent = data.user;
         document.getElementById('loginFormWrapper').style.display = 'none';
         document.getElementById('dashboardPreview').style.display = 'block';
