@@ -105,6 +105,11 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Dashboard stats — 3 kad (Kanak-kanak / Dewasa / Jumlah) dalam panel **Senarai Murid** sahaja; dimuatkan bila panel dibuka, bukan masa login
 - ✅ Idle timer — auto logout selepas tempoh tidak aktif
 - ✅ Custom toast & modal — ganti browser alert() dengan UI Navy+Gold
+- ✅ Sistem Notifikasi — bell icon dalam header, badge merah, panel dropdown
+- ✅ Notif Sound — Islamic chime (Web Audio API, C5→E5→G5, tanpa fail audio luar)
+- ✅ Notif localStorage — persist dalam browser, max 50 notif, auto-buang lama
+- ✅ Notif hooks — 4 event: daftar kanak-kanak, daftar dewasa, kehadiran, bayaran yuran
+- ✅ Notif mobile — bottom sheet panel, berfungsi dalam portal.html & index.html
 
 #### Pendaftaran
 - ✅ Daftar Murid Kanak-kanak — form 3 langkah, OTP email verification
@@ -203,6 +208,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 | **Laporan Tahunan** | Planned | Sederhana |
 | **Bayaran Online (Billplz/ToyyibPay)** | Planned | Tinggi |
 | **Pecah Code.js** → multi-file | Planned | Sederhana |
+| **Notifikasi Sheets-based** | KIV | Rendah |
 
 ---
 
@@ -295,6 +301,9 @@ SELEPAS LOGIN:
 Lepas siap: git push && git push pages main
 ```
 
+### Prompt Notifikasi (Selesai ✅):
+Dah siap — bell icon + chime sound + localStorage. Rujuk PROMPT_NOTIFIKASI.md untuk detail penuh.
+
 ---
 
 ## Nota untuk AJK
@@ -306,6 +315,7 @@ Lepas siap: git push && git push pages main
 5. **Mobile PWA** — boleh install kat home screen phone, nampak macam app native
 6. **Desktop** guna GAS URL, **mobile** guna GitHub Pages URL — dua-dua sync data yang sama
 7. **Blast WA yuran** — button "Hantar WA" dalam tab Yuran, guna Fonnte API
+8. **Notifikasi** — bell icon 🔔 dalam header, berbunyi chime bila ada aktiviti baru (daftar murid / kehadiran / bayaran). Data notif simpan dalam browser masing-masing.
 
 ---
 
