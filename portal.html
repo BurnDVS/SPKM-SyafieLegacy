@@ -1838,6 +1838,172 @@
   #waToast.t-error   { border-left-color: #C0392B; }
   #waToast.t-success { border-left-color: #27AE60; }
 
+  /* === NOTIFICATION BELL === */
+  .notif-bell-wrap {
+    position: relative;
+    margin-right: 12px;
+  }
+  .notif-bell-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: background 0.2s;
+    color: #fff;
+    padding: 0;
+  }
+  .notif-bell-btn:hover { background: rgba(255,255,255,0.22); }
+
+  .notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #E74C3C;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #0A1F44;
+    font-family: 'DM Sans', sans-serif;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  /* === NOTIFICATION PANEL === */
+  .notif-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 340px;
+    background: #ffffff;
+    border: 1px solid #D8DCE8;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    z-index: 9999;
+    overflow: hidden;
+    animation: notifSlideDown 0.22s ease;
+  }
+  .notif-panel.open { display: block; }
+
+  @keyframes notifSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .notif-panel-header {
+    padding: 14px 16px;
+    background: #0A1F44;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .notif-panel-title {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Lora', serif;
+  }
+  .notif-clear-btn {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: rgba(255,255,255,0.85);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .notif-clear-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .notif-list {
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #D8DCE8;
+    transition: background 0.15s;
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item.unread { background: #E8EEF8; }
+  .notif-item:hover  { background: #F8F8F8; }
+
+  .notif-item-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .notif-item-body { flex: 1; min-width: 0; }
+  .notif-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1C1C1C;
+    margin-bottom: 2px;
+    line-height: 1.3;
+  }
+  .notif-item-desc {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .notif-item-time {
+    font-size: 10px;
+    color: #888;
+    margin-top: 4px;
+  }
+  .notif-unread-dot {
+    width: 8px;
+    height: 8px;
+    background: #FFD700;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+
+  .notif-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+  }
+  .notif-empty-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+
+  @media (max-width: 1024px) {
+    .notif-panel {
+      position: fixed;
+      top: auto;
+      bottom: 80px;
+      right: 12px;
+      left: 12px;
+      width: auto;
+      max-height: 70vh;
+      display: none;
+      flex-direction: column;
+    }
+    .notif-panel.open { display: flex; }
+    .notif-list { max-height: none; flex: 1; overflow-y: auto; }
+  }
+
 </style>
 </head>
 <body>
@@ -1909,6 +2075,20 @@
     <div class="header-text">
       <h1>Sistem Pengurusan Kelas Mengaji</h1>
       <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
+    </div>
+    <!-- NOTIFICATION BELL (Desktop) -->
+    <div class="notif-bell-wrap" id="notifBellWrap">
+      <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel()" aria-label="Notifikasi">
+        🔔
+        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel">
+        <div class="notif-panel-header">
+          <span class="notif-panel-title">🔔 Notifikasi</span>
+          <button class="notif-clear-btn" onclick="markAllRead()">Tandakan semua dibaca</button>
+        </div>
+        <div class="notif-list" id="notifList"></div>
+      </div>
     </div>
     <div class="header-login-wrap" id="headerLoginWrap">
       <!-- Sebelum login -->
@@ -2032,6 +2212,21 @@
       </div>
     </div>
 
+
+    <!-- NOTIFICATION BELL (Mobile dalam portal.html) -->
+    <div style="display:flex; justify-content:flex-end; margin-bottom:12px; position:relative;">
+      <button class="notif-bell-btn" onclick="toggleNotifPanel()" style="background:rgba(10,31,68,0.08); border-color:rgba(10,31,68,0.2); color:#0A1F44;" aria-label="Notifikasi">
+        🔔
+        <span class="notif-badge" id="notifBadgeMob" style="display:none;">0</span>
+      </button>
+      <div class="notif-panel" id="notifPanelMob">
+        <div class="notif-panel-header">
+          <span class="notif-panel-title">🔔 Notifikasi</span>
+          <button class="notif-clear-btn" onclick="markAllRead()">Tandakan semua dibaca</button>
+        </div>
+        <div class="notif-list" id="notifListMob"></div>
+      </div>
+    </div>
 
     <!-- GUEST MENU -->
     <div id="guestMenu">
@@ -4213,10 +4408,12 @@
             document.getElementById('bilBadge').textContent        = 'No. Bil: ' + (data.bil || '—');
             document.getElementById('kanakOtpPanel').style.display = 'none';
             document.getElementById('kanakSuccess').style.display  = 'block';
+            notifAdd('kanak', '📝', 'Murid Baru Didaftarkan', (pendingKanakPayload ? pendingKanakPayload.namaAnak : 'Murid') + ' — ' + (pendingKanakPayload ? pendingKanakPayload.tahap : ''));
           } else {
             document.getElementById('dewasaBilBadge').textContent    = 'ID Murid: ' + (data.id || '—');
             document.getElementById('dewasaOtpPanel').style.display  = 'none';
             document.getElementById('dewasaSuccess').style.display   = 'block';
+            notifAdd('dewasa', '👤', 'Murid Dewasa Didaftarkan', (pendingDewasaPayload ? pendingDewasaPayload.nama : 'Murid') + ' — ' + (pendingDewasaPayload ? pendingDewasaPayload.tahap : ''));
           }
         } else {
           btn.disabled = false;
@@ -4678,6 +4875,7 @@
           const msgEl = document.getElementById('cashSuccessMsg');
           if (msgEl) msgEl.textContent = 'Bayaran berjaya direkod. No. Resit: ' + data.noResit;
           document.getElementById('cashSuccess').classList.add('show');
+          notifAdd('yuran', '💰', 'Bayaran Yuran Diterima', 'No. Resit: ' + (data.noResit || '—'));
           document.getElementById('cashNamaMurid').value = '';
           document.getElementById('cashJumlah').value    = '';
           setTimeout(() => document.getElementById('cashSuccess').classList.remove('show'), 5000);
@@ -4897,6 +5095,7 @@
           const msg = '✅ Kehadiran berjaya disimpan! ' + data.jumlahRekod + ' murid direkodkan.';
           document.getElementById('rekodSuccessMsg').textContent = msg;
           document.getElementById('rekodSuccess').classList.add('show');
+          notifAdd('kehadiran', '✅', 'Kehadiran Direkodkan', (loggedInGuru || 'Guru') + ' — ' + (data.jumlahRekod || 0) + ' murid hadir');
           setTimeout(() => document.getElementById('rekodSuccess').classList.remove('show'), 5000);
           pilihSemuaMurid(false);
         } else {
@@ -5504,6 +5703,192 @@
   } else {
     initPWA();
   }
+
+  // ============================================================
+  // NOTIFICATION SYSTEM — localStorage based, no login required
+  // ============================================================
+  var NOTIF_KEY = 'spkm_notif';
+  var NOTIF_MAX = 50;
+
+  function notifGetAll() {
+    try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
+    catch(e) { return []; }
+  }
+
+  function notifSave(list) {
+    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(list)); }
+    catch(e) {}
+  }
+
+  function notifAdd(type, icon, title, body) {
+    var list = notifGetAll();
+    var item = {
+      id:    Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      type:  type,
+      icon:  icon,
+      title: title,
+      body:  body,
+      time:  new Date().toISOString(),
+      read:  false
+    };
+    list.unshift(item);
+    if (list.length > NOTIF_MAX) list = list.slice(0, NOTIF_MAX);
+    notifSave(list);
+    renderNotifBadge();
+    renderNotifList();
+    notifPulse();
+    playNotifSound();
+  }
+
+  function notifUnreadCount() {
+    return notifGetAll().filter(function(n) { return !n.read; }).length;
+  }
+
+  function markAllRead() {
+    var list = notifGetAll().map(function(n) { n.read = true; return n; });
+    notifSave(list);
+    renderNotifBadge();
+    renderNotifList();
+  }
+
+  function notifTimeAgo(isoStr) {
+    var diff = Date.now() - new Date(isoStr).getTime();
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1)  return 'Baru sahaja';
+    if (mins < 60) return mins + ' minit lepas';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return hrs + ' jam lepas';
+    return Math.floor(hrs / 24) + ' hari lepas';
+  }
+
+  function renderNotifList() {
+    var list = notifGetAll();
+    var html = list.length === 0
+      ? '<div class="notif-empty"><span class="notif-empty-icon">🔕</span><p>Tiada notifikasi lagi.</p></div>'
+      : list.map(function(n) {
+          return '<div class="notif-item ' + (n.read ? '' : 'unread') + '">' +
+            '<div class="notif-item-icon">' + n.icon + '</div>' +
+            '<div class="notif-item-body">' +
+              '<div class="notif-item-title">' + escHtml(n.title) + '</div>' +
+              '<div class="notif-item-desc">'  + escHtml(n.body)  + '</div>' +
+              '<div class="notif-item-time">'  + notifTimeAgo(n.time) + '</div>' +
+            '</div>' +
+            (n.read ? '' : '<div class="notif-unread-dot"></div>') +
+          '</div>';
+        }).join('');
+
+    ['notifList', 'notifListMob'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    });
+  }
+
+  function renderNotifBadge() {
+    var count = notifUnreadCount();
+    var text  = count > 99 ? '99+' : String(count);
+    ['notifBadge', 'notifBadgeMob'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = count > 0 ? 'flex' : 'none';
+      el.textContent   = text;
+    });
+  }
+
+  function toggleNotifPanel() {
+    var panelIds = ['notifPanel', 'notifPanelMob'];
+    var opened = false;
+    panelIds.forEach(function(id) {
+      var panel = document.getElementById(id);
+      if (!panel) return;
+      var willOpen = !panel.classList.contains('open');
+      panel.classList.toggle('open', willOpen);
+      if (willOpen) opened = true;
+    });
+    if (opened) {
+      renderNotifList();
+      setTimeout(function() {
+        document.addEventListener('click', closeNotifOutside, { once: true });
+      }, 10);
+    }
+  }
+
+  function closeNotifOutside(e) {
+    var wrapIds  = ['notifBellWrap'];
+    var panelIds = ['notifPanel', 'notifPanelMob'];
+    var inside = wrapIds.some(function(id) {
+      var el = document.getElementById(id);
+      return el && el.contains(e.target);
+    });
+    if (!inside) {
+      panelIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+      });
+    }
+  }
+
+  function notifPulse() {
+    var btn = document.getElementById('notifBellBtn');
+    if (!btn) return;
+    btn.style.transition = 'transform 0.15s ease';
+    btn.style.transform  = 'scale(1.3) rotate(-15deg)';
+    setTimeout(function() {
+      btn.style.transform = 'scale(1) rotate(0deg)';
+    }, 200);
+  }
+
+  // ============================================================
+  // NOTIFICATION SOUND — Web Audio API (Islamic Chime)
+  // ============================================================
+  var _notifAudioCtx = null;
+
+  function getAudioCtx() {
+    if (!_notifAudioCtx) {
+      try {
+        _notifAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) { return null; }
+    }
+    if (_notifAudioCtx.state === 'suspended') {
+      _notifAudioCtx.resume();
+    }
+    return _notifAudioCtx;
+  }
+
+  function playChimeNote(ctx, freq, startTime, duration) {
+    var osc      = ctx.createOscillator();
+    var gainNode = ctx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+
+  function playNotifSound() {
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    var now   = ctx.currentTime;
+    var notes = [
+      { freq: 523.25, delay: 0.00 },
+      { freq: 659.25, delay: 0.18 },
+      { freq: 783.99, delay: 0.36 }
+    ];
+    notes.forEach(function(n) {
+      playChimeNote(ctx, n.freq, now + n.delay, 1.2);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    renderNotifBadge();
+    document.addEventListener('click', function unlockAudio() {
+      getAudioCtx();
+      document.removeEventListener('click', unlockAudio);
+    }, { once: true });
+  });
 
 </script>
 
