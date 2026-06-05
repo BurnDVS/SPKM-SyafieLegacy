@@ -568,6 +568,8 @@ function attendance(params) {
     SpreadsheetApp.flush();
 
     Logger.log('Kehadiran rekod: ' + params.murid + ' — ' + params.status + ' (' + params.tarikh + ')');
+    try { simpanNotifikasi('kehadiran', '✅ Kehadiran Direkod', 'Kehadiran direkod oleh ' + params.guru.trim(), { murid: params.murid.trim(), tarikh: params.tarikh.trim() }); } catch(e) {}
+
     return { success: true };
 
   } catch (err) {
@@ -1772,7 +1774,11 @@ function updateStatusMurid(params) {
     sheet.getRange(rowIndex, 19).setValue(status);
     SpreadsheetApp.flush();
 
+    var namaCol   = (jenis === 'kanak') ? COL_KANAK.NAMA + 1 : COL_DEWASA.NAMA + 1;
+    var namaMurid = sheet.getRange(rowIndex, namaCol).getValue().toString().trim() || 'Murid';
     Logger.log('updateStatusMurid: ' + jenis + ' baris ' + rowIndex + ' → ' + status);
+    try { simpanNotifikasi('status', '🔄 Status Murid', 'Status ' + namaMurid + ' dikemaskini → ' + status, { jenis: jenis, rowIndex: String(rowIndex) }); } catch(e) {}
+
     return { success: true };
 
   } catch (err) {
