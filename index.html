@@ -6310,25 +6310,57 @@
   // FCM + NOTIFICATION POLLING
   // ============================================================
 
-  // initFCM — setup Firebase + handler foreground sahaja (tanpa requestPermission)
-  // Boleh dipanggil dari login/tryAutoLogin tanpa user gesture
+  // initFCM — setup Firebase foreground handler + auto-simpan token jika permission dah granted
   function initFCM() {
     if (_fcmDone) return;
-    if (!window.firebase) return;
-    if (!firebase.messaging.isSupported()) { _fcmDone = true; return; }
+    if (!window.firebase) { console.log('[FCM] firebase tidak wujud'); return; }
+    if (!firebase.messaging.isSupported()) { _fcmDone = true; console.log('[FCM] tidak disokong'); return; }
     try {
       if (!firebase.apps || !firebase.apps.length) {
         firebase.initializeApp(FIREBASE_CONFIG);
       }
       var messaging = firebase.messaging();
       _fcmDone = true;
+      console.log('[FCM] initFCM berjaya, permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A');
+
       messaging.onMessage(function(payload) {
         var notif = payload.notification || {};
         var data  = payload.data        || {};
         notifAdd(data.type || 'fcm', '🔔', notif.title || 'Notifikasi', notif.body || '');
         showToast(notif.title || 'Notifikasi', notif.body || '');
       });
-    } catch(e) { console.warn('initFCM error:', e); }
+
+      // Kalau permission dah 'granted', terus ambil token dan simpan ke GAS
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !_isGAS) {
+        console.log('[FCM] Permission granted, cuba ambil token...');
+        var tokenOptions = { vapidKey: FCM_VAPID_KEY };
+        var doGetToken = function() {
+          messaging.getToken(tokenOptions)
+            .then(function(fcmToken) {
+              if (fcmToken) {
+                console.log('[FCM] Token dapat:', fcmToken.substring(0, 20) + '...');
+                callGASPromise('simpanDeviceToken', { fcmToken: fcmToken, device: navigator.userAgent.substring(0, 200) })
+                  .then(function(r) { console.log('[FCM] simpanDeviceToken:', r && r.success ? 'berjaya' : 'gagal', r); })
+                  .catch(function(e) { console.warn('[FCM] simpanDeviceToken error:', e); });
+              } else {
+                console.log('[FCM] getToken pulangkan kosong');
+              }
+            })
+            .catch(function(e) { console.warn('[FCM] getToken error:', e); });
+        };
+        if ('serviceWorker' in navigator && !_isGAS) {
+          navigator.serviceWorker.ready
+            .then(function(swReg) {
+              console.log('[FCM] SW ready, scope:', swReg.scope);
+              tokenOptions.serviceWorkerRegistration = swReg;
+              doGetToken();
+            })
+            .catch(function(e) { console.warn('[FCM] SW ready error:', e); doGetToken(); });
+        } else {
+          doGetToken();
+        }
+      }
+    } catch(e) { console.warn('[FCM] initFCM error:', e); }
   }
 
   // requestFCMPermission — dipanggil HANYA dari user gesture (klik butang loceng)
