@@ -2110,7 +2110,7 @@
       <p>Portal Guru &amp; Pendaftaran Murid &nbsp;·&nbsp; Fasa 1</p>
     </div>
     <!-- NOTIFICATION BELL (Desktop) -->
-    <div class="notif-bell-wrap" id="notifBellWrap">
+    <div class="notif-bell-wrap" id="notifBellWrap" style="display:none;">
       <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel()" aria-label="Notifikasi">
         🔔
         <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
@@ -5895,6 +5895,10 @@
     });
     if (opened) {
       renderNotifList();
+      // Request FCM permission disini — direct user gesture (klik loceng)
+      if (loggedInGuru && Notification.permission === 'default') {
+        requestFCMPermission();
+      }
       setTimeout(function() {
         document.addEventListener('click', closeNotifOutside, { once: true });
       }, 10);
@@ -6105,23 +6109,18 @@
   // FCM + NOTIFICATION POLLING
   // ============================================================
 
-  async function initFCM() {
+  // initFCM — setup Firebase + handler foreground sahaja (tanpa requestPermission)
+  // Boleh dipanggil dari login/tryAutoLogin tanpa user gesture
+  function initFCM() {
     if (_fcmDone) return;
-    _fcmDone = true;
     if (!window.firebase) return;
+    if (!firebase.messaging.isSupported()) { _fcmDone = true; return; }
     try {
       if (!firebase.apps || !firebase.apps.length) {
         firebase.initializeApp(FIREBASE_CONFIG);
       }
-      if (!firebase.messaging.isSupported()) return;
       var messaging = firebase.messaging();
-      var perm = await Notification.requestPermission();
-      if (perm !== 'granted') return;
-      var fcmToken = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
-      if (fcmToken) {
-        callGASPromise('simpanDeviceToken', { fcmToken: fcmToken, device: navigator.userAgent.substring(0, 200) })
-          .catch(function() {});
-      }
+      _fcmDone = true;
       messaging.onMessage(function(payload) {
         var notif = payload.notification || {};
         var data  = payload.data        || {};
@@ -6129,6 +6128,24 @@
         showToast(notif.title || 'Notifikasi', notif.body || '');
       });
     } catch(e) { console.warn('initFCM error:', e); }
+  }
+
+  // requestFCMPermission — dipanggil HANYA dari user gesture (klik butang loceng)
+  async function requestFCMPermission() {
+    if (!window.firebase || !firebase.messaging.isSupported()) return;
+    try {
+      if (!firebase.apps || !firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      var messaging = firebase.messaging();
+      var fcmToken  = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+      if (fcmToken) {
+        callGASPromise('simpanDeviceToken', { fcmToken: fcmToken, device: navigator.userAgent.substring(0, 200) })
+          .catch(function() {});
+      }
+    } catch(e) { console.warn('requestFCMPermission error:', e); }
   }
 
   function stopNotifPolling() {
