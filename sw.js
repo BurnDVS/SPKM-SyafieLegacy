@@ -1,4 +1,32 @@
-const CACHE = 'spkm-v8';
+// Firebase Messaging — background push notification handler
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey:            'AIzaSyDstUwfbD0jlhrt5S0KyoHA0n7F8tIeaE0',
+  projectId:         'spkm-syafielegacy',
+  messagingSenderId: '812576273769',
+  appId:             '1:812576273769:web:ded036c7553d4b8e1bb9f8'
+});
+
+var _messaging = firebase.messaging();
+
+_messaging.onBackgroundMessage(function(payload) {
+  var notif = payload.notification || {};
+  self.registration.showNotification(notif.title || 'SPKM', {
+    body:               notif.body || '',
+    icon:               'https://i.ibb.co/93rXrkZq/LOGO-SL.png',
+    badge:              'https://i.ibb.co/93rXrkZq/LOGO-SL.png',
+    data:               payload.data || {},
+    tag:                'spkm-notif',
+    requireInteraction: false
+  });
+});
+
+// ============================================================
+// Cache logic (kekalkan asal, bump version untuk SW baru)
+// ============================================================
+const CACHE = 'spkm-v9';
 
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
@@ -24,7 +52,6 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  // Hanya handle same-origin requests — biar browser handle CDN & GAS terus
   if (new URL(e.request.url).origin !== self.location.origin) return;
 
   e.respondWith(

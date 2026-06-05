@@ -8,11 +8,13 @@ var SPREADSHEET_ID = '1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU';
 
 // Nama tab dalam spreadsheet
 var TAB = {
-  GURU:        'Maklumat Guru',
-  KANAK:       'PendaftaranBaru',
-  DEWASA:      'KelasDewasa',
-  KEHADIRAN:   'Kehadiran',
-  BLAST_QUEUE: 'BlastQueue'
+  GURU:          'Maklumat Guru',
+  KANAK:         'PendaftaranBaru',
+  DEWASA:        'KelasDewasa',
+  KEHADIRAN:     'Kehadiran',
+  BLAST_QUEUE:   'BlastQueue',
+  DEVICE_TOKENS: 'DeviceTokens',
+  NOTIFIKASI:    'Notifikasi'
 };
 
 // Kolum tab BlastQueue (0-indexed)
@@ -86,6 +88,24 @@ var COL_KEHADIRAN = {
   STATUS:     3
 };
 
+// Kolum tab DeviceTokens (0-indexed)
+var COL_TOKEN = {
+  TIMESTAMP: 0,  // A
+  EMAIL:     1,  // B
+  TOKEN:     2,  // C
+  DEVICE:    3   // D
+};
+
+// Kolum tab Notifikasi (0-indexed)
+var COL_NOTIF = {
+  ID:        0,  // A — UUID
+  TIMESTAMP: 1,  // B
+  TYPE:      2,  // C — kanak/dewasa/kehadiran/yuran
+  TITLE:     3,  // D
+  BODY:      4,  // E
+  DATA:      5   // F — JSON string
+};
+
 // ============================================================
 // AUTOCRAT CONFIG
 // Gantikan nilai di bawah dengan Template ID & Output Folder ID
@@ -107,7 +127,8 @@ var ALLOWED_ACTIONS = [
   'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
-  'queueWABlast', 'getBlastStatus', 'logout'
+  'queueWABlast', 'getBlastStatus', 'logout',
+  'simpanDeviceToken', 'getNotifikasi'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -115,7 +136,8 @@ var AUTH_REQUIRED_ACTIONS = [
   'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
   'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
-  'queueWABlast', 'getBlastStatus'
+  'queueWABlast', 'getBlastStatus',
+  'simpanDeviceToken', 'getNotifikasi'
 ];
 
 function doPost(e) {
@@ -184,6 +206,8 @@ function doPost(e) {
     else if (action === 'queueWABlast')           result = queueWABlast(body);
     else if (action === 'getBlastStatus')         result = getBlastStatus(body);
     else if (action === 'logout')                 result = logout(body);
+    else if (action === 'simpanDeviceToken')      result = simpanDeviceToken(body);
+    else if (action === 'getNotifikasi')          result = getNotifikasi(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -311,6 +335,8 @@ function doAction(action, payload) {
   else if (action === 'hantarWAYuran')         return hantarWAYuran(payload);
   else if (action === 'queueWABlast')          return queueWABlast(payload);
   else if (action === 'getBlastStatus')        return getBlastStatus(payload);
+  else if (action === 'simpanDeviceToken')     return simpanDeviceToken(payload);
+  else if (action === 'getNotifikasi')         return getNotifikasi(payload);
 }
 
 // ============================================================
@@ -434,6 +460,8 @@ function registerKanak(params) {
     var slipRow = sheet.getLastRow();
     generateSlipKanak(slipRow);
 
+    try { simpanNotifikasi('kanak', 'Murid Baru Didaftarkan', (params.namaAnak || '') + ' — ' + (params.tahap || ''), { bil: String(nextBil) }); } catch(e) {}
+
     return { success: true, bil: nextBil };
 
   } catch (err) {
@@ -491,6 +519,9 @@ function registerDewasa(params) {
     var muridId = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
 
     Logger.log('registerDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
+
+    try { simpanNotifikasi('dewasa', 'Murid Dewasa Didaftarkan', (params.nama || '') + ' — ' + (params.tahap || ''), { id: muridId }); } catch(e) {}
+
     return { success: true, id: muridId };
 
   } catch (err) {
@@ -1649,6 +1680,9 @@ function recordCash(params) {
     SpreadsheetApp.flush();
 
     Logger.log('recordCash: ' + nama + ' ' + bulan + ' RM' + jumlah + ' Resit: ' + noResit);
+
+    try { simpanNotifikasi('yuran', 'Bayaran Yuran Diterima', nama + ' — ' + bulan + ' RM' + jumlah, { noResit: noResit }); } catch(e) {}
+
     return { success: true, noResit: noResit };
 
   } catch (err) {
@@ -2046,6 +2080,9 @@ function simpanKehadiran(params) {
     SpreadsheetApp.flush();
 
     Logger.log('simpanKehadiran: ' + namaTab + ' — ' + muridHadir.length + ' murid (' + tarikhKelas + ')');
+
+    try { simpanNotifikasi('kehadiran', 'Kehadiran Direkodkan', namaGuru + ' — ' + muridHadir.length + ' murid (' + tarikhKelas + ')', { jumlah: String(muridHadir.length) }); } catch(e) {}
+
     return { success: true, jumlahRekod: muridHadir.length };
 
   } catch (err) {
@@ -2753,5 +2790,209 @@ function getYuranParent(params) {
   } catch (err) {
     Logger.log('getYuranParent error: ' + err.message);
     return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// FCM — Firebase Cloud Messaging
+// ============================================================
+
+function ensureDeviceTokensSheet(ss) {
+  var sheet = ss.getSheetByName(TAB.DEVICE_TOKENS);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB.DEVICE_TOKENS);
+    sheet.getRange(1, 1, 1, 4).setValues([['Timestamp', 'Email', 'FCM_Token', 'Device']]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function ensureNotifikasiSheet(ss) {
+  var sheet = ss.getSheetByName(TAB.NOTIFIKASI);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB.NOTIFIKASI);
+    sheet.getRange(1, 1, 1, 6).setValues([['ID', 'Timestamp', 'Type', 'Title', 'Body', 'Data']]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+// simpanDeviceToken — simpan/kemaskini FCM token device guru
+function simpanDeviceToken(params) {
+  params = params || {};
+  try {
+    var fcmToken  = (params.fcmToken || '').toString().trim();
+    var device    = (params.device   || '').toString().trim().substring(0, 200);
+    if (!fcmToken) return { success: false, message: 'Token FCM diperlukan.' };
+
+    var authCheck = validateToken(params.token || '');
+    var email = authCheck.valid ? (authCheck.user.email || '') : '';
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ensureDeviceTokensSheet(ss);
+    var ts    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+
+    // Kemaskini jika token sudah wujud
+    if (sheet.getLastRow() > 1) {
+      var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i][COL_TOKEN.TOKEN].toString() === fcmToken) {
+          sheet.getRange(i + 2, COL_TOKEN.TIMESTAMP + 1).setValue(ts);
+          return { success: true };
+        }
+      }
+    }
+
+    sheet.appendRow([ts, email, fcmToken, device]);
+    SpreadsheetApp.flush();
+    Logger.log('simpanDeviceToken: token baru disimpan untuk ' + (email || 'unknown'));
+    return { success: true };
+  } catch (err) {
+    Logger.log('simpanDeviceToken error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// getFCMAccessToken — jana OAuth2 bearer token untuk FCM HTTP V1 API
+function getFCMAccessToken() {
+  var props       = PropertiesService.getScriptProperties();
+  var clientEmail = (props.getProperty('FCM_CLIENT_EMAIL') || '').trim();
+  var privateKey  = (props.getProperty('FCM_PRIVATE_KEY')  || '').replace(/\\n/g, '\n');
+
+  if (!clientEmail || !privateKey) throw new Error('FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY tidak dijumpai dalam Script Properties.');
+
+  var now = Math.floor(Date.now() / 1000);
+
+  function b64url(obj) {
+    return Utilities.base64EncodeWebSafe(JSON.stringify(obj)).replace(/=+$/, '');
+  }
+
+  var header   = b64url({ alg: 'RS256', typ: 'JWT' });
+  var payload  = b64url({
+    iss:   clientEmail,
+    sub:   clientEmail,
+    aud:   'https://oauth2.googleapis.com/token',
+    iat:   now,
+    exp:   now + 3600,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging'
+  });
+
+  var sigInput  = header + '.' + payload;
+  var signature = Utilities.computeRsaSha256Signature(sigInput, privateKey);
+  var jwt       = sigInput + '.' + Utilities.base64EncodeWebSafe(signature).replace(/=+$/, '');
+
+  var resp = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method:      'post',
+    contentType: 'application/x-www-form-urlencoded',
+    payload:     'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt,
+    muteHttpExceptions: true
+  });
+
+  var data = JSON.parse(resp.getContentText());
+  if (!data.access_token) throw new Error('getFCMAccessToken gagal: ' + resp.getContentText());
+  return data.access_token;
+}
+
+// hantarFCM — hantar push notification ke semua token dalam DeviceTokens
+function hantarFCM(title, body, dataMap) {
+  try {
+    var props      = PropertiesService.getScriptProperties();
+    var projectId  = (props.getProperty('FCM_PROJECT_ID') || '').trim();
+    if (!projectId) return;
+
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ensureDeviceTokensSheet(ss);
+    if (sheet.getLastRow() < 2) return;
+
+    var rows   = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    var tokens = rows.map(function(r) { return (r[COL_TOKEN.TOKEN] || '').toString().trim(); })
+                     .filter(function(t) { return t.length > 0; });
+    if (!tokens.length) return;
+
+    var accessToken = getFCMAccessToken();
+    var url         = 'https://fcm.googleapis.com/v1/projects/' + projectId + '/messages:send';
+    var dataStr     = {};
+    if (dataMap) {
+      Object.keys(dataMap).forEach(function(k) { dataStr[k] = String(dataMap[k]); });
+    }
+
+    tokens.forEach(function(token) {
+      try {
+        UrlFetchApp.fetch(url, {
+          method:      'post',
+          contentType: 'application/json',
+          headers:     { Authorization: 'Bearer ' + accessToken },
+          payload:     JSON.stringify({
+            message: {
+              token: token,
+              notification: { title: title, body: body },
+              data: dataStr,
+              webpush: {
+                headers:      { TTL: '86400' },
+                notification: {
+                  title: title, body: body,
+                  icon:  'https://i.ibb.co/93rXrkZq/LOGO-SL.png',
+                  requireInteraction: false
+                }
+              }
+            }
+          }),
+          muteHttpExceptions: true
+        });
+      } catch (te) { Logger.log('hantarFCM token error: ' + te.message); }
+    });
+    Logger.log('hantarFCM: hantar ke ' + tokens.length + ' token — "' + title + '"');
+  } catch (err) {
+    Logger.log('hantarFCM error: ' + err.message);
+  }
+}
+
+// simpanNotifikasi — simpan ke tab Notifikasi dan trigger FCM push
+function simpanNotifikasi(type, title, body, dataMap) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ensureNotifikasiSheet(ss);
+    var id    = Utilities.getUuid();
+    var ts    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    sheet.appendRow([id, ts, type || 'umum', title || '', body || '', dataMap ? JSON.stringify(dataMap) : '']);
+    SpreadsheetApp.flush();
+    try { hantarFCM(title || '', body || '', Object.assign({ type: type || 'umum', id: id }, dataMap || {})); } catch(fe) {}
+    return id;
+  } catch (err) {
+    Logger.log('simpanNotifikasi error: ' + err.message);
+    return null;
+  }
+}
+
+// getNotifikasi — return 20 notifikasi terbaru, filter selepas lastId
+function getNotifikasi(params) {
+  params = params || {};
+  try {
+    var lastId = (params.lastId || '').toString().trim();
+    var ss     = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet  = ensureNotifikasiSheet(ss);
+    if (sheet.getLastRow() < 2) return { success: true, notifikasi: [] };
+
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+    rows.reverse(); // latest first
+
+    var result = [];
+    for (var i = 0; i < rows.length && result.length < 20; i++) {
+      var id = (rows[i][COL_NOTIF.ID] || '').toString().trim();
+      if (!id) continue;
+      if (lastId && id === lastId) break;
+      result.push({
+        id:        id,
+        timestamp: rows[i][COL_NOTIF.TIMESTAMP].toString(),
+        type:      rows[i][COL_NOTIF.TYPE].toString(),
+        title:     rows[i][COL_NOTIF.TITLE].toString(),
+        body:      rows[i][COL_NOTIF.BODY].toString()
+      });
+    }
+
+    return { success: true, notifikasi: result };
+  } catch (err) {
+    Logger.log('getNotifikasi error: ' + err.message);
+    return { success: false, notifikasi: [] };
   }
 }

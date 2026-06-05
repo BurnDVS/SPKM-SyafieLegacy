@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://i.ibb.co https://drive.google.com https://lh3.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://fcm.googleapis.com https://www.googleapis.com; worker-src 'self';">
 <meta name="application-name" content="SPKM">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,6 +16,8 @@
 <link rel="apple-touch-startup-image" href="https://i.ibb.co/93rXrkZq/LOGO-SL.png">
 <title>Sistem Pengurusan Kelas Mengaji</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
   :root {
     --gold: #FFD700;
@@ -1773,6 +1775,30 @@
   .wa-stat-row.ok   .wa-stat-val { color: #2E7D32; }
   .wa-stat-row.err  .wa-stat-val { color: #C0392B; }
   .wa-stat-row.warn .wa-stat-val { color: #B8860B; }
+  /* === SPKM TOAST (FCM / polling) === */
+  #spkmToast {
+    position: fixed;
+    right: 16px;
+    bottom: 24px;
+    z-index: 9997;
+    background: #0A1F44;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border-left: 3px solid #FFD700;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.28);
+    font-size: 13px;
+    max-width: 280px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  @media (max-width: 1024px) {
+    #spkmToast { bottom: 80px; }
+  }
+
   /* === WA TOAST === */
   #waToast {
     position: fixed; bottom: 28px; left: 50%;
@@ -1951,6 +1977,7 @@
   }
 
   /* === NOTIFICATION BELL === */
+  #notifBellWrap { display: none; }
   .notif-bell-wrap {
     position: relative;
     margin-right: 12px;
@@ -3466,6 +3493,21 @@
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1/exec';
   const _isGAS  = window.location.hostname.endsWith('google.com');
 
+  // FCM + persistent storage config
+  var _isMobile  = window.innerWidth <= 1024;
+  var _spkm_st   = _isMobile ? localStorage : sessionStorage;
+  var _fcmDone   = false;
+  var _pollTimer = null;
+  var SPKM_LS_USER = 'spkm_ls_user';
+  var SPKM_LAST_ID = 'spkm_notif_last_id';
+  var FCM_VAPID_KEY = 'BAXOj_r1g0CJyKfuJ1iyku9JSHU3QGGKMPBNSqJ-f3Huv2FBzsAF6Pg8M_QwIfy1R7mSm691BGQiGE6nXDGAhfc';
+  var FIREBASE_CONFIG = {
+    apiKey:            'AIzaSyDstUwfbD0jlhrt5S0KyoHA0n7F8tIeaE0',
+    projectId:         'spkm-syafielegacy',
+    messagingSenderId: '812576273769',
+    appId:             '1:812576273769:web:ded036c7553d4b8e1bb9f8'
+  };
+
   let currentStep    = 1;
   let loggedInGuru          = null;
   let loggedInTabKehadiran  = null;
@@ -3597,6 +3639,7 @@
 
   function resetIdleTimer() {
     if (!loggedInGuru) return;
+    if (_isMobile) return;
     clearTimeout(idleTimer);
     clearTimeout(warnTimer);
     const modal = document.getElementById('idleWarningModal');
@@ -3640,6 +3683,8 @@
     if (btnSync)     btnSync.style.display     = isAdmin ? '' : 'none';
     const tabRekodGuru = document.getElementById('tabBtnRekodKehadiran');
     if (tabRekodGuru)  tabRekodGuru.style.display = loggedIn ? '' : 'none';
+    var bellWrap = document.getElementById('notifBellWrap');
+    if (bellWrap) bellWrap.style.display = loggedIn ? 'flex' : 'none';
   }
 
   // =====================
@@ -3771,7 +3816,7 @@
 
   function callGAS(action, payload, onSuccess, onError) {
     const p = Object.assign({}, payload);
-    const tok = sessionStorage.getItem('spkm_token');
+    const tok = _spkm_st.getItem('spkm_token');
     if (tok) p.token = tok;
     if (_isGAS) {
       google.script.run
@@ -3788,7 +3833,7 @@
   function callGASPromise(action, payload) {
     return new Promise(function(resolve, reject) {
       const p = Object.assign({}, payload);
-      const tok = sessionStorage.getItem('spkm_token');
+      const tok = _spkm_st.getItem('spkm_token');
       if (tok) p.token = tok;
       if (_isGAS) {
         google.script.run
@@ -3834,7 +3879,15 @@
             document.getElementById('guruMenu').style.display = 'block';
           }
           currentRole  = data.role || 'GURU';
-          if (data.token) sessionStorage.setItem('spkm_token', data.token);
+          if (data.token) {
+            _spkm_st.setItem('spkm_token', data.token);
+            if (_isMobile) {
+              localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+                token: data.token, user: data.user,
+                role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+              }));
+            }
+          }
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
           document.getElementById('dashboardPreview').style.display = 'block';
@@ -3851,6 +3904,8 @@
           resetIdleTimer();
           const gEl = document.getElementById('hadirGuru');
           if (gEl) gEl.value = data.user;
+          initFCM();
+          startNotifPolling();
         } else {
           const msg = data.message || 'E-mel atau nombor tidak sepadan.';
           showErr('loginError', msg);
@@ -3867,7 +3922,9 @@
   }
 
   function handleLogout() {
-    sessionStorage.removeItem('spkm_token');
+    _spkm_st.removeItem('spkm_token');
+    if (_isMobile) { localStorage.removeItem(SPKM_LS_USER); localStorage.removeItem(SPKM_LAST_ID); }
+    stopNotifPolling();
     loggedInGuru          = null;
     loggedInTabKehadiran  = null;
     if (window.innerWidth <= 1024) {
@@ -4311,7 +4368,7 @@
 
     const doUpdate = function(gambarUrl) {
       callGAS('updateGuru', {
-        token: sessionStorage.getItem('spkm_token'),
+        token: _spkm_st.getItem('spkm_token'),
         targetEmail, nama, telefon, alamat, jawatan,
         gambarUrl: gambarUrl
       },
@@ -4341,7 +4398,7 @@
       reader.onload = function(e) {
         const base64Data = e.target.result.split(',')[1];
         callGAS('uploadGuruGambar', {
-          token: sessionStorage.getItem('spkm_token'),
+          token: _spkm_st.getItem('spkm_token'),
           base64Data: base64Data,
           mimeType: file.type,
           fileName: 'guru_' + Date.now() + '_' + file.name
@@ -4382,7 +4439,7 @@
   // CARTA ORGANISASI
   // =====================
   function loadOrgChart() {
-    console.log('loadOrgChart called, loggedInGuru:', loggedInGuru, 'token:', sessionStorage.getItem('spkm_token') ? 'ada' : 'tiada');
+    console.log('loadOrgChart called, loggedInGuru:', loggedInGuru, 'token:', _spkm_st.getItem('spkm_token') ? 'ada' : 'tiada');
     const container = document.getElementById('orgChartContent');
     if (!container) { console.log('loadOrgChart: orgChartContent tidak dijumpai'); return; }
     container.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:14px;">Memuatkan...</p>';
@@ -4923,7 +4980,7 @@
         return { nama: m.nama, telefon: String(m.telefon || '') };
       });
       const res = await callGASPromise('queueWABlast', {
-        token:          sessionStorage.getItem('spkm_token'),
+        token:          _spkm_st.getItem('spkm_token'),
         mesejTemplate:  mesejTemplate,
         bulan:          bulan,
         muridList:      muridList
@@ -4968,7 +5025,7 @@
   }
 
   function refreshBlastStatus() {
-    callGASPromise('getBlastStatus', { token: sessionStorage.getItem('spkm_token') })
+    callGASPromise('getBlastStatus', { token: _spkm_st.getItem('spkm_token') })
       .then(function(data) {
         if (!data || !data.success) return;
         var txt = document.getElementById('blastActiveBadgeText');
@@ -4983,7 +5040,7 @@
   function checkBlastStatus() {
     var btn = document.getElementById('btnBlastStatus');
     if (btn) { btn.textContent = '⏳ Menyemak...'; btn.disabled = true; }
-    callGASPromise('getBlastStatus', { token: sessionStorage.getItem('spkm_token') })
+    callGASPromise('getBlastStatus', { token: _spkm_st.getItem('spkm_token') })
       .then(function(data) {
         if (btn) { btn.textContent = '📊 Status Blast'; btn.disabled = false; }
         if (!data || !data.success) { waToast('Gagal ambil status.', 'error'); return; }
@@ -5798,12 +5855,21 @@
           document.getElementById('guestMenu').style.display = 'none';
           document.getElementById('guruMenu').style.display = 'block';
         }
-        if (data.token) sessionStorage.setItem('spkm_token', data.token);
+        loggedInTabKehadiran = data.tabKehadiran || null;
+        currentRole = data.role || 'GURU';
+        if (data.token) {
+          _spkm_st.setItem('spkm_token', data.token);
+          if (_isMobile) {
+            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+              token: data.token, user: data.user,
+              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+            }));
+          }
+        }
         document.getElementById('headerUserName').textContent = data.user;
         document.getElementById('headerUserNameDropdown').textContent = data.user;
         document.getElementById('headerPreLogin').style.display = 'none';
         document.getElementById('headerPostLogin').style.display = '';
-        currentRole = data.role || 'GURU';
         setLoginState(true);
         updateNav(true);
         updateMobileBottomNav(true);
@@ -5811,6 +5877,8 @@
         const gEl = document.getElementById('hadirGuru');
         if (gEl) gEl.value = data.user;
         loadOrgChart();
+        initFCM();
+        startNotifPolling();
       } else {
         document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
         document.getElementById('loginModalError').classList.add('show');
@@ -6186,6 +6254,9 @@
 <!-- WA TOAST -->
 <div id="waToast"></div>
 
+<!-- SPKM TOAST (FCM / polling) -->
+<div id="spkmToast"></div>
+
 <!-- MOBILE BOTTOM NAV -->
 <nav id="mobileBottomNav" aria-label="Navigasi bawah">
   <!-- Utama & Daftar — sentiasa ada -->
@@ -6222,6 +6293,118 @@
 </nav>
 
 <script>
+  // ============================================================
+  // FCM + NOTIFICATION POLLING
+  // ============================================================
+
+  async function initFCM() {
+    if (_fcmDone) return;
+    _fcmDone = true;
+    if (!window.firebase) return;
+    try {
+      if (!firebase.apps || !firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
+      if (!firebase.messaging.isSupported()) return;
+      var messaging = firebase.messaging();
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      var fcmToken = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+      if (fcmToken) {
+        callGASPromise('simpanDeviceToken', { fcmToken: fcmToken, device: navigator.userAgent.substring(0, 200) })
+          .catch(function() {});
+      }
+      messaging.onMessage(function(payload) {
+        var notif = payload.notification || {};
+        var data  = payload.data        || {};
+        notifAdd(data.type || 'fcm', '🔔', notif.title || 'Notifikasi', notif.body || '');
+        showToast(notif.title || 'Notifikasi', notif.body || '');
+      });
+    } catch(e) { console.warn('initFCM error:', e); }
+  }
+
+  function stopNotifPolling() {
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+  }
+
+  function startNotifPolling() {
+    stopNotifPolling();
+    // Baseline: simpan ID terkini tanpa tunjuk toast
+    callGASPromise('getNotifikasi', { lastId: '' })
+      .then(function(d) {
+        if (d && d.success && d.notifikasi && d.notifikasi.length) {
+          if (!localStorage.getItem(SPKM_LAST_ID)) {
+            localStorage.setItem(SPKM_LAST_ID, d.notifikasi[0].id);
+          }
+        }
+      }).catch(function() {});
+
+    _pollTimer = setInterval(function() {
+      var lastId = localStorage.getItem(SPKM_LAST_ID) || '';
+      callGASPromise('getNotifikasi', { lastId: lastId })
+        .then(function(d) {
+          if (!d || !d.success || !d.notifikasi || !d.notifikasi.length) return;
+          d.notifikasi.forEach(function(n) {
+            notifAdd(n.type || 'fcm', '🔔', n.title || '', n.body || '');
+            showToast(n.title || '', n.body || '');
+          });
+          localStorage.setItem(SPKM_LAST_ID, d.notifikasi[0].id);
+        }).catch(function() {});
+    }, 30000);
+  }
+
+  function showToast(title, body) {
+    var el = document.getElementById('spkmToast');
+    if (!el) return;
+    el.innerHTML = '<strong style="display:block;margin-bottom:3px;">' + escHtml(title) + '</strong>' +
+                   '<span style="font-size:11px;opacity:0.82;">' + escHtml(body) + '</span>';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+    if (el._t) clearTimeout(el._t);
+    el._t = setTimeout(function() {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+    }, 4000);
+  }
+
+  function tryAutoLogin() {
+    if (!_isMobile) return;
+    var saved = localStorage.getItem(SPKM_LS_USER);
+    if (!saved) return;
+    try {
+      var u = JSON.parse(saved);
+      if (!u || !u.token || !u.user) { localStorage.removeItem(SPKM_LS_USER); return; }
+      _spkm_st.setItem('spkm_token', u.token);
+      loggedInGuru         = u.user;
+      loggedInTabKehadiran = u.tabKehadiran || null;
+      currentRole          = u.role || 'GURU';
+      document.getElementById('guruName').textContent = u.user;
+      document.getElementById('loginFormWrapper').style.display = 'none';
+      document.getElementById('dashboardPreview').style.display = 'block';
+      var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+      var avEl = document.getElementById('mobLoggedAv');
+      var nmEl = document.getElementById('mobLoggedName');
+      if (avEl) avEl.textContent = initials;
+      if (nmEl) nmEl.textContent = u.user;
+      var guestEl = document.getElementById('guestMenu');
+      var guruEl  = document.getElementById('guruMenu');
+      if (guestEl) guestEl.style.display = 'none';
+      if (guruEl)  guruEl.style.display  = 'block';
+      setLoginState(true);
+      updateNav(true);
+      updateMobileBottomNav(true);
+      loadOrgChart();
+      var gEl = document.getElementById('hadirGuru');
+      if (gEl) gEl.value = u.user;
+      initFCM();
+      startNotifPolling();
+    } catch(e) { localStorage.removeItem(SPKM_LS_USER); }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    tryAutoLogin();
+  });
+
   if ('serviceWorker' in navigator && !_isGAS) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('./sw.js')
