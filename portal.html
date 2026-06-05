@@ -5895,8 +5895,9 @@
     });
     if (opened) {
       renderNotifList();
-      // Request FCM permission disini — direct user gesture (klik loceng)
-      if (loggedInGuru && Notification.permission === 'default') {
+      // Request/refresh FCM token disini — direct user gesture (klik loceng)
+      // Panggil walaupun permission sudah 'granted' supaya token disimpan semula
+      if (loggedInGuru && typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
         requestFCMPermission();
       }
       setTimeout(function() {
@@ -6133,6 +6134,8 @@
   // requestFCMPermission — dipanggil HANYA dari user gesture (klik butang loceng)
   async function requestFCMPermission() {
     if (!window.firebase || !firebase.messaging.isSupported()) return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'denied') return;
     try {
       if (!firebase.apps || !firebase.apps.length) {
         firebase.initializeApp(FIREBASE_CONFIG);
@@ -6140,7 +6143,17 @@
       var perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
       var messaging = firebase.messaging();
-      var fcmToken  = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+
+      // Dapatkan SW registration yang betul — Firebase perlu SW yang ada Firebase Messaging
+      var tokenOptions = { vapidKey: FCM_VAPID_KEY };
+      if ('serviceWorker' in navigator && !_isGAS) {
+        try {
+          var swReg = await navigator.serviceWorker.ready;
+          if (swReg) tokenOptions.serviceWorkerRegistration = swReg;
+        } catch(swErr) {}
+      }
+
+      var fcmToken = await messaging.getToken(tokenOptions);
       if (fcmToken) {
         callGASPromise('simpanDeviceToken', { fcmToken: fcmToken, device: navigator.userAgent.substring(0, 200) })
           .catch(function() {});
