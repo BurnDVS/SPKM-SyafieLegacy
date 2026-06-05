@@ -2375,7 +2375,7 @@
 
     <!-- GURU MENU -->
     <div id="guruMenu" style="display:none;">
-      <div id="mobLoggedBadge" style="background:#E8F4EE; border:1px solid rgba(26,92,58,0.15); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+      <div id="mobLoggedBadge" style="background:#E8F4EE; border:1px solid rgba(26,92,58,0.15); border-radius:10px; padding:10px 12px; display:none; align-items:center; gap:10px; margin-bottom:16px;">
         <div id="mobLoggedAv" style="width:30px; height:30px; border-radius:50%; background:#1A5C3A; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:#fff; flex-shrink:0;">MS</div>
         <div>
           <p id="mobLoggedName" style="margin:0; font-size:12px; font-weight:500; color:#1A5C3A;">Nama Guru</p>
@@ -3686,10 +3686,12 @@
     var bellWrap = document.getElementById('notifBellWrap');
     if (bellWrap) bellWrap.style.display = loggedIn ? 'flex' : 'none';
     if (window.innerWidth <= 1024) {
-      var guestEl = document.getElementById('guestMenu');
-      var guruEl  = document.getElementById('guruMenu');
-      if (guestEl) guestEl.style.display = loggedIn ? 'none' : 'block';
-      if (guruEl)  guruEl.style.display  = loggedIn ? 'block' : 'none';
+      var guestEl  = document.getElementById('guestMenu');
+      var guruEl   = document.getElementById('guruMenu');
+      var badgeEl  = document.getElementById('mobLoggedBadge');
+      if (guestEl)  guestEl.style.display  = loggedIn ? 'none'  : 'block';
+      if (guruEl)   guruEl.style.display   = loggedIn ? 'block' : 'none';
+      if (badgeEl)  badgeEl.style.display  = loggedIn ? 'flex'  : 'none';
     }
   }
 
@@ -6410,30 +6412,47 @@
     try {
       var u = JSON.parse(saved);
       if (!u || !u.token || !u.user) { localStorage.removeItem(SPKM_LS_USER); return; }
+
+      // Set token sementara supaya callGASPromise boleh hantar dalam request
       _spkm_st.setItem('spkm_token', u.token);
-      loggedInGuru         = u.user;
-      loggedInTabKehadiran = u.tabKehadiran || null;
-      currentRole          = u.role || 'GURU';
-      document.getElementById('guruName').textContent = u.user;
-      document.getElementById('loginFormWrapper').style.display = 'none';
-      document.getElementById('dashboardPreview').style.display = 'block';
-      var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
-      var avEl = document.getElementById('mobLoggedAv');
-      var nmEl = document.getElementById('mobLoggedName');
-      if (avEl) avEl.textContent = initials;
-      if (nmEl) nmEl.textContent = u.user;
-      var guestEl = document.getElementById('guestMenu');
-      var guruEl  = document.getElementById('guruMenu');
-      if (guestEl) guestEl.style.display = 'none';
-      if (guruEl)  guruEl.style.display  = 'block';
-      setLoginState(true);
-      updateNav(true);
-      updateMobileBottomNav(true);
-      loadOrgChart();
-      var gEl = document.getElementById('hadirGuru');
-      if (gEl) gEl.value = u.user;
-      initFCM();
-      startNotifPolling();
+
+      // Validate token dengan server DULU — jangan tunjuk menu guru lagi
+      callGASPromise('getNotifikasi', { lastId: '' })
+        .then(function(data) {
+          if (!data || !data.success) {
+            // Token tidak sah / tamat tempoh — clear semua, kekal state logout
+            _spkm_st.removeItem('spkm_token');
+            localStorage.removeItem(SPKM_LS_USER);
+            localStorage.removeItem(SPKM_LAST_ID);
+            setLoginState(false);
+            return;
+          }
+          // Token sah — tunjuk state login
+          loggedInGuru         = u.user;
+          loggedInTabKehadiran = u.tabKehadiran || null;
+          currentRole          = u.role || 'GURU';
+          document.getElementById('guruName').textContent = u.user;
+          document.getElementById('loginFormWrapper').style.display = 'none';
+          document.getElementById('dashboardPreview').style.display = 'block';
+          var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+          var avEl = document.getElementById('mobLoggedAv');
+          var nmEl = document.getElementById('mobLoggedName');
+          if (avEl) avEl.textContent = initials;
+          if (nmEl) nmEl.textContent = u.user;
+          setLoginState(true);
+          updateNav(true);
+          updateMobileBottomNav(true);
+          loadOrgChart();
+          var gEl = document.getElementById('hadirGuru');
+          if (gEl) gEl.value = u.user;
+          initFCM();
+          startNotifPolling();
+        })
+        .catch(function() {
+          // Ralat sambungan — clear token, kekal logout
+          _spkm_st.removeItem('spkm_token');
+          localStorage.removeItem(SPKM_LS_USER);
+        });
     } catch(e) { localStorage.removeItem(SPKM_LS_USER); }
   }
 
