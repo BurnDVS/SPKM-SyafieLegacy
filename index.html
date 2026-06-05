@@ -3685,6 +3685,12 @@
     if (tabRekodGuru)  tabRekodGuru.style.display = loggedIn ? '' : 'none';
     var bellWrap = document.getElementById('notifBellWrap');
     if (bellWrap) bellWrap.style.display = loggedIn ? 'flex' : 'none';
+    if (window.innerWidth <= 1024) {
+      var guestEl = document.getElementById('guestMenu');
+      var guruEl  = document.getElementById('guruMenu');
+      if (guestEl) guestEl.style.display = loggedIn ? 'none' : 'block';
+      if (guruEl)  guruEl.style.display  = loggedIn ? 'block' : 'none';
+    }
   }
 
   // =====================
