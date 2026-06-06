@@ -1,5 +1,5 @@
 @echo off
-cd /d C:\Users\burnk\Documents\SPKM
+cd /d C:\Users\burnk\OneDrive\Documents-assets\SPKM
 echo.
 echo ================================
 echo   SPKM - Sistem Mengaji
