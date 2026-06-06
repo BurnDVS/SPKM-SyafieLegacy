@@ -214,6 +214,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 | **Bayaran Online (Billplz/ToyyibPay)** | Planned | Tinggi |
 | **Pecah Code.js** → multi-file | Planned | Sederhana |
 | **Notifikasi Sheets-based** | KIV | Rendah |
+| **Migrate folder ke OneDrive** | ✅ Selesai | - |
 
 ---
 
