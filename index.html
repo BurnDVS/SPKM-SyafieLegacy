@@ -3811,33 +3811,15 @@
   // API CALL HELPER
   // =====================
   function _fetchGAS(action, payload) {
-    // Wait for config.json to load before making any JSONP call
     return _gasUrlReady.then(function() {
-      if (!window.GAS_URL) { alert('DEBUG: GAS_URL kosong!'); return Promise.reject('no url'); }
-      else { alert('DEBUG: GAS_URL = ' + window.GAS_URL.substring(0,50)); }
-      // JSONP — <script> tag bypass CORS, follow GAS redirect automatik
-      return new Promise(function(resolve, reject) {
-        var cbName = 'gasJSONP_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-        var script = document.createElement('script');
-        var timer  = setTimeout(function() { cleanup(); reject(new Error('Timeout')); }, 30000);
-
-        function cleanup() {
-          clearTimeout(timer);
-          delete window[cbName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        window[cbName] = function(data) { cleanup(); resolve(data); };
-        script.onerror = function() { cleanup(); reject(new Error('JSONP gagal')); };
-
-        var params = new URLSearchParams({
-          action:   action,
-          payload:  JSON.stringify(payload),
-          callback: cbName
-        });
-        script.src = window.GAS_URL + '?' + params.toString();
-        document.head.appendChild(script);
+      var params = new URLSearchParams({
+        action:  action,
+        payload: JSON.stringify(payload)
       });
+      return fetch(window.GAS_URL + '?' + params.toString(), {
+        method: 'GET',
+        redirect: 'follow'
+      }).then(function(r) { return r.json(); });
     });
   }
 
