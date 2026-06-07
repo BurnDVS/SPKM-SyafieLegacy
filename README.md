@@ -240,7 +240,7 @@ git add . && git commit -m "message" && git push && git push pages main
 >
 > ❌ **JANGAN guna `clasp deploy`** — ia akan rosak Web App URL dan buat URL baru setiap kali.
 
-> ⚠️ **PENTING:** Bila GAS URL bertukar (new deployment), kena update `GAS_URL` dalam `portal.html` DAN `index.html`, lepas tu push semula + bump `sw.js` cache version.
+> ⚠️ **Bila GAS URL bertukar:** edit `config.json` → tukar `gasUrl` → `git add config.json && git commit && git push && git push pages main`. Tak perlu touch `index.html` atau bump `sw.js`.
 
 ---
 
