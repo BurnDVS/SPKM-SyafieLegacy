@@ -3494,12 +3494,17 @@
 
   // Load GAS_URL dynamically so URL changes only need a config.json update
   var _gasUrlReady = new Promise(function(resolve) {
-    document.addEventListener('DOMContentLoaded', function() {
+    function doFetch() {
       fetch('./config.json?v=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(cfg) { window.GAS_URL = cfg.gasUrl; resolve(); })
-        .catch(function() { resolve(); }); // fail gracefully; calls will timeout
-    });
+        .catch(function() { resolve(); });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doFetch);
+    } else {
+      doFetch(); // DOMContentLoaded dah lepas, fetch terus
+    }
   });
 
   // FCM + persistent storage config
