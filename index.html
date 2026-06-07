@@ -3490,8 +3490,17 @@
 <!-- SCRIPT -->
 <!-- ============================================================ -->
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1/exec';
   const _isGAS  = window.location.hostname.endsWith('google.com');
+
+  // Load GAS_URL dynamically so URL changes only need a config.json update
+  var _gasUrlReady = new Promise(function(resolve) {
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('./config.json?v=' + Date.now())
+        .then(function(r) { return r.json(); })
+        .then(function(cfg) { window.GAS_URL = cfg.gasUrl; resolve(); })
+        .catch(function() { resolve(); }); // fail gracefully; calls will timeout
+    });
+  });
 
   // FCM + persistent storage config
   var _isMobile  = window.innerWidth <= 1024;
@@ -3797,28 +3806,31 @@
   // API CALL HELPER
   // =====================
   function _fetchGAS(action, payload) {
-    // JSONP — <script> tag bypass CORS, follow GAS redirect automatik
-    return new Promise(function(resolve, reject) {
-      var cbName = 'gasJSONP_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-      var script = document.createElement('script');
-      var timer  = setTimeout(function() { cleanup(); reject(new Error('Timeout')); }, 30000);
+    // Wait for config.json to load before making any JSONP call
+    return _gasUrlReady.then(function() {
+      // JSONP — <script> tag bypass CORS, follow GAS redirect automatik
+      return new Promise(function(resolve, reject) {
+        var cbName = 'gasJSONP_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        var script = document.createElement('script');
+        var timer  = setTimeout(function() { cleanup(); reject(new Error('Timeout')); }, 30000);
 
-      function cleanup() {
-        clearTimeout(timer);
-        delete window[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-      }
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
 
-      window[cbName] = function(data) { cleanup(); resolve(data); };
-      script.onerror = function() { cleanup(); reject(new Error('JSONP gagal')); };
+        window[cbName] = function(data) { cleanup(); resolve(data); };
+        script.onerror = function() { cleanup(); reject(new Error('JSONP gagal')); };
 
-      var params = new URLSearchParams({
-        action:   action,
-        payload:  JSON.stringify(payload),
-        callback: cbName
+        var params = new URLSearchParams({
+          action:   action,
+          payload:  JSON.stringify(payload),
+          callback: cbName
+        });
+        script.src = window.GAS_URL + '?' + params.toString();
+        document.head.appendChild(script);
       });
-      script.src = GAS_URL + '?' + params.toString();
-      document.head.appendChild(script);
     });
   }
 

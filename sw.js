@@ -52,7 +52,9 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  if (new URL(e.request.url).origin !== self.location.origin) return;
+  var url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/config.json')) return; // always fetch fresh from network
 
   e.respondWith(
     fetch(e.request).then(function(resp) {
