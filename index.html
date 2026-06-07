@@ -3813,6 +3813,8 @@
   function _fetchGAS(action, payload) {
     // Wait for config.json to load before making any JSONP call
     return _gasUrlReady.then(function() {
+      if (!window.GAS_URL) { alert('DEBUG: GAS_URL kosong!'); return Promise.reject('no url'); }
+      else { alert('DEBUG: GAS_URL = ' + window.GAS_URL.substring(0,50)); }
       // JSONP — <script> tag bypass CORS, follow GAS redirect automatik
       return new Promise(function(resolve, reject) {
         var cbName = 'gasJSONP_' + Date.now() + '_' + Math.random().toString(36).slice(2);
