@@ -110,6 +110,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ Notif localStorage — persist dalam browser, max 50 notif, auto-buang lama
 - ✅ Notif hooks — 4 event: daftar kanak-kanak, daftar dewasa, kehadiran, bayaran yuran
 - ✅ Notif mobile — bottom sheet panel, berfungsi dalam portal.html & index.html
+- ✅ Panel Sijil Khatam — carian by nama, papar sijil Iqra' + Al-Quran, butang download + link Google Form
 
 #### Pendaftaran
 - ✅ Daftar Murid Kanak-kanak — form 3 langkah, OTP email verification
@@ -209,7 +210,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 | **3D Clay UI mobile** | ✅ Selesai | Tinggi |
 | **Login Parent (eBayar & eSemak)** | Planned | Tinggi |
 | **Login Guru (eBayar & eSemak)** | Planned | Tinggi |
-| **Sijil Khatam** | Planned | Sederhana |
+| **Sijil Khatam** | ✅ Selesai | Sederhana |
 | **Laporan Tahunan** | Planned | Sederhana |
 | **Bayaran Online (Billplz/ToyyibPay)** | Planned | Tinggi |
 | **Pecah Code.js** → multi-file | Planned | Sederhana |
