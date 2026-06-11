@@ -128,7 +128,8 @@ var ALLOWED_ACTIONS = [
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus', 'logout',
-  'simpanDeviceToken', 'getNotifikasi'
+  'simpanDeviceToken', 'getNotifikasi',
+  'searchSijilKhatam'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -208,6 +209,7 @@ function doPost(e) {
     else if (action === 'logout')                 result = logout(body);
     else if (action === 'simpanDeviceToken')      result = simpanDeviceToken(body);
     else if (action === 'getNotifikasi')          result = getNotifikasi(body);
+    else if (action === 'searchSijilKhatam')      result = searchSijilKhatam(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -337,6 +339,7 @@ function doAction(action, payload) {
   else if (action === 'getBlastStatus')        return getBlastStatus(payload);
   else if (action === 'simpanDeviceToken')     return simpanDeviceToken(payload);
   else if (action === 'getNotifikasi')         return getNotifikasi(payload);
+  else if (action === 'searchSijilKhatam')     return searchSijilKhatam(payload);
 }
 
 // ============================================================
@@ -3000,5 +3003,51 @@ function getNotifikasi(params) {
   } catch (err) {
     Logger.log('getNotifikasi error: ' + err.message);
     return { success: false, notifikasi: [] };
+  }
+}
+function searchSijilKhatam(params) {
+  params = params || {};
+  try {
+    var namaSearch = ((params.namaSearch || '').toString().trim()).toUpperCase();
+    if (namaSearch.length < 2) {
+      return { success: false, message: 'Sila masukkan sekurang-kurangnya 2 huruf nama.' };
+    }
+    var ss = SpreadsheetApp.openById('1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU');
+    var results = [];
+    var sheetIqra = ss.getSheetByName("Khatam Iqra'");
+    if (sheetIqra && sheetIqra.getLastRow() > 1) {
+      var dataIqra = sheetIqra.getDataRange().getValues();
+      var hdIqra = dataIqra[0].map(function(h) { return (h||'').toString().trim(); });
+      var colNamaI = hdIqra.indexOf('NAMA PENUH ANAK SEPERTI MYKID/MYKAD');
+      if (colNamaI === -1) colNamaI = 2;
+      var colSiriI = hdIqra.indexOf('SIRI');
+      var colGuruI = hdIqra.indexOf('GURU KELAS YANG MENGAJAR ANAK');
+      var colUrlI  = hdIqra.indexOf('Merged Doc URL - KHATAM IQRA');
+      for (var i = 1; i < dataIqra.length; i++) {
+        var namaI = (dataIqra[i][colNamaI]||'').toString().trim().toUpperCase();
+        if (!namaI || namaI.indexOf(namaSearch) === -1) continue;
+        results.push({ nama: namaI, jenis: "Khatam Iqra'", siri: colSiriI !== -1 ? (dataIqra[i][colSiriI]||'').toString().trim() : '', guru: colGuruI !== -1 ? (dataIqra[i][colGuruI]||'').toString().trim() : '', url: colUrlI !== -1 ? (dataIqra[i][colUrlI]||'').toString().trim() : '' });
+      }
+    }
+    var sheetQuran = ss.getSheetByName('Khatam Quran');
+    if (sheetQuran && sheetQuran.getLastRow() > 1) {
+      var dataQuran = sheetQuran.getDataRange().getValues();
+      var hdQuran = dataQuran[0].map(function(h) { return (h||'').toString().trim(); });
+      var colNamaQ = hdQuran.indexOf('NAMA PENUH ANAK SEPERTI MYKID/MYKAD');
+      if (colNamaQ === -1) colNamaQ = 2;
+      var colSiriQ = hdQuran.indexOf('SIRI');
+      var colGuruQ = hdQuran.indexOf('GURU KELAS YANG MENGAJAR ANAK');
+      var colUrlQ  = hdQuran.indexOf('Merged Doc URL - KHATAM QURAN');
+      for (var j = 1; j < dataQuran.length; j++) {
+        var namaQ = (dataQuran[j][colNamaQ]||'').toString().trim().toUpperCase();
+        if (!namaQ || namaQ.indexOf(namaSearch) === -1) continue;
+        results.push({ nama: namaQ, jenis: 'Khatam Al-Quran', siri: colSiriQ !== -1 ? (dataQuran[j][colSiriQ]||'').toString().trim() : '', guru: colGuruQ !== -1 ? (dataQuran[j][colGuruQ]||'').toString().trim() : '', url: colUrlQ !== -1 ? (dataQuran[j][colUrlQ]||'').toString().trim() : '' });
+      }
+    }
+    Logger.log('searchSijilKhatam: "' + namaSearch + '" - ' + results.length + ' keputusan');
+    return { success: true, results: results };
+  } catch (err) {
+    Logger.log('searchSijilKhatam error: ' + err.message);
+    return { success: false, message: 'Ralat semasa mencari sijil: ' + err.message };
   }
 }

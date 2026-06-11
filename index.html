@@ -2274,6 +2274,7 @@
   <button class="nav-tab"        id="tabYuran"      onclick="showPanel('yuran')"     data-auth="true" style="display:none;">💰 Yuran</button>
   <button class="nav-tab"        id="nav-ebayar"    onclick="showPanel('ebayar')">💳 eBayar</button>
   <button class="nav-tab"        id="nav-esemak"    onclick="showPanel('esemak')">🔍 eSemak Yuran</button>
+  <button class="nav-tab"        id="nav-sijil"     onclick="showPanel('sijil')">🎓 Sijil</button>
 </nav>
 
 <!-- ============================================================ -->
@@ -2365,7 +2366,12 @@
           <strong style="font-size:13px; font-weight:500; color:#1C1C1C; line-height:1.2;">eBayar Yuran</strong>
           <span style="font-size:11px; color:#888;">Bayar yuran bulanan</span>
         </div>
-        <div onclick="showPanel('esemak')" style="background:#fff; border:0.5px solid #E2D9C5; border-top:2.5px solid #E2D9C5; border-radius:12px; padding:16px 14px; display:flex; flex-direction:column; gap:4px; cursor:pointer; grid-column:1 / -1;">
+        <div onclick="showPanel('sijil')" style="background:#fff; border:0.5px solid #E2D9C5; border-top:2.5px solid #B8860B; border-radius:12px; padding:16px 14px; display:flex; flex-direction:column; gap:4px; cursor:pointer;">
+          <div style="font-size:22px; margin-bottom:4px;">🎓</div>
+          <strong style="font-size:13px; font-weight:500; color:#1C1C1C; line-height:1.2;">Sijil Khatam</strong>
+          <span style="font-size:11px; color:#888;">Iqra' &amp; Al-Quran</span>
+        </div>
+        <div onclick="showPanel('esemak')" style="background:#fff; border:0.5px solid #E2D9C5; border-top:2.5px solid #E2D9C5; border-radius:12px; padding:16px 14px; display:flex; flex-direction:column; gap:4px; cursor:pointer;">
           <div style="font-size:22px; margin-bottom:4px;">🔍</div>
           <strong style="font-size:13px; font-weight:500; color:#1C1C1C; line-height:1.2;">eSemak Yuran</strong>
           <span style="font-size:11px; color:#888;">Semak status bayaran</span>
@@ -3476,6 +3482,49 @@
     <div id="esemakBelumContainer">
       <p style="color:var(--text-muted); text-align:center; padding:40px 0;">Memuatkan senarai belum kemaskini...</p>
     </div>
+  </div>
+
+</section>
+
+<!-- ============================================================ -->
+<!-- PANEL: SIJIL KHATAM (mobile clay style) -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-sijil">
+
+  <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
+  <div class="section-heading">
+    <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
+    <h2>🎓 Sijil Khatam</h2>
+    <p>Taip nama anak untuk cari sijil Khatam Iqra' atau Al-Quran</p>
+    <div class="divider-ornament"><span>✦</span></div>
+  </div>
+
+  <div style="max-width:620px; margin:0 auto 28px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon gold">🎓</div>
+        <div class="card-header-text">
+          <h3>Cari Sijil Khatam</h3>
+          <p>Masukkan nama anak seperti dalam MYKID/MYKAD</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="sijilKeyword" placeholder="Contoh: ADAM atau NUR AISYAH"
+                 oninput="this.value=this.value.toUpperCase()"
+                 onkeydown="if(event.key==='Enter')cariSijil()"
+                 style="margin:0; flex:1;">
+          <button class="btn btn-gold btn-sm" style="margin-top:0; flex-shrink:0;" onclick="cariSijil()">Cari</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sijilResultArea" style="max-width:700px; margin:0 auto 48px; display:none;">
+    <h3 style="font-family:'Lora',serif; font-size:16px; color:var(--green); margin-bottom:14px;">
+      🎓 Sijil Dijumpai
+    </h3>
+    <div id="sijilResultContainer"></div>
   </div>
 
 </section>
@@ -5427,6 +5476,59 @@
         html += resitBtn;
         html += '</div>';
       }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  // =====================
+  // SIJIL KHATAM
+  // =====================
+  async function cariSijil() {
+    var keyword    = (document.getElementById('sijilKeyword').value || '').trim().toUpperCase();
+    var resultArea = document.getElementById('sijilResultArea');
+    var resultEl   = document.getElementById('sijilResultContainer');
+    resultArea.style.display = 'block';
+    if (!keyword || keyword.length < 2) {
+      resultEl.innerHTML = '<div class="alert alert-error show"><span class="alert-icon">⚠</span><span>Sila masukkan sekurang-kurangnya 2 huruf nama.</span></div>';
+      return;
+    }
+    resultEl.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">&#x1F50D; Mencari sijil untuk <strong>' + escHtml(keyword) + '</strong>...</p>';
+    try {
+      var data = await callGASPromise('searchSijilKhatam', { namaSearch: keyword });
+      if (!data.success) {
+        resultEl.innerHTML = '<p style="text-align:center; color:var(--error); padding:20px;">Ralat: ' + escHtml(data.message || 'Tidak dapat memuatkan data.') + '</p>';
+        return;
+      }
+      renderSijilResult(data.results);
+    } catch (err) {
+      resultEl.innerHTML = '<p style="text-align:center; color:var(--error); padding:20px;">Ralat sambungan. Sila cuba semula.</p>';
+    }
+  }
+
+  function renderSijilResult(results) {
+    var el = document.getElementById('sijilResultContainer');
+    if (!results || results.length === 0) {
+      el.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; color:var(--text-muted);">Tiada sijil dijumpai untuk nama tersebut.</div></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < results.length; i++) {
+      var r = results[i];
+      var badgeStyle = r.jenis === "Khatam Iqra'"
+        ? 'background:#E0F7F4; color:#00796B; border:1px solid #B2DFDB;'
+        : 'background:var(--gold-light); color:var(--gold-dark); border:1px solid var(--gold);';
+      var sijilBtn = r.url
+        ? '<a href="' + escHtml(r.url) + '" target="_blank" class="btn btn-gold btn-sm" style="margin:0; padding:6px 14px; font-size:12px; text-decoration:none; display:inline-block;">&#x1F4C4; Lihat / Download Sijil</a>'
+        : '<span style="color:var(--text-muted); font-size:12px;">Sijil tidak tersedia</span>';
+      html += '<div class="esemak-result-card">';
+      html += '<div class="esemak-result-name">&#x1F393; ' + escHtml(r.nama) + '</div>';
+      html += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">';
+      html += '<span class="badge" style="' + badgeStyle + '">' + escHtml(r.jenis) + '</span>';
+      if (r.guru) html += '<span style="font-size:13px; color:var(--text-mid);">&#x1F468;&#x200D;&#x1F3EB; ' + escHtml(r.guru) + '</span>';
+      if (r.siri) html += '<span style="font-size:12px; color:var(--text-muted);">No. Siri: ' + escHtml(r.siri) + '</span>';
+      html += '</div>';
+      html += '<div>' + sijilBtn + '</div>';
       html += '</div>';
     }
     el.innerHTML = html;
