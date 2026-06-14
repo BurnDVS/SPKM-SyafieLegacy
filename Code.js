@@ -26,25 +26,34 @@ var COL_BLAST = {
   STATUS:     4,  // E — PENDING / SENT / FAILED
   BLASTED_AT: 5   // F — Masa mesej dihantar
 };
+function testKehadiranStats() {
+  var r = getMuridByGuru({namaGuru: 'MUHAMMAD SHAFIE BIN BAHARI'});
+  Logger.log('enrolment: ' + r.murid.length); // expect 60
+  Logger.log(JSON.stringify(r.murid));
 
+  var s = getKehadiranStats({bulan:'06', tahun:'2026', namaGuru:'MUHAMMAD SHAFIE BIN BAHARI'});
+  Logger.log('totalMurid: ' + s.totalMurid + ' | totalSesi: ' + s.totalSesi);
+  Logger.log('unmatched: ' + JSON.stringify(s.unmatched));
+}
 // Kolum tab PendaftaranBaru (0-indexed) — disahkan dari sheet sebenar
 var COL_KANAK = {
-  BIL:        0,  // A — Bil
-  TIMESTAMP:  1,  // B — Timestamp
-  NAMA_IBU:   2,  // C — Nama Ibu/Bapa/Penjaga
-  TELEFON:    3,  // D — Nombor Telefon
-  NAMA:       4,  // E — Nama Anak (seperti MYKID)
-  NO_MYKID:   5,  // F — No. MYKID
-  EMAIL:      6,  // G — Email Address
-  ALAMAT:     7,  // H — Alamat Penuh
-  TAHAP:      8,  // I — Tahap Pengajian
-  FAHAM:      9,  // J — Saya Faham
-  PAKEJ:     10,  // K — Pilihan Pakej
-  KAEDAH:    11,  // L — Kaedah Pengajian
-  MERGED_ID:  12, // M — Merged Doc ID - Slip Pendaftaran
-  MERGED_URL: 13, // N — Merged Doc URL - Slip Pendaftaran
+  BIL:        0,
+  TIMESTAMP:  1,
+  NAMA_IBU:   2,
+  TELEFON:    3,
+  NAMA:       4,
+  NO_MYKID:   5,
+  EMAIL:      6,
+  ALAMAT:     7,
+  TAHAP:      8,
+  FAHAM:      9,
+  PAKEJ:     10,
+  KAEDAH:    11,
+  MERGED_ID:  12,
+  MERGED_URL: 13,
+  GURU:       16, // Q — Nama Guru        ← TAMBAH BARIS NI
   GURU_BACKUP:17, // R — Guru Backup
-  STATUS:     18  // S — Status (AKTIF / TIDAK AKTIF)
+  STATUS:     18
 };
 
 // Kolum tab KelasDewasa (0-indexed) — disahkan dari sheet sebenar
@@ -1799,21 +1808,28 @@ function updateStatusMurid(params) {
 function getKehadiranStats(params) {
   params = params || {};
   try {
-    var bulan = (params.bulan || '').toString().trim();
-    var tahun = (params.tahun || '').toString().trim();
+    var bulan    = (params.bulan    || '').toString().trim();
+    var tahun    = (params.tahun    || '').toString().trim();
+    var namaGuru = (params.namaGuru || '').toString().trim();
 
-    var ss     = SpreadsheetApp.openById(KEHADIRAN_SS_ID);
-    var sheets = ss.getSheets();
-
-    var muridMap  = {};
+    var ss = SpreadsheetApp.openById(KEHADIRAN_SS_ID);
     var totalSesi = 0;
+    var hadirMap  = {}; // NAMA_MURID (upper) -> jumlahHadir
 
-    sheets.forEach(function(sheet) {
+    var sheetsToScan;
+    if (namaGuru) {
+      var tabNama = cariTabGuru(namaGuru);
+      var s = tabNama ? ss.getSheetByName(tabNama) : null;
+      sheetsToScan = s ? [s] : [];
+    } else {
+      sheetsToScan = ss.getSheets();
+    }
+
+    sheetsToScan.forEach(function(sheet) {
       if (sheet.getLastRow() < 2) return;
       var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
       data.forEach(function(r) {
         var ts   = r[0];
-        var guru = (r[2] || '').toString().trim();
         var nama = (r[3] || '').toString().trim();
         if (!nama) return;
 
@@ -1827,16 +1843,35 @@ function getKehadiranStats(params) {
 
         totalSesi++;
         var key = nama.toUpperCase();
-        if (!muridMap[key]) muridMap[key] = { nama: nama, jumlahHadir: 0, guru: guru };
-        muridMap[key].jumlahHadir++;
-        muridMap[key].guru = guru;
+        hadirMap[key] = (hadirMap[key] || 0) + 1;
       });
     });
 
-    var byMurid = Object.keys(muridMap).map(function(k) { return muridMap[k]; });
+    var byMurid, totalMurid, unmatched;
+
+    if (namaGuru) {
+      var enrol   = getMuridByGuru({ namaGuru: namaGuru });
+      var senarai = (enrol.success ? enrol.murid : []) || [];
+
+      byMurid = senarai.map(function(nama) {
+        return { nama: nama, jumlahHadir: hadirMap[nama] || 0, guru: namaGuru };
+      });
+      totalMurid = senarai.length;
+
+      var enrolSet = {};
+      senarai.forEach(function(n) { enrolSet[n] = true; });
+      unmatched = Object.keys(hadirMap).filter(function(n) { return !enrolSet[n]; });
+    } else {
+      byMurid = Object.keys(hadirMap).map(function(k) {
+        return { nama: k, jumlahHadir: hadirMap[k], guru: '' };
+      });
+      totalMurid = byMurid.length;
+      unmatched  = [];
+    }
+
     byMurid.sort(function(a, b) { return b.jumlahHadir - a.jumlahHadir; });
 
-    return { success: true, totalMurid: byMurid.length, totalSesi: totalSesi, byMurid: byMurid };
+    return { success: true, totalMurid: totalMurid, totalSesi: totalSesi, byMurid: byMurid, unmatched: unmatched };
 
   } catch (err) {
     Logger.log('getKehadiranStats error: ' + err.message);
@@ -1978,61 +2013,42 @@ function getMuridByGuru(params) {
 
     var namaGuruUpper = namaGuru.toUpperCase();
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName('Pecahan Murid Mengikut Guru Kelas');
-    if (!sheet) return { success: false, message: 'Tab senarai murid tidak dijumpai.' };
-
-    var lastCol = sheet.getLastColumn();
-    var lastRow = sheet.getLastRow();
-    if (lastRow < 2 || lastCol < 1) return { success: true, murid: [] };
-
-    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    var muridColIdx = -1;
-
-    // Cuba exact substring match dulu
-    for (var c = 0; c < headers.length; c++) {
-      var h = (headers[c] || '').toString().toUpperCase().trim();
-      if (h && h.indexOf(namaGuruUpper) !== -1) {
-        muridColIdx = c;
-        break;
-      }
-    }
-
-    // Fallback: match berdasarkan kiraan kata bermakna
-    if (muridColIdx === -1) {
-      var SKIP = ['BIN','BINTI','BINTE','ABD','ABDUL','ABU','AL'];
-      var parts = namaGuruUpper.split(' ').filter(function(w) {
-        return w.length > 2 && SKIP.indexOf(w) === -1;
-      });
-      var bestIdx   = -1;
-      var bestScore = 0;
-      for (var c2 = 0; c2 < headers.length; c2++) {
-        var h2 = (headers[c2] || '').toString().toUpperCase().trim();
-        if (!h2) continue;
-        var score = 0;
-        parts.forEach(function(w) { if (h2.indexOf(w) !== -1) score++; });
-        if (score > bestScore) { bestScore = score; bestIdx = c2; }
-      }
-      if (bestScore >= 2) muridColIdx = bestIdx;
-    }
-
-    if (muridColIdx === -1) {
-      Logger.log('getMuridByGuru: Guru "' + namaGuru + '" tidak dijumpai dalam header.');
-      return { success: true, murid: [] };
-    }
-
-    var colOneBased = muridColIdx + 1;
-    var data = sheet.getRange(2, colOneBased, lastRow - 1, 1).getValues();
     var names = [];
-    data.forEach(function(r) {
-      var nama = (r[0] || '').toString().trim();
-      if (nama && isNaN(Number(nama))) names.push(nama.toUpperCase());
-    });
 
+    // PendaftaranBaru — col Q (COL_KANAK.GURU) = Nama Guru, col E = Nama Anak
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, kanakSheet.getLastColumn()).getValues();
+      kData.forEach(function(r) {
+        var guru   = (r[COL_KANAK.GURU]   || '').toString().trim().toUpperCase();
+        var status = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+        if (guru !== namaGuruUpper) return;
+        if (status && status !== 'AKTIF') return;
+        var nama = (r[COL_KANAK.NAMA] || '').toString().trim();
+        if (nama) names.push(nama.toUpperCase());
+      });
+    }
+
+    // KelasDewasa — col R (COL_DEWASA.GURU) = Nama Guru, col D = Nama
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues();
+      dData.forEach(function(r) {
+        var guru   = (r[COL_DEWASA.GURU]   || '').toString().trim().toUpperCase();
+        var status = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+        if (guru !== namaGuruUpper) return;
+        if (status && status !== 'AKTIF') return;
+        var nama = (r[COL_DEWASA.NAMA] || '').toString().trim();
+        if (nama) names.push(nama.toUpperCase());
+      });
+    }
+
+    // Remove duplicates, sort A-Z
     var unique = {};
     names.forEach(function(n) { unique[n] = true; });
     var sorted = Object.keys(unique).sort();
 
-    Logger.log('getMuridByGuru: "' + namaGuru + '" → ' + sorted.length + ' murid (col ' + colOneBased + ')');
+    Logger.log('getMuridByGuru: "' + namaGuru + '" → ' + sorted.length + ' murid AKTIF');
     return { success: true, murid: sorted };
 
   } catch (err) {
@@ -2040,7 +2056,6 @@ function getMuridByGuru(params) {
     return { success: false, message: err.message };
   }
 }
-
 // ============================================================
 // 32. simpanKehadiran
 // Simpan rekod kehadiran murid ke spreadsheet Kehadiran

@@ -5040,7 +5040,9 @@
     if (summary) summary.textContent = '';
     document.getElementById('kehadiranSearch').value = '';
 
-    callGAS('getKehadiranStats', { bulan, tahun },
+    const kehadiranPayload = { bulan, tahun };
+    if (currentRole !== 'ADMIN' && loggedInGuru) kehadiranPayload.namaGuru = loggedInGuru;
+    callGAS('getKehadiranStats', kehadiranPayload,
       function(data) {
         if (!data.success) {
           tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--error);padding:20px;">' + escHtml(data.message || 'Ralat memuatkan data.') + '</td></tr>';
