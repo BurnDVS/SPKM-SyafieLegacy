@@ -4,6 +4,29 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [Fix] — 2026-06-14 — Kehadiran Stats: getMuridByGuru & getKehadiranStats
+
+### Masalah
+Panel "Statistik Kehadiran" untuk guru menunjukkan `totalMurid` yang salah (contoh: 57/60 berbanding sebenar 71 untuk Ustaz Shafie) — dikira dari rekod kehadiran sedia ada, bukan dari enrollment sebenar.
+
+### Fix
+- **`COL_KANAK.GURU = 16`** — tambah constant baru (col Q, Nama Guru) dalam `Code.js`
+- **`getMuridByGuru()`** — ditulis semula. Kini baca terus dari `PendaftaranBaru` (col Q = index 16) dan `KelasDewasa` (col R = `COL_DEWASA.GURU` = 17), filter `STATUS = AKTIF` atau kosong, dedupe, sort A-Z. Tab "Pecahan Murid Mengikut Guru Kelas" tidak lagi digunakan.
+- **`getKehadiranStats()`** — terima param `namaGuru` opsyenal:
+  - **Bila ada `namaGuru`**: `totalMurid` = `getMuridByGuru().length` (enrollment), `byMurid` = semua murid terdaftar dengan `jumlahHadir` dari sheet Kehadiran (0 jika tiada rekod), `totalSesi` = bilangan tarikh unik dalam sheet, `unmatched[]` = nama dalam kehadiran yang tidak match enrollment
+  - **Tanpa `namaGuru`** (admin): behavior asal dikekalkan
+- **Frontend** (`index.html` ~ln 5207, `portal.html` ~ln 5043): `loadKehadiranStats()` hantar `namaGuru: loggedInGuru` dalam payload bila `currentRole !== 'ADMIN'`
+
+### Verified
+Ustaz Shafie → 71 murid AKTIF, totalSesi 159, `unmatched []`
+
+### Deploy
+- GAS Version 149 (14 Jun 2026)
+- Git pushed ke `origin` (BurnDVS/SPKM-SyafieLegacy) dan `pages` (shafielegacy/SPKM)
+- **PENTING:** `clasp push` sahaja tidak update URL live — mesti **Deploy → Manage Deployments → Edit → New version → Deploy**
+
+---
+
 ## [Fasa 1.4] — 2026-06-04
 
 ### Ditambah
