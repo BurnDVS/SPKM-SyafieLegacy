@@ -133,7 +133,7 @@ var ALLOWED_ACTIONS = [
   'sendOTPKanak', 'sendOTPDewasa', 'confirmRegisterKanak', 'confirmRegisterDewasa',
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
-  'recordCash', 'syncForms', 'updateStatusMurid', 'getMuridListAll',
+  'recordCash', 'syncForms', 'syncFormBulanIni', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus', 'logout',
@@ -143,7 +143,7 @@ var ALLOWED_ACTIONS = [
 
 var AUTH_REQUIRED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
-  'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'updateStatusMurid',
+  'getGuru', 'getYuranStats', 'recordCash', 'syncForms', 'syncFormBulanIni', 'updateStatusMurid',
   'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus',
@@ -203,6 +203,7 @@ function doPost(e) {
     else if (action === 'getYuranParent')         result = getYuranParent(body);
     else if (action === 'recordCash')             result = recordCash(body);
     else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
+    else if (action === 'syncFormBulanIni')       result = syncFormMinusBayar(body);
     else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
     else if (action === 'getMuridListAll')        result = getMuridListAll();
     else if (action === 'getKehadiranStats')      result = getKehadiranStats(body);
@@ -334,6 +335,7 @@ function doAction(action, payload) {
   else if (action === 'getYuranParent')        return getYuranParent(payload);
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
+  else if (action === 'syncFormBulanIni')      return syncFormMinusBayar(payload);
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
   else if (action === 'getMuridListAll')       return getMuridListAll();
   else if (action === 'getKehadiranStats')     return getKehadiranStats(payload);
@@ -1531,6 +1533,140 @@ function syncNamaMuridToAllForms() {
     Logger.log('syncNamaMuridToAllForms error: ' + err.message);
     return { success: false, message: err.message };
   }
+}
+
+function syncFormMinusBayar(params) {
+  params = params || {};
+  try {
+    var bulan = (params.bulan || '').toString().trim().toUpperCase();
+    if (!bulan) return { success: false, message: 'Parameter bulan diperlukan.' };
+    var FORM_IDS = {
+      'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
+      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+      'MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
+      'APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
+      'MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
+      'JUN2026':   '1bEbRSaDbZbcpmGoFOeABoLElOX1lhYkQSB7Cuj0GIYM',
+      'JULAI2026': '1U4Ecr40vB7_HssJxVPwCzq6lElCxjEGWDJGZqXOMKXw',
+      'OGOS2026':  '1wT-UU2ZxOn_tTnDFo-8B5rHI5u07R_sObUaXXdwINMw',
+      'SEPT2026':  '15xIeRZ4uNzvrjTCQRZHZclgzy8gORtB9A_bPvxZl-Tw',
+      'OKT2026':   '1goZKtfWL2GpaZFb42TMEdolA8K3_3B0Siyqnn3jCBr0',
+      'NOV2026':   '1QoV63w2Ecl2lipapwrsvMYXKMtD9M1HeLfJsRN27zFY',
+      'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
+    };
+    if (!FORM_IDS[bulan]) return { success: false, message: 'Bulan tidak dikenali: ' + bulan };
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+    var namaMuridSheet = yuranSS.getSheetByName('NAMA MURID');
+    if (!namaMuridSheet) return { success: false, message: 'Tab NAMA MURID tidak dijumpai.' };
+    var lastRow = namaMuridSheet.getLastRow();
+    var lastCol = namaMuridSheet.getLastColumn();
+    var allData = namaMuridSheet.getRange(1, 1, lastRow, lastCol).getValues();
+    var bulanShort = bulan.replace('2026', '');
+    var tableStartRow = -1;
+    var colD = 3;
+    for (var i = 0; i < allData.length; i++) {
+      var rowStr = allData[i].join('|').toUpperCase();
+      if (rowStr.indexOf('SELESAI BAYAR ' + bulanShort) !== -1 || rowStr.indexOf('BAYAR ' + bulanShort) !== -1) {
+        tableStartRow = i + 1;
+        if (tableStartRow < allData.length) {
+          var nextRowStr = allData[tableStartRow].join('').trim();
+          if (nextRowStr === '' || nextRowStr.indexOf(':-:') !== -1) tableStartRow++;
+        }
+        break;
+      }
+    }
+    if (tableStartRow === -1) return { success: false, message: 'Table untuk bulan ' + bulan + ' tidak dijumpai dalam tab NAMA MURID.' };
+    var dahBayarSet = {};
+    for (var r = tableStartRow; r < allData.length; r++) {
+      var rowData = allData[r];
+      var colA = (rowData[0] || '').toString().trim().toUpperCase();
+      if (colA === 'BIL' && r > tableStartRow) break;
+      if (!rowData[0] && !rowData[1] && r > tableStartRow + 5) break;
+      var nama = (rowData[colD] || '').toString().trim().toUpperCase();
+      if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
+        dahBayarSet[nama] = true;
+      }
+    }
+    var sudahBayarCount = Object.keys(dahBayarSet).length;
+    var mainSS = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var kanakSheet = mainSS.getSheetByName(TAB.KANAK);
+    var allNames = [];
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues();
+      kData.forEach(function(row) {
+        var n = (row[COL_KANAK.NAMA] || '').toString().trim().toUpperCase();
+        var s = (row[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+        if (n && (!s || s === 'AKTIF')) allNames.push(n);
+      });
+    }
+    var dewasaSheet = mainSS.getSheetByName(TAB.DEWASA);
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues();
+      dData.forEach(function(row) {
+        var n = (row[COL_DEWASA.NAMA] || '').toString().trim().toUpperCase();
+        var s = (row[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+        if (n && (!s || s === 'AKTIF')) allNames.push(n);
+      });
+    }
+    var uniqueAll = {};
+    allNames.forEach(function(n) { if (n) uniqueAll[n] = true; });
+    var totalAktif = Object.keys(uniqueAll).length;
+    var namaUntukForm = Object.keys(uniqueAll).filter(function(n) { return !dahBayarSet[n]; }).sort();
+    var form = FormApp.openById(FORM_IDS[bulan]);
+    var items = form.getItems(FormApp.ItemType.CHECKBOX);
+    var updated = false;
+    for (var j = 0; j < items.length; j++) {
+      if (items[j].getTitle() === 'NAMA PENUH MURID') {
+        items[j].asCheckboxItem().setChoiceValues(namaUntukForm);
+        updated = true;
+        break;
+      }
+    }
+    if (!updated) return { success: false, message: 'Soalan NAMA PENUH MURID tidak dijumpai dalam form ' + bulan + '.' };
+    Logger.log('syncFormMinusBayar: ' + bulan + ' totalAktif=' + totalAktif + ' sudahBayar=' + sudahBayarCount + ' namaInForm=' + namaUntukForm.length);
+    return { success: true, bulan: bulan, totalAktif: totalAktif, sudahBayar: sudahBayarCount, namaInForm: namaUntukForm.length };
+  } catch (err) {
+    Logger.log('syncFormMinusBayar error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function onEbayarSubmit(e) {
+  try {
+    Utilities.sleep(3000);
+    var bulanRaw = '';
+    if (e && e.namedValues) {
+      bulanRaw = (e.namedValues['BAYARAN YURAN BAGI BULAN'] || [''])[0];
+    } else if (e && e.range) {
+      var row = e.range.getValues()[0];
+      bulanRaw = (row[3] || '').toString();
+    }
+    bulanRaw = bulanRaw.toString().trim().toUpperCase();
+    Logger.log('onEbayarSubmit: bulanRaw = ' + bulanRaw);
+    var BULAN_MAP = {
+      'JANUARI': 'JAN2026', 'FEBRUARI': 'FEB2026', 'MAC': 'MAC2026',
+      'APRIL': 'APRIL2026', 'MEI': 'MEI2026', 'JUN': 'JUN2026',
+      'JULAI': 'JULAI2026', 'OGOS': 'OGOS2026', 'SEPTEMBER': 'SEPT2026',
+      'SEPT': 'SEPT2026', 'OKTOBER': 'OKT2026', 'OKT': 'OKT2026',
+      'NOVEMBER': 'NOV2026', 'DISEMBER': 'DIS2026', 'DIS': 'DIS2026'
+    };
+    var bulanKey = BULAN_MAP[bulanRaw];
+    if (!bulanKey) { Logger.log('onEbayarSubmit: bulan tidak dikenali — ' + bulanRaw); return; }
+    Logger.log('onEbayarSubmit: syncFormMinusBayar untuk ' + bulanKey);
+    var result = syncFormMinusBayar({ bulan: bulanKey });
+    Logger.log('onEbayarSubmit result: ' + JSON.stringify(result));
+  } catch (err) {
+    Logger.log('onEbayarSubmit error: ' + err.message);
+  }
+}
+
+function createEbayarTriggers() {
+  var existing = ScriptApp.getProjectTriggers();
+  var sudahAda = existing.some(function(t) { return t.getHandlerFunction() === 'onEbayarSubmit'; });
+  if (sudahAda) { Logger.log('Trigger sudah wujud.'); return 'Trigger sudah wujud.'; }
+  ScriptApp.newTrigger('onEbayarSubmit').forSpreadsheet(YURAN_SS_ID).onFormSubmit().create();
+  Logger.log('Trigger berjaya dipasang.');
+  return 'Trigger berjaya dipasang.';
 }
 
 // ============================================================
