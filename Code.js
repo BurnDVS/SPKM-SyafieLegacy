@@ -35,6 +35,32 @@ function testKehadiranStats() {
   Logger.log('totalMurid: ' + s.totalMurid + ' | totalSesi: ' + s.totalSesi);
   Logger.log('unmatched: ' + JSON.stringify(s.unmatched));
 }
+
+function testSyncFormManual() {
+  var result = syncFormMinusBayar({ bulan: 'JUN2026' });
+  Logger.log(JSON.stringify(result));
+}
+
+function debugListAllTabs() {
+  var yuranSS = SpreadsheetApp.openById('1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM');
+  var sheets = yuranSS.getSheets();
+  sheets.forEach(function(s) {
+    Logger.log(s.getName());
+  });
+}
+
+function debugCalculationJun() {
+  var yuranSS = SpreadsheetApp.openById('1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM');
+  var sheet = yuranSS.getSheetByName('CalculationJun2026');
+  if (!sheet) { Logger.log('Tab tak jumpa!'); return; }
+  
+  // Tengok 5 baris pertama, 8 kolum
+  var data = sheet.getRange(1, 1, 5, 8).getValues();
+  for (var i = 0; i < data.length; i++) {
+    Logger.log('Row ' + (i+1) + ': ' + JSON.stringify(data[i]));
+  }
+}
+
 // Kolum tab PendaftaranBaru (0-indexed) — disahkan dari sheet sebenar
 var COL_KANAK = {
   BIL:        0,
@@ -1555,37 +1581,35 @@ function syncFormMinusBayar(params) {
       'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
     };
     if (!FORM_IDS[bulan]) return { success: false, message: 'Bulan tidak dikenali: ' + bulan };
-    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
-    var namaMuridSheet = yuranSS.getSheetByName('NAMA MURID');
-    if (!namaMuridSheet) return { success: false, message: 'Tab NAMA MURID tidak dijumpai.' };
-    var lastRow = namaMuridSheet.getLastRow();
-    var lastCol = namaMuridSheet.getLastColumn();
-    var allData = namaMuridSheet.getRange(1, 1, lastRow, lastCol).getValues();
-    var bulanShort = bulan.replace('2026', '');
-    var tableStartRow = -1;
-    var colD = 3;
-    for (var i = 0; i < allData.length; i++) {
-      var rowStr = allData[i].join('|').toUpperCase();
-      if (rowStr.indexOf('SELESAI BAYAR ' + bulanShort) !== -1 || rowStr.indexOf('BAYAR ' + bulanShort) !== -1) {
-        tableStartRow = i + 1;
-        if (tableStartRow < allData.length) {
-          var nextRowStr = allData[tableStartRow].join('').trim();
-          if (nextRowStr === '' || nextRowStr.indexOf(':-:') !== -1) tableStartRow++;
-        }
-        break;
-      }
-    }
-    if (tableStartRow === -1) return { success: false, message: 'Table untuk bulan ' + bulan + ' tidak dijumpai dalam tab NAMA MURID.' };
+var CALC_TAB_MAP = {
+      'JAN2026':   'CalculationJan2026',
+      'FEB2026':   'CalculationFeb2026',
+      'MAC2026':   'CalculationMac2026',
+      'APRIL2026': 'CalculationApril2026',
+      'MEI2026':   'CalculationMei2026',
+      'JUN2026':   'CalculationJun2026',
+      'JULAI2026': 'CalculationJulai2026',
+      'OGOS2026':  'CalculationOgos2026',
+      'SEPT2026':  'CalculationSept2026',
+      'OKT2026':   'CalculationOkt2026',
+      'NOV2026':   'CalculationNov2026',
+      'DIS2026':   'CalculationDis2026'
+    };
+    var calcTabNama = CALC_TAB_MAP[bulan];
+    if (!calcTabNama) return { success: false, message: 'Tab Calculation tidak dijumpai untuk: ' + bulan };
+    var yuranSS   = SpreadsheetApp.openById(YURAN_SS_ID);
+    var calcSheet = yuranSS.getSheetByName(calcTabNama);
+    if (!calcSheet) return { success: false, message: 'Tab ' + calcTabNama + ' tidak dijumpai.' };
+    var lastRow = calcSheet.getLastRow();
     var dahBayarSet = {};
-    for (var r = tableStartRow; r < allData.length; r++) {
-      var rowData = allData[r];
-      var colA = (rowData[0] || '').toString().trim().toUpperCase();
-      if (colA === 'BIL' && r > tableStartRow) break;
-      if (!rowData[0] && !rowData[1] && r > tableStartRow + 5) break;
-      var nama = (rowData[colD] || '').toString().trim().toUpperCase();
-      if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
-        dahBayarSet[nama] = true;
-      }
+    if (lastRow >= 2) {
+      var calcData = calcSheet.getRange(2, 4, lastRow - 1, 1).getValues();
+      calcData.forEach(function(r) {
+        var nama = (r[0] || '').toString().trim().toUpperCase();
+        if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
+          dahBayarSet[nama] = true;
+        }
+      });
     }
     var sudahBayarCount = Object.keys(dahBayarSet).length;
     var mainSS = SpreadsheetApp.openById(SPREADSHEET_ID);

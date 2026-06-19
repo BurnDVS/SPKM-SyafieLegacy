@@ -4,6 +4,15 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## syncFormMinusBayar — DEPLOYED (19 Jun 2026)
+
+- Fix: baca senarai "sudah bayar" dari tab CalculationXxx2026 (kolum D), bukan dari tab NAMA MURID (yang sebenarnya senarai pendaftaran, bukan bayaran)
+- Trigger `onEbayarSubmit` auto-jalankan fungsi ni lepas setiap form submission eBayar
+- Button manual "🧹 Kemas Form (Tolak Dah Bayar)" dalam panel Yuran (admin only)
+- Verified: JUN2026 — 196 aktif, 102 sudah bayar, 96 nama tinggal dalam form
+
+---
+
 ## [Fix] — 2026-06-14 — Kehadiran Stats: getMuridByGuru & getKehadiranStats
 
 ### Masalah
