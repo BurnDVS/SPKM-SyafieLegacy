@@ -3167,10 +3167,21 @@
     <button class="btn btn-ghost btn-sm" id="btnSyncGF" onclick="syncMuridToForms()" style="display:none; margin-bottom:2px;">
       🔄 Sync Senarai Murid ke Google Form
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnSyncMinusBayar" onclick="syncFormMinusBayar()" style="display:none; margin-bottom:2px;">
+      🧹 Kemas Form (Tolak Dah Bayar)
+    </button>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">✓</span>
     <span id="syncSuccessMsg"></span>
+  </div>
+  <div class="alert alert-success" id="syncMinusSuccess" style="display:none; margin-bottom:16px;">
+    <span class="alert-icon">✓</span>
+    <span id="syncMinusSuccessMsg"></span>
+  </div>
+  <div class="alert alert-error" id="syncMinusError" style="display:none; margin-bottom:16px;">
+    <span class="alert-icon">⚠</span>
+    <span>Gagal kemas form. Sila cuba semula.</span>
   </div>
   <div class="alert alert-error" id="syncError" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">⚠</span>
@@ -3761,6 +3772,8 @@
     if (cardKutipan) cardKutipan.style.display = isAdmin ? '' : 'none';
     if (sectionCash) sectionCash.style.display = isAdmin ? '' : 'none';
     if (btnSync)     btnSync.style.display     = isAdmin ? '' : 'none';
+    const btnSyncMinus = document.getElementById('btnSyncMinusBayar');
+    if (btnSyncMinus) btnSyncMinus.style.display = isAdmin ? '' : 'none';
     const tabRekodGuru = document.getElementById('tabBtnRekodKehadiran');
     if (tabRekodGuru)  tabRekodGuru.style.display = loggedIn ? '' : 'none';
     var bellWrap = document.getElementById('notifBellWrap');
@@ -4896,6 +4909,36 @@
         btn.disabled = false;
         btn.textContent = '🔄 Sync Senarai Murid ke Google Form';
         err.style.display = '';
+      }
+    );
+  }
+
+  function syncFormMinusBayar() {
+    const btn = document.getElementById('btnSyncMinusBayar');
+    const ok  = document.getElementById('syncMinusSuccess');
+    const err = document.getElementById('syncMinusError');
+    if (ok) ok.style.display = 'none';
+    if (err) err.style.display = 'none';
+    const bulan = document.getElementById('yuranBulan').value;
+    if (!bulan) { if (err) err.style.display = ''; return; }
+    btn.disabled = true;
+    btn.textContent = 'Sedang kemas...';
+    callGAS('syncFormBulanIni', { bulan: bulan },
+      function(data) {
+        btn.disabled = false;
+        btn.textContent = '🧹 Kemas Form (Tolak Dah Bayar)';
+        if (data && data.success) {
+          document.getElementById('syncMinusSuccessMsg').textContent =
+            '✅ Form ' + data.bulan + ' dikemaskini — ' + data.sudahBayar + ' nama disingkir, ' + data.namaInForm + ' nama tinggal dalam form.';
+          if (ok) ok.style.display = '';
+        } else {
+          if (err) err.style.display = '';
+        }
+      },
+      function() {
+        btn.disabled = false;
+        btn.textContent = '🧹 Kemas Form (Tolak Dah Bayar)';
+        if (err) err.style.display = '';
       }
     );
   }
