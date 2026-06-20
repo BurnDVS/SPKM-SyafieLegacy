@@ -36,6 +36,11 @@ function testKehadiranStats() {
   Logger.log('unmatched: ' + JSON.stringify(s.unmatched));
 }
 
+function testSyncNamaMuridManual() {
+  var result = syncNamaMuridToAllForms();
+  Logger.log(JSON.stringify(result));
+}
+
 function testSyncFormManual() {
   var result = syncFormMinusBayar({ bulan: 'JUN2026' });
   Logger.log(JSON.stringify(result));
@@ -834,7 +839,7 @@ function setScriptProperties() {
     'SLIP_FOLDER_ID':   'GANTI_DENGAN_OUTPUT_FOLDER_ID',
     // Form IDs untuk eBayar (12 bulan 2026)
     'FORM_JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
-    'FORM_FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+    'FORM_FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6Xepqw',
     'FORM_MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
     'FORM_APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
     'FORM_MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
@@ -1483,7 +1488,9 @@ function getOrgChart() {
 
 // ============================================================
 // 24. syncNamaMuridToAllForms
-// Sync nama murid dari SPKM DB ke 12 Google Form eBayar
+// Sync nama murid dari SPKM DB ke 12 Google Form eBayar — dengan filter
+// tarikh daftar (murid hanya masuk form bulan daftar dia & seterusnya)
+// dan filter status bayaran (exclude yang dah bayar untuk bulan tu)
 // Dipanggil selepas confirmRegisterKanak/Dewasa & doPost 'syncForms'
 // ============================================================
 function syncNamaMuridToAllForms() {
@@ -1498,7 +1505,7 @@ function syncNamaMuridToAllForms() {
 
     var FORM_IDS = {
       'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
-      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6Xepqw',
       'MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
       'APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
       'MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
@@ -1655,7 +1662,7 @@ function syncFormMinusBayar(params) {
     if (!bulan) return { success: false, message: 'Parameter bulan diperlukan.' };
     var FORM_IDS = {
       'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
-      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6XepqwV',
+      'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6Xepqw',
       'MAC2026':   '1Z6oGu7sPhkYmLKLFxHTi-1392hOIkE106xTBHisqBEs',
       'APRIL2026': '1d60MHkiapXdMxNJtCSZtTc1-ybFm2JDSGwDDvtLjMIQ',
       'MEI2026':   '1rapRxUcIXX6X4b2eCmQ2Ky8PzsH_fzOlOFGyuVhmnYE',
