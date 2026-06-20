@@ -1488,33 +1488,13 @@ function getOrgChart() {
 // ============================================================
 function syncNamaMuridToAllForms() {
   try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
 
-    var kanakSheet = ss.getSheetByName(TAB.KANAK);
-    var kanakNames = [];
-    if (kanakSheet && kanakSheet.getLastRow() > 1) {
-      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues();
-      kData.forEach(function(r) {
-        var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
-        var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
-        if (n && (!s || s === 'AKTIF')) kanakNames.push(n);
-      });
-    }
-
-    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
-    var dewasaNames = [];
-    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
-      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues();
-      dData.forEach(function(r) {
-        var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
-        var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
-        if (n && (!s || s === 'AKTIF')) dewasaNames.push(n);
-      });
-    }
-
-    var unique = {};
-    kanakNames.concat(dewasaNames).forEach(function(n) { if (n) unique[n] = true; });
-    var sortedNames = Object.keys(unique).sort();
+    var BULAN_2026 = [
+      'JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
+      'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'
+    ];
 
     var FORM_IDS = {
       'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
@@ -1531,29 +1511,136 @@ function syncNamaMuridToAllForms() {
       'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
     };
 
+    var CALC_TAB_MAP = {
+      'JAN2026':   'CalculationJan2026',
+      'FEB2026':   'CalculationFeb2026',
+      'MAC2026':   'CalculationMac2026',
+      'APRIL2026': 'CalculationApril2026',
+      'MEI2026':   'CalculationMei2026',
+      'JUN2026':   'CalculationJun2026',
+      'JULAI2026': 'CalculationJulai2026',
+      'OGOS2026':  'CalculationOgos2026',
+      'SEPT2026':  'CalculationSept2026',
+      'OKT2026':   'CalculationOkt2026',
+      'NOV2026':   'CalculationNov2026',
+      'DIS2026':   'CalculationDis2026'
+    };
+
+    function parseRegMonthIdx(tarikhRaw) {
+      if (!tarikhRaw) return -1;
+      var d = null;
+      if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
+        d = tarikhRaw;
+      } else {
+        var ts = tarikhRaw.toString().trim();
+        var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m1) d = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+        if (!d) {
+          var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (m2) d = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10));
+        }
+      }
+      if (!d || isNaN(d.getTime())) return -1;
+      var yr = d.getFullYear();
+      if (yr < 2026)   return -1;
+      if (yr === 2026) return d.getMonth();
+      return 999;
+    }
+
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    var kanakData  = (kanakSheet && kanakSheet.getLastRow() > 1)
+      ? kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues()
+      : [];
+
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    var dewasaData  = (dewasaSheet && dewasaSheet.getLastRow() > 1)
+      ? dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues()
+      : [];
+
+    var uniqueAktif = {};
+    kanakData.forEach(function(r) {
+      var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+      var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+      if (n && (!s || s === 'AKTIF')) uniqueAktif[n] = true;
+    });
+    dewasaData.forEach(function(r) {
+      var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+      var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+      if (n && (!s || s === 'AKTIF')) uniqueAktif[n] = true;
+    });
+    var totalNames = Object.keys(uniqueAktif).length;
+
     var updated = 0;
     var errors  = [];
 
-    for (var bulan in FORM_IDS) {
+    for (var bi = 0; bi < BULAN_2026.length; bi++) {
+      var bulan         = BULAN_2026[bi];
+      var bulanMonthIdx = bi;
+
       try {
+        var eligibleSet = {};
+        kanakData.forEach(function(r) {
+          var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+          var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+          if (!n || (s && s !== 'AKTIF')) return;
+          var rmi = parseRegMonthIdx(r[COL_KANAK.TIMESTAMP]);
+          if (rmi > bulanMonthIdx) return;
+          eligibleSet[n] = true;
+        });
+        dewasaData.forEach(function(r) {
+          var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+          var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+          if (!n || (s && s !== 'AKTIF')) return;
+          var rmi = parseRegMonthIdx(r[COL_DEWASA.TIMESTAMP]);
+          if (rmi > bulanMonthIdx) return;
+          eligibleSet[n] = true;
+        });
+
+        var dahBayarSet = {};
+        try {
+          var calcSheet = yuranSS.getSheetByName(CALC_TAB_MAP[bulan]);
+          if (calcSheet && calcSheet.getLastRow() >= 2) {
+            var calcData = calcSheet.getRange(2, 4, calcSheet.getLastRow() - 1, 1).getValues();
+            calcData.forEach(function(r) {
+              var nama = (r[0] || '').toString().trim().toUpperCase();
+              if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
+                dahBayarSet[nama] = true;
+              }
+            });
+          }
+        } catch (calcErr) {
+          Logger.log('syncNamaMuridToAllForms calc ' + bulan + ': ' + calcErr.message);
+        }
+
+        var namaUntukForm = Object.keys(eligibleSet)
+          .filter(function(n) { return !dahBayarSet[n]; })
+          .sort();
+
         var form  = FormApp.openById(FORM_IDS[bulan]);
         var items = form.getItems(FormApp.ItemType.CHECKBOX);
+        var found = false;
         for (var j = 0; j < items.length; j++) {
           if (items[j].getTitle() === 'NAMA PENUH MURID') {
-            items[j].asCheckboxItem().setChoiceValues(sortedNames);
+            items[j].asCheckboxItem().setChoiceValues(namaUntukForm);
             updated++;
-            Logger.log('syncNamaMuridToAllForms: ' + bulan + ' dikemaskini (' + sortedNames.length + ' nama)');
+            found = true;
+            Logger.log('syncNamaMuridToAllForms: ' + bulan
+              + ' eligible=' + Object.keys(eligibleSet).length
+              + ' dahBayar=' + Object.keys(dahBayarSet).length
+              + ' inForm='   + namaUntukForm.length);
             break;
           }
         }
+        if (!found) errors.push(bulan + ': NAMA PENUH MURID tidak dijumpai');
+
       } catch (formErr) {
         errors.push(bulan + ': ' + formErr.message);
         Logger.log('syncNamaMuridToAllForms ralat ' + bulan + ': ' + formErr.message);
       }
     }
 
-    Logger.log('syncNamaMuridToAllForms selesai: ' + updated + '/' + Object.keys(FORM_IDS).length + ' forms, ' + errors.length + ' ralat.');
-    return { success: true, updated: updated, totalNames: sortedNames.length, errors: errors };
+    Logger.log('syncNamaMuridToAllForms selesai: ' + updated + '/' + BULAN_2026.length + ' forms, ' + errors.length + ' ralat.');
+    return { success: true, updated: updated, totalNames: totalNames, errors: errors };
 
   } catch (err) {
     Logger.log('syncNamaMuridToAllForms error: ' + err.message);
@@ -1581,7 +1668,7 @@ function syncFormMinusBayar(params) {
       'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
     };
     if (!FORM_IDS[bulan]) return { success: false, message: 'Bulan tidak dikenali: ' + bulan };
-var CALC_TAB_MAP = {
+    var CALC_TAB_MAP = {
       'JAN2026':   'CalculationJan2026',
       'FEB2026':   'CalculationFeb2026',
       'MAC2026':   'CalculationMac2026',
