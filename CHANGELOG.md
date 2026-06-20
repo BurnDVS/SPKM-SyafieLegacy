@@ -4,6 +4,44 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## eBayar Sync Fix — 2026-06-20
+
+### Masalah
+1. `syncFormMinusBayar()` baca senarai "sudah bayar" dari tab `NAMA MURID` — sebenarnya 
+   tab tu senarai pendaftaran, bukan rekod bayaran. Akibatnya checkbox Google Form 
+   eBayar tidak betul-betul menyingkir nama yang dah bayar.
+2. `syncNamaMuridToAllForms()` tiada filter langsung — semua murid AKTIF dimasukkan ke 
+   SEMUA 12 Google Form, tanpa kira bulan dia daftar. Murid baru daftar bulan JUN pun 
+   muncul dalam form JAN-MEI (sepatutnya tak relevan).
+3. Setiap kali ada pendaftaran murid baru, `syncNamaMuridToAllForms()` auto dipanggil 
+   dan OVERWRITE checkbox semua 12 form dengan senarai penuh — ini reset balik kerja 
+   `syncFormMinusBayar()` yang dah singkir nama yang dah bayar.
+4. Typo Form ID untuk FEB2026 (ada huruf 'V' berlebihan di hujung) menyebabkan ralat 
+   "No item with the given ID could be found" — bug lama yang baru terdedah.
+
+### Fix
+1. `syncFormMinusBayar()` kini baca dari `CalculationXxx2026` (kolum D, index 3) guna 
+   `CALC_TAB_MAP`, bukan tab `NAMA MURID`.
+2. `syncNamaMuridToAllForms()` kini loop 12 bulan secara individu, dengan 2 filter:
+   - Filter tarikh daftar (`parseRegMonthIdx()`) — murid hanya masuk form bulan dia 
+     daftar & seterusnya
+   - Filter status bayaran (`CALC_TAB_MAP`) — exclude murid yang sudah bayar untuk 
+     bulan tersebut
+3. Fix typo Form ID FEB2026 di 3 lokasi: `setScriptProperties()`, 
+   `syncNamaMuridToAllForms()`, `syncFormMinusBayar()`.
+
+### Verifikasi
+- 12/12 Google Form eBayar berjaya sync tanpa ralat
+- Checkbox "NAMA PENUH MURID" kini jauh lebih pendek & relevan (cth JAN2026: 197→57 nama)
+- Test helper baru: `testSyncNamaMuridManual()`
+
+### Git
+- Commit `75d6583` — Fix syncNamaMuridToAllForms + Form ID FEB2026
+- Commit `7d2ad15` — Sync local dengan GAS (test helper + setScriptProperties fix)
+- Pushed ke origin (BurnDVS) dan pages (shafielegacy)
+
+---
+
 ## syncFormMinusBayar — DEPLOYED (19 Jun 2026)
 
 - Fix: baca senarai "sudah bayar" dari tab CalculationXxx2026 (kolum D), bukan dari tab NAMA MURID (yang sebenarnya senarai pendaftaran, bukan bayaran)
