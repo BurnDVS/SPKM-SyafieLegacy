@@ -1819,6 +1819,57 @@ function createEbayarTriggers() {
 }
 
 // ============================================================
+// Khatam Iqra' / Khatam Quran — onFormSubmit notification trigger
+// ============================================================
+function onKhatamSubmit(e) {
+  try {
+    Utilities.sleep(2000);
+    var sheet = e.range.getSheet();
+    var sheetName = sheet.getName();
+    var row = e.range.getValues()[0];
+
+    var isQuran = sheetName.toLowerCase().indexOf('quran') !== -1;
+    var jenis   = isQuran ? 'Khatam Al-Quran' : "Khatam Iqra'";
+    var icon    = isQuran ? '📖' : '📗';
+
+    var nama = (row[2] || '').toString().trim();
+    var siri = (row[4] || '').toString().trim();
+    var guru = (row[5] || '').toString().trim();
+
+    if (!nama) return;
+
+    var title = icon + ' ' + jenis + ' — ' + nama;
+    var body  = 'Guru: ' + guru + (siri ? ' | Siri: ' + siri : '');
+
+    simpanNotifikasi('khatam', title, body, {
+      nama: nama, guru: guru, siri: siri, jenis: jenis
+    });
+
+    Logger.log('onKhatamSubmit: ' + jenis + ' — ' + nama);
+  } catch(err) {
+    Logger.log('onKhatamSubmit error: ' + err.message);
+  }
+}
+
+function createKhatamTriggers() {
+  var ss = SpreadsheetApp.openById('1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU');
+  var existing = ScriptApp.getProjectTriggers();
+  var sudahAda = existing.some(function(t) {
+    return t.getHandlerFunction() === 'onKhatamSubmit';
+  });
+  if (sudahAda) {
+    Logger.log('Trigger onKhatamSubmit sudah wujud.');
+    return 'Trigger sudah wujud.';
+  }
+  ScriptApp.newTrigger('onKhatamSubmit')
+    .forSpreadsheet(ss)
+    .onFormSubmit()
+    .create();
+  Logger.log('Trigger onKhatamSubmit berjaya dipasang.');
+  return 'Trigger berjaya dipasang.';
+}
+
+// ============================================================
 // 25. getYuranStats
 // Ambil statistik yuran untuk bulan tertentu dari Yuran spreadsheet
 // Input:  { bulan } e.g. { bulan: "MEI2026" }
