@@ -169,7 +169,8 @@ var ALLOWED_ACTIONS = [
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus', 'logout',
   'simpanDeviceToken', 'getNotifikasi',
-  'searchSijilKhatam'
+  'searchSijilKhatam',
+  'renewSession'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -251,6 +252,7 @@ function doPost(e) {
     else if (action === 'simpanDeviceToken')      result = simpanDeviceToken(body);
     else if (action === 'getNotifikasi')          result = getNotifikasi(body);
     else if (action === 'searchSijilKhatam')      result = searchSijilKhatam(body);
+    else if (action === 'renewSession')           result = renewSession(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -382,6 +384,7 @@ function doAction(action, payload) {
   else if (action === 'simpanDeviceToken')     return simpanDeviceToken(payload);
   else if (action === 'getNotifikasi')         return getNotifikasi(payload);
   else if (action === 'searchSijilKhatam')     return searchSijilKhatam(payload);
+  else if (action === 'renewSession')          return renewSession(payload);
 }
 
 // ============================================================
@@ -893,6 +896,34 @@ function validateToken(token) {
   } catch (e) {
     props.deleteProperty(key);
     return { valid: false };
+  }
+}
+
+// ============================================================
+// HELPER: renewSession — lanjut expiry 30 minit
+// ============================================================
+function renewSession(params) {
+  params = params || {};
+  var token = (params.token || '').toString().trim();
+  if (!token) return { success: false };
+  var props = PropertiesService.getScriptProperties();
+  var key = 'session_' + token;
+  var raw = props.getProperty(key);
+  if (!raw) return { success: false, message: 'Session tidak dijumpai atau dah expire.' };
+  try {
+    var data = JSON.parse(raw);
+    var now = new Date().getTime();
+    if (now > data.expiry) {
+      props.deleteProperty(key);
+      return { success: false, message: 'Session dah expire.' };
+    }
+    data.expiry = now + 30 * 60 * 1000;
+    props.setProperty(key, JSON.stringify(data));
+    Logger.log('renewSession: token ' + token.substring(0,8) + '... diperbaharui');
+    return { success: true, user: data.nama, email: data.email };
+  } catch(e) {
+    props.deleteProperty(key);
+    return { success: false, message: 'Data session rosak.' };
   }
 }
 

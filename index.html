@@ -3586,7 +3586,7 @@
 
   // FCM + persistent storage config
   var _isMobile  = window.innerWidth <= 1024;
-  var _spkm_st   = _isMobile ? localStorage : sessionStorage;
+  var _spkm_st   = localStorage;
   var _fcmDone   = false;
   var _pollTimer = null;
   var SPKM_LS_USER = 'spkm_ls_user';
@@ -3969,12 +3969,10 @@
           currentRole  = data.role || 'GURU';
           if (data.token) {
             _spkm_st.setItem('spkm_token', data.token);
-            if (_isMobile) {
-              localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-                token: data.token, user: data.user,
-                role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-              }));
-            }
+            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+              token: data.token, user: data.user,
+              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+            }));
           }
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
@@ -3994,6 +3992,10 @@
           if (gEl) gEl.value = data.user;
           initFCM();
           startNotifPolling();
+          if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
+          window._sessionRenewTimer = setInterval(function() {
+            callGASPromise('renewSession', {}).catch(function() {});
+          }, 20 * 60 * 1000);
         } else {
           const msg = data.message || 'E-mel atau nombor tidak sepadan.';
           showErr('loginError', msg);
@@ -4011,7 +4013,8 @@
 
   function handleLogout() {
     _spkm_st.removeItem('spkm_token');
-    if (_isMobile) { localStorage.removeItem(SPKM_LS_USER); localStorage.removeItem(SPKM_LAST_ID); }
+    localStorage.removeItem(SPKM_LS_USER); localStorage.removeItem(SPKM_LAST_ID);
+    if (window._sessionRenewTimer) { clearInterval(window._sessionRenewTimer); window._sessionRenewTimer = null; }
     stopNotifPolling();
     loggedInGuru          = null;
     loggedInTabKehadiran  = null;
@@ -6032,12 +6035,10 @@
         currentRole = data.role || 'GURU';
         if (data.token) {
           _spkm_st.setItem('spkm_token', data.token);
-          if (_isMobile) {
-            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-              token: data.token, user: data.user,
-              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-            }));
-          }
+          localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+            token: data.token, user: data.user,
+            role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+          }));
         }
         document.getElementById('headerUserName').textContent = data.user;
         document.getElementById('headerUserNameDropdown').textContent = data.user;
@@ -6052,6 +6053,10 @@
         loadOrgChart();
         initFCM();
         startNotifPolling();
+        if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
+        window._sessionRenewTimer = setInterval(function() {
+          callGASPromise('renewSession', {}).catch(function() {});
+        }, 20 * 60 * 1000);
       } else {
         document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
         document.getElementById('loginModalError').classList.add('show');
@@ -6603,7 +6608,6 @@
   }
 
   function tryAutoLogin() {
-    if (!_isMobile) return;
     var saved = localStorage.getItem(SPKM_LS_USER);
     if (!saved) return;
     try {
@@ -6613,8 +6617,8 @@
       // Set token sementara supaya callGASPromise boleh hantar dalam request
       _spkm_st.setItem('spkm_token', u.token);
 
-      // Validate token dengan server DULU — jangan tunjuk menu guru lagi
-      callGASPromise('getNotifikasi', { lastId: '' })
+      // Validate & renew token dengan server DULU — jangan tunjuk menu guru lagi
+      callGASPromise('renewSession', {})
         .then(function(data) {
           if (!data || !data.success) {
             // Token tidak sah / tamat tempoh — clear semua, kekal state logout
@@ -6644,6 +6648,10 @@
           if (gEl) gEl.value = u.user;
           initFCM();
           startNotifPolling();
+          if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
+          window._sessionRenewTimer = setInterval(function() {
+            callGASPromise('renewSession', {}).catch(function() {});
+          }, 20 * 60 * 1000);
         })
         .catch(function() {
           // Ralat sambungan — clear token, kekal logout
