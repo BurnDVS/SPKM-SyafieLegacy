@@ -6172,6 +6172,8 @@
     var list = notifGetAll().map(function(n) { n.read = true; return n; });
     notifSave(list);
     renderNotifBadge();
+    var badge = document.getElementById('notifBadge');
+    if (badge && notifUnreadCount() === 0) badge.style.display = 'none';
     renderNotifList();
   }
 
@@ -6482,25 +6484,29 @@
 
   // initFCM — setup Firebase foreground handler + auto-simpan token jika permission dah granted
   function initFCM() {
-    if (_fcmDone) return;
     if (!window.firebase) { console.log('[FCM] firebase tidak wujud'); return; }
     if (!firebase.messaging.isSupported()) { _fcmDone = true; console.log('[FCM] tidak disokong'); return; }
     try {
-      if (!firebase.apps || !firebase.apps.length) {
-        firebase.initializeApp(FIREBASE_CONFIG);
+      var messaging;
+      if (!_fcmDone) {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        messaging = firebase.messaging();
+        _fcmDone = true;
+        console.log('[FCM] initFCM berjaya, permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A');
+        messaging.onMessage(function(payload) {
+          var notif = payload.notification || {};
+          var data  = payload.data        || {};
+          notifAdd(data.type || 'fcm', '🔔', notif.title || 'Notifikasi', notif.body || '');
+          showToast(notif.title || 'Notifikasi', notif.body || '');
+        });
+      } else {
+        messaging = firebase.messaging();
       }
-      var messaging = firebase.messaging();
-      _fcmDone = true;
-      console.log('[FCM] initFCM berjaya, permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A');
 
-      messaging.onMessage(function(payload) {
-        var notif = payload.notification || {};
-        var data  = payload.data        || {};
-        notifAdd(data.type || 'fcm', '🔔', notif.title || 'Notifikasi', notif.body || '');
-        showToast(notif.title || 'Notifikasi', notif.body || '');
-      });
-
-      // Kalau permission dah 'granted', terus ambil token dan simpan ke GAS
+      // Kalau permission dah 'granted', ambil token dan simpan ke GAS
+      // — dijalankan setiap kali initFCM() dipanggil (termasuk dari tryAutoLogin)
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !_isGAS) {
         console.log('[FCM] Permission granted, cuba ambil token...');
         var tokenOptions = { vapidKey: FCM_VAPID_KEY };
