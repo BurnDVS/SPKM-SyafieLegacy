@@ -4,6 +4,25 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [23 Jun 2026]
+### Fixed
+- FCM private key format — fixFCMPrivateKey() rebuild PEM format betul 
+  (BEGIN/END header, 64-char chunks). getFCMAccessToken() kini berjaya.
+- Push notification PC berfungsi sepenuhnya.
+- Session persist selepas refresh — _spkm_st = localStorage semua device,
+  tryAutoLogin() berfungsi desktop+mobile, renewSession() GAS extend 30 minit,
+  auto-renew timer setiap 20 minit.
+- Header UI fix — headerPreLogin/headerPostLogin dikemaskini dalam tryAutoLogin().
+- SW cache bump spkm-v11 → spkm-v12.
+
+### Added
+- renewSession() dalam Code.js — validate dan extend GAS session token.
+- onKhatamSubmit() trigger — notification bila parent submit Borang Khatam 
+  Iqra' atau Khatam Quran (spreadsheet 1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU).
+- createKhatamTriggers() — pasang onFormSubmit trigger untuk spreadsheet Khatam.
+
+---
+
 ## eBayar Sync Fix — 2026-06-20
 
 ### Masalah
