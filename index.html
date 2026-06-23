@@ -6642,6 +6642,10 @@
           if (nmEl) nmEl.textContent = u.user;
           setLoginState(true);
           updateNav(true);
+          document.getElementById('headerPreLogin').style.display = 'none';
+          document.getElementById('headerPostLogin').style.display = '';
+          document.getElementById('headerUserName').textContent = u.user;
+          document.getElementById('headerUserNameDropdown').textContent = u.user;
           updateMobileBottomNav(true);
           loadOrgChart();
           var gEl = document.getElementById('hadirGuru');
