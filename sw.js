@@ -26,7 +26,7 @@ _messaging.onBackgroundMessage(function(payload) {
 // ============================================================
 // Cache logic (kekalkan asal, bump version untuk SW baru)
 // ============================================================
-const CACHE = 'spkm-v11';
+const CACHE = 'spkm-v12';
 
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
