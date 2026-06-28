@@ -163,6 +163,7 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 - Claude Code heredoc/paste boleh corrupt code blocks panjang — guna PowerShell `Add-Content` dari fail temp sebagai fallback
 - Python tak available — PowerShell adalah scripting fallback
 - `UPKK Bahasa Arab` = projek lain, TAK berkaitan SPKM
+- `clasp login --no-localhost` — bila browser redirect ke localhost fail, paste FULL URL (termasuk `http://localhost:8888/?iss=...`) dalam terminal, bukan code sahaja. URL expires cepat, copy terus lepas browser buka.
 
 ---
 
@@ -172,4 +173,4 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 
 ---
 
-*Last updated: 14 Jun 2026*
+*Last updated: 28 Jun 2026*

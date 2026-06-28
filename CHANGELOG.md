@@ -4,6 +4,30 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [28 Jun 2026] — Fix kiraan eBayar, block duplicate, bersih duplicate data
+
+### Fixed
+- `getEbayarStats`: Kira dari live data (PendaftaranBaru + KelasDewasa + CalculationXxx col D) — bukan formula spreadsheet yang boleh stale.
+- `getYuranStats`: Master list murid kini baca terus dari PendaftaranBaru + KelasDewasa — bukan tab `NAMA MURID` dalam yuran spreadsheet.
+- Kedua-dua panel (eBayar grid dan Dashboard Yuran) kini konsisten — guna sumber kebenaran yang sama.
+
+### Added
+- `confirmRegisterKanak`: Block pendaftaran duplikat — semak NO_MYKID sebelum appendRow. Return error jika MYKID sudah wujud.
+- `confirmRegisterDewasa`: Block pendaftaran duplikat — semak NO_MYKAD sebelum appendRow. Return error jika MYKAD sudah wujud.
+
+### Data cleanup
+- Buang semua duplicate entries dalam PendaftaranBaru dan KelasDewasa.
+- PendaftaranBaru: 130 murid (bersih, 0 duplicate MYKID)
+- KelasDewasa: 42 murid (bersih, 0 duplicate)
+- Total aktif: 172 murid
+
+### Commits
+- `95efaf4` — fix: getEbayarStats kira dari live data
+- `8b4dd16` — fix: getYuranStats guna live data dari PendaftaranBaru+KelasDewasa
+- `73bfaa7` — feat: block pendaftaran duplikat berdasarkan no. MYKID/MYKAD
+
+---
+
 ## [23 Jun 2026]
 ### Fixed
 - FCM private key format — fixFCMPrivateKey() rebuild PEM format betul 
