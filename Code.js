@@ -1914,53 +1914,53 @@ function getYuranStats(params) {
       });
     }
 
-    // 2. Master list — tab NAMA MURID (sumber tunggal, sama seperti eSemak)
+    // 2. Master list — baca terus dari PendaftaranBaru + KelasDewasa (live data)
     var BULAN_2026    = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
                          'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
     var bulanMonthIdx = BULAN_2026.indexOf(bulan);
-    var activeMurid   = [];
+    var activeMurid;
 
-    try {
-      var nmSheet = yuranSS.getSheetByName('NAMA MURID');
-      if (nmSheet && nmSheet.getLastRow() > 1) {
-        var nmData = nmSheet.getRange(2, 2, nmSheet.getLastRow() - 1, 5).getValues();
-        for (var nm = 0; nm < nmData.length; nm++) {
-          var nmNama = (nmData[nm][0] || '').toString().trim().toUpperCase();
-          if (!nmNama) continue;
+    var mainSS2      = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var kanakSheet2  = mainSS2.getSheetByName(TAB.KANAK);
+    var kanakData2   = (kanakSheet2 && kanakSheet2.getLastRow() > 1)
+      ? kanakSheet2.getRange(2, 1, kanakSheet2.getLastRow() - 1, 19).getValues() : [];
+    var dewasaSheet2 = mainSS2.getSheetByName(TAB.DEWASA);
+    var dewasaData2  = (dewasaSheet2 && dewasaSheet2.getLastRow() > 1)
+      ? dewasaSheet2.getRange(2, 1, dewasaSheet2.getLastRow() - 1, 19).getValues() : [];
 
-          var tarikhRaw   = nmData[nm][4];
-          var regMonthIdx = -1;
-          if (tarikhRaw) {
-            var d = null;
-            if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
-              d = tarikhRaw;
-            } else {
-              var ts = tarikhRaw.toString().trim();
-              var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-              if (m1) d = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
-              if (!d) {
-                var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (m2) d = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10));
-              }
-            }
-            if (d && !isNaN(d.getTime())) {
-              var yr = d.getFullYear();
-              if      (yr < 2026)  regMonthIdx = -1;
-              else if (yr === 2026) regMonthIdx = d.getMonth();
-              else                 regMonthIdx = 999;
-            }
-          }
-
-          // Skip murid daftar selepas bulan berkenaan
-          if (bulanMonthIdx !== -1 && regMonthIdx !== -1 && regMonthIdx > bulanMonthIdx) continue;
-          if (regMonthIdx === 999 && bulanMonthIdx !== -1) continue;
-
-          activeMurid.push(nmNama);
-        }
+    function parseRegMonthIdx2(tarikhRaw) {
+      if (!tarikhRaw) return -1;
+      var d = null;
+      if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) { d = tarikhRaw; }
+      else {
+        var ts = tarikhRaw.toString().trim();
+        var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m1) d = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+        if (!d) { var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m2) d = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10)); }
       }
-    } catch (nmErr) {
-      Logger.log('getYuranStats NAMA MURID error: ' + nmErr.message);
+      if (!d || isNaN(d.getTime())) return -1;
+      var yr = d.getFullYear();
+      if (yr < 2026) return -1;
+      if (yr === 2026) return d.getMonth();
+      return 999;
     }
+
+    var eligibleSet2 = {};
+    kanakData2.forEach(function(r) {
+      var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+      var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+      if (!n || (s && s !== 'AKTIF')) return;
+      if (parseRegMonthIdx2(r[COL_KANAK.TIMESTAMP]) > bulanMonthIdx) return;
+      eligibleSet2[n] = true;
+    });
+    dewasaData2.forEach(function(r) {
+      var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+      var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+      if (!n || (s && s !== 'AKTIF')) return;
+      if (parseRegMonthIdx2(r[COL_DEWASA.TIMESTAMP]) > bulanMonthIdx) return;
+      eligibleSet2[n] = true;
+    });
+    activeMurid = Object.keys(eligibleSet2);
 
     // 3. Telefon dari WARemind
     var mainSS    = SpreadsheetApp.openById(SPREADSHEET_ID);
