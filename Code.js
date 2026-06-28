@@ -2936,44 +2936,114 @@ function confirmRegisterDewasa(params) {
 
 // ============================================================
 // getEbayarStats
-// Baca stats agregat dari 12 tab Calculation dalam Yuran spreadsheet
+// Kira stats dari live data: eligible murid AKTIF per bulan vs sudah bayar
 // Output: { success, stats: [{jumlahDaftar, selesai, belum, peratus}] }
 // ============================================================
 function getEbayarStats() {
   try {
-    var STATS_SHEET_ID = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
-    var tabs = [
-      'CalculationJan2026',
-      'CalculationFeb2026',
-      'CalculationMac2026',
-      'CalculationApril2026',
-      'CalculationMei2026',
-      'CalculationJun2026',
-      'CalculationJulai2026',
-      'CalculationOgos2026',
-      'CalculationSept2026',
-      'CalculationOkt2026',
-      'CalculationNov2026',
-      'CalculationDis2026'
+    var BULAN_2026 = [
+      'JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
+      'JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'
     ];
 
-    var ss      = SpreadsheetApp.openById(STATS_SHEET_ID);
+    var CALC_TAB_MAP = {
+      'JAN2026':   'CalculationJan2026',
+      'FEB2026':   'CalculationFeb2026',
+      'MAC2026':   'CalculationMac2026',
+      'APRIL2026': 'CalculationApril2026',
+      'MEI2026':   'CalculationMei2026',
+      'JUN2026':   'CalculationJun2026',
+      'JULAI2026': 'CalculationJulai2026',
+      'OGOS2026':  'CalculationOgos2026',
+      'SEPT2026':  'CalculationSept2026',
+      'OKT2026':   'CalculationOkt2026',
+      'NOV2026':   'CalculationNov2026',
+      'DIS2026':   'CalculationDis2026'
+    };
+
+    function parseRegMonthIdx(tarikhRaw) {
+      if (!tarikhRaw) return -1;
+      var d = null;
+      if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
+        d = tarikhRaw;
+      } else {
+        var ts = tarikhRaw.toString().trim();
+        var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m1) d = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+        if (!d) {
+          var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (m2) d = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10));
+        }
+      }
+      if (!d || isNaN(d.getTime())) return -1;
+      var yr = d.getFullYear();
+      if (yr < 2026)   return -1;
+      if (yr === 2026) return d.getMonth();
+      return 999;
+    }
+
+    var ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+
+    var kanakSheet  = ss.getSheetByName(TAB.KANAK);
+    var kanakData   = (kanakSheet && kanakSheet.getLastRow() > 1)
+      ? kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues()
+      : [];
+
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    var dewasaData  = (dewasaSheet && dewasaSheet.getLastRow() > 1)
+      ? dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues()
+      : [];
+
     var results = [];
 
-    for (var i = 0; i < tabs.length; i++) {
+    for (var bi = 0; bi < BULAN_2026.length; bi++) {
+      var bulan         = BULAN_2026[bi];
+      var bulanMonthIdx = bi;
+
       try {
-        var sheet = ss.getSheetByName(tabs[i]);
-        if (!sheet) {
-          results.push({ error: 'Tab tidak dijumpai: ' + tabs[i] });
+        var calcSheet = yuranSS.getSheetByName(CALC_TAB_MAP[bulan]);
+        if (!calcSheet) {
+          results.push({ error: 'Tab tidak dijumpai' });
           continue;
         }
-        var row = sheet.getRange(2, 5, 1, 4).getValues()[0];
-        results.push({
-          jumlahDaftar: row[0] || 0,
-          selesai:      row[1] || 0,
-          belum:        row[2] || 0,
-          peratus:      row[3] || 0
+
+        var eligibleSet = {};
+        kanakData.forEach(function(r) {
+          var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+          var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+          if (!n || (s && s !== 'AKTIF')) return;
+          var rmi = parseRegMonthIdx(r[COL_KANAK.TIMESTAMP]);
+          if (rmi > bulanMonthIdx) return;
+          eligibleSet[n] = true;
         });
+        dewasaData.forEach(function(r) {
+          var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+          var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+          if (!n || (s && s !== 'AKTIF')) return;
+          var rmi = parseRegMonthIdx(r[COL_DEWASA.TIMESTAMP]);
+          if (rmi > bulanMonthIdx) return;
+          eligibleSet[n] = true;
+        });
+
+        var jumlahDaftar = Object.keys(eligibleSet).length;
+
+        var selesai = 0;
+        if (calcSheet.getLastRow() >= 2) {
+          var calcData = calcSheet.getRange(2, 4, calcSheet.getLastRow() - 1, 1).getValues();
+          calcData.forEach(function(r) {
+            var nama = (r[0] || '').toString().trim().toUpperCase();
+            if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
+              selesai++;
+            }
+          });
+        }
+
+        var belum   = jumlahDaftar - selesai;
+        var peratus = jumlahDaftar > 0 ? Math.round((selesai / jumlahDaftar) * 100) : 0;
+
+        results.push({ jumlahDaftar: jumlahDaftar, selesai: selesai, belum: belum, peratus: peratus });
+
       } catch (tabErr) {
         results.push({ error: tabErr.message });
       }
