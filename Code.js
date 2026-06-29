@@ -1904,7 +1904,7 @@ function getYuranStats(params) {
         if (!isNaN(jumlah)) totalKutipan += jumlah;
         var resitUrl = (r[11] || '').toString().trim();
         rawNama.split(',').forEach(function(n) {
-          var nama = n.trim().toUpperCase();
+          var nama = n.replace(/\s+/g, ' ').trim().toUpperCase();
           if (!nama || seenNames[nama]) return;
           seenNames[nama]      = true;
           sudahBayarSet[nama]  = true;
@@ -1947,14 +1947,14 @@ function getYuranStats(params) {
 
     var eligibleSet2 = {};
     kanakData2.forEach(function(r) {
-      var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+      var n = (r[COL_KANAK.NAMA]   || '').toString().replace(/\s+/g, ' ').trim().toUpperCase();
       var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
       if (!n || (s && s !== 'AKTIF')) return;
       if (parseRegMonthIdx2(r[COL_KANAK.TIMESTAMP]) > bulanMonthIdx) return;
       eligibleSet2[n] = true;
     });
     dewasaData2.forEach(function(r) {
-      var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+      var n = (r[COL_DEWASA.NAMA]   || '').toString().replace(/\s+/g, ' ').trim().toUpperCase();
       var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
       if (!n || (s && s !== 'AKTIF')) return;
       if (parseRegMonthIdx2(r[COL_DEWASA.TIMESTAMP]) > bulanMonthIdx) return;
