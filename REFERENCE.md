@@ -28,6 +28,17 @@ clasp login
 ```
 Login dengan `shafielegacykelasmengaji@gmail.com` (guna `clasp login` plain, JANGAN `--no-localhost`).
 
+⚠️ **Kalau `clasp login` / `clasp login --no-localhost` gagal dengan OAuth `Premature close`**:
+```powershell
+clasp logout
+clasp login --no-localhost
+```
+Jika masih gagal dan deployment urgent, buat fallback manual:
+1. Buka GAS editor
+2. Copy isi `Code.js` local ke `Code.gs`/`Code.js` dalam editor
+3. Save
+4. **Deploy → Manage deployments → Edit → New version → Deploy**
+
 ⚠️ **Kalau `git push origin` bagi error credential GitHub salah akaun** → clear cached credential:
 ```powershell
 cmdkey /delete:LegacyGeneric:target=git:https://github.com
@@ -153,6 +164,21 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 
 ---
 
+## ✅ Recent Safety Fixes
+
+### 30 Jun 2026 — Duplicate Registration Guard
+- Kanak-kanak: duplicate `NO_MYKID` disekat dalam `sendOTPKanak`, `confirmRegisterKanak`, dan `registerKanak`.
+- Dewasa: duplicate `NO_MYKAD` disekat dalam `sendOTPDewasa`, `confirmRegisterDewasa`, dan `registerDewasa`.
+- ID dinormalize sebelum compare, jadi format dengan dash/space tetap match.
+- Rekod `TIDAK AKTIF` tidak boleh daftar semula; admin perlu aktifkan semula dari senarai murid.
+- Commit: `fa76f73`
+
+### 30 Jun 2026 — Yuran Name Normalization
+- `getYuranStats` normalize nama dalam `sudahBayarSet` dan `eligibleSet2` dengan whitespace collapse.
+- Tujuan: elak mismatch bila nama ada double spaces atau spacing pelik.
+
+---
+
 ## 🔧 Workflow
 
 - **Claude.ai** (chat ini): planning, review code, architecture decisions, MCP tasks (baca Google Drive/Sheets)
@@ -173,4 +199,4 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 
 ---
 
-*Last updated: 28 Jun 2026*
+*Last updated: 30 Jun 2026*

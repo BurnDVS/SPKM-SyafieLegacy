@@ -115,6 +115,9 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 #### Pendaftaran
 - ✅ Daftar Murid Kanak-kanak — form 3 langkah, OTP email verification
 - ✅ Daftar Murid Dewasa — form satu halaman, OTP email verification
+- ✅ Duplicate guard kanak-kanak — `NO_MYKID` disemak sebelum OTP, sebelum simpan, dan pada laluan backend lama
+- ✅ Duplicate guard dewasa — `NO_MYKAD` disemak sebelum OTP, sebelum simpan, dan pada laluan backend lama
+- ✅ Normalize MyKid/MyKad — format dengan/ tanpa dash/spacing dikira sebagai ID yang sama
 - ✅ Auto-generate Bil & Timestamp
 - ✅ Autocrat generate slip → isi kolum Merged Doc ID & URL
 - ✅ Hantar slip ke email ibu bapa
@@ -143,6 +146,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 - ✅ eSemak Yuran — carian nama, senarai belum bayar cross-check NAMA MURID
 - ✅ recordCash — rekod bayaran tunai oleh admin
 - ✅ getYuranStats — statistik per bulan
+- ✅ getYuranStats — normalize nama bayar vs eligible dengan whitespace collapse untuk elak mismatch double spaces
 - ✅ Button "Copy Senarai WA" — copy senarai belum bayar ke clipboard
 - ✅ Button "Hantar WA" — blast WA reminder via Fonnte API (desktop & mobile)
 - ✅ Modal confirm blast WA — Navy+Gold UI, tunjuk bilangan murid
@@ -199,7 +203,7 @@ Mobile CSS   : @media (max-width: 1024px) SAHAJA
 
 ### Dalam Proses / Bug 🔧
 
-*(Tiada bug aktif buat masa ini — fix terakhir: 14 Jun 2026, lihat CHANGELOG.md)*
+*(Tiada bug aktif buat masa ini — fix terakhir: 30 Jun 2026, lihat CHANGELOG.md)*
 
 ---
 
@@ -240,6 +244,11 @@ git add . && git commit -m "message" && git push && git push pages main
 > **Deploy → Manage Deployments → SPKM Web App → Edit (✏️) → New version → Deploy**
 >
 > ❌ **JANGAN guna `clasp deploy`** — ia akan rosak Web App URL dan buat URL baru setiap kali.
+
+> ⚠️ **Kalau `clasp login` gagal dengan OAuth `Premature close`:**
+> 1. Cuba `clasp logout`
+> 2. Cuba `clasp login --no-localhost`
+> 3. Jika masih gagal dan urgent, salin `Code.js` manual ke GAS editor, Save, kemudian deploy **New version** dari Manage deployments.
 
 > ⚠️ **Bila GAS URL bertukar:** edit `config.json` → tukar `gasUrl` → `git add config.json && git commit && git push && git push pages main`. Tak perlu touch `index.html` atau bump `sw.js`.
 

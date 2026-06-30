@@ -4,6 +4,43 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Jun 2026] — Duplicate registration guard + Yuran name normalization
+
+### Fixed
+- `getYuranStats`: Nama dari rekod bayaran (`sudahBayarSet`) dan master list (`eligibleSet2`) kini guna normalization sama:
+  `replace(/\s+/g, ' ').trim().toUpperCase()`.
+- Ini elak mismatch bila nama ada double spaces atau spacing pelik antara rekod bayaran dan master list.
+
+### Added
+- Pendaftaran kanak-kanak kini block duplicate `NO_MYKID` di semua laluan backend:
+  - `sendOTPKanak` — semak sebelum OTP dihantar
+  - `confirmRegisterKanak` — semak sebelum `appendRow`
+  - `registerKanak` — laluan lama/backend turut disekat
+- Pendaftaran dewasa kini block duplicate `NO_MYKAD` di semua laluan backend:
+  - `sendOTPDewasa` — semak sebelum OTP dihantar
+  - `confirmRegisterDewasa` — semak sebelum `appendRow`
+  - `registerDewasa` — laluan lama/backend turut disekat
+- Helper baru:
+  - `normalizeMykid_()`, `findExistingKanakByMykid_()`, `duplicateKanakMessage_()`
+  - `normalizeMykad_()`, `findExistingDewasaByMykad_()`, `duplicateDewasaMessage_()`
+
+### Behavior
+- Format ID seperti `120101-10-1234`, `120101101234`, atau ada spacing dikira sebagai ID yang sama.
+- Jika rekod sedia ada status `TIDAK AKTIF`, sistem tidak benarkan daftar baru; mesej minta hubungi admin untuk aktifkan semula.
+- Duplicate disekat lebih awal sebelum parent terima OTP.
+
+### Investigation notes
+- Dashboard Yuran dan spreadsheet sempat berbeza kerana beberapa murid dalam `KelasDewasa` berstatus `TIDAK AKTIF`; dashboard/form memang filter `STATUS=AKTIF`.
+- Kes `ZAINOR BIN AB HAMID` diabaikan selepas disahkan tiada dalam senarai murid dewasa berdaftar.
+
+### Deploy
+- `clasp login`/OAuth sempat gagal dengan `Premature close`, jadi `Code.js` disalin manual ke GAS editor.
+- GAS dideploy manual melalui **Deploy → Manage deployments → Edit → New version → Deploy**.
+- Commit `fa76f73` — `fix: prevent duplicate registration by mykid and mykad`
+- Pushed ke `origin` (BurnDVS/SPKM-SyafieLegacy) dan `pages` (shafielegacy/SPKM)
+
+---
+
 ## [28 Jun 2026] — Fix kiraan eBayar, block duplicate, bersih duplicate data
 
 ### Fixed

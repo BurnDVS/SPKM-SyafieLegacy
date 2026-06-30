@@ -78,3 +78,15 @@ Auto update dipasang: onFormSubmit / On form submit.
 
 ## Status
 Settle. Mulai sekarang, bila ada bayaran baru masuk, script akan auto refresh semua bulan dan semua nama.
+
+---
+
+## Follow-up 30 Jun 2026
+
+`getYuranStats()` juga dikemas supaya nama dalam rekod bayaran dan master list guna normalization sama:
+
+```javascript
+nama.replace(/\s+/g, ' ').trim().toUpperCase()
+```
+
+Tujuan: elak mismatch antara `sudahBayarSet` dan `eligibleSet2` bila nama ada double spaces atau spacing pelik.
