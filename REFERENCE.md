@@ -92,10 +92,23 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
 |---|---|---|
 | SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni. Tab `LogPertukaranGuru` (ditambah 30 Jun 2026) — log audit Pertukaran Guru, 7 kolum: `Timestamp \| Admin \| Guru Lama \| Guru Baru \| Nama Murid \| Jenis Murid \| Bil` |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
+| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property, belum live | Staging/shadow spreadsheet: `SPKM eBayar Master`. Canonical tab: `Payments`. Backend V2 sudah ada dalam `Code.js`, tetapi UI/live flow masih legacy. |
 | Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
 
-📌 To-Do #9: gabung tab eBayar 2025 (dari SPKM Main DB) + eBayar 2026 (`YURAN_SS_ID`) jadi satu spreadsheet dengan tab per tahun. Catatan: SPKM Main DB akan kekal untuk tab pendaftaran/kehadiran — hanya tab eBayar 2025 yang dipindah/disalin.
+### eBayar Master / Yuran V2 Shadow Note
+
+- Queue #9 foundation is backend-only and not live. `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `YURAN_SS_ID` flow remain legacy.
+- Future Script Property: `EBAYAR_MASTER_SS_ID`.
+- Staging spreadsheet name: `SPKM eBayar Master`.
+- Canonical tab: `Payments`, one table for all years.
+- `PAYMENT_GROUP_ID` = one original source row/resit/payment. `PAYMENT_ID` = one student-level row.
+- Next steps:
+  1. Create staging spreadsheet by running `ensureEbayarMasterSchemaV2({create:true})`.
+  2. Import/copy only eBayar data later: 2025 from SPKM Main DB, 2026 from `YURAN_SS_ID`.
+  3. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
+  4. Run `compareYuranLegacyVsV2` by month before any UI switch.
+  5. Deploy/switch UI only in a later task after comparison passes.
 
 ---
 

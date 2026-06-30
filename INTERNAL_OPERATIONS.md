@@ -139,6 +139,19 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 - Custom mesej WA dengan `[BULAN]`.
 - Timestamp blast WA.
 
+#### eBayar V2 Shadow Workflow
+
+- Current live yuran/eBayar flow remains **LEGACY**.
+- V2 is backend-only shadow/read model in `Code.js`; no UI is switched to V2 yet.
+- Do not deploy or switch `index.html` / `portal.html` to V2 until `compareYuranLegacyVsV2` passes for the target months.
+- Staging spreadsheet should be `SPKM eBayar Master`, stored via Script Property `EBAYAR_MASTER_SS_ID`.
+- Use `ensureEbayarMasterSchemaV2({create:true})` only to create/verify the staging schema.
+- Import/copy eBayar data later only after source mapping is confirmed:
+  - 2025 eBayar tabs from SPKM Main DB.
+  - 2026 eBayar tabs from `YURAN_SS_ID`.
+- Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
+- No GAS production deployment and no `git push pages main` was done for Queue #9 shadow foundation.
+
 ### WhatsApp Blast
 - Fonnte integration.
 - `hantarWhatsApp()`.

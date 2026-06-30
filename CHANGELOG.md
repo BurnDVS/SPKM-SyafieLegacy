@@ -4,6 +4,40 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Jun 2026] — Queue #9 — eBayar Master / Yuran V2 shadow foundation
+
+### Added
+- Backend-only V2 shadow/read model foundation in `Code.js` for future canonical eBayar master data.
+- New V2 helper/action functions:
+  - `normalizeYuranNameV2_`
+  - `makeBulanKeyV2_`
+  - `getEbayarMasterSpreadsheet_`
+  - `ensureEbayarMasterSchemaV2`
+  - `listEbayarYears`
+  - `getMonthlyPaymentSummaryV2`
+  - `getYuranStatsV2`
+  - `getYuranParentV2`
+  - `compareYuranLegacyVsV2`
+- Revised `Payments` schema for one canonical payment table:
+  `PAYMENT_ID`, `PAYMENT_GROUP_ID`, `TIMESTAMP`, `TAHUN`, `BULAN`, `BULAN_KEY`, `NAMA_MURID_RAW`, `NAMA_MURID_NORM`, `STUDENT_ID`, `NO_MYKID_MYKAD`, `STUDENT_TYPE`, `JUMLAH`, `AMOUNT_TOTAL`, `AMOUNT_ALLOCATED`, `STATUS`, `KAEDAH`, `RESIT_URL`, `SOURCE_YEAR`, `SOURCE_SHEET`, `SOURCE_ROW`, `SOURCE_ROW_HASH`, `MATCH_STATUS`, `MATCH_CONFIDENCE`, `NOTE`, `CREATED_AT`, `UPDATED_AT`.
+
+### Behavior
+- V2 is shadow-only. Live SPKM remains on legacy yuran/eBayar flow.
+- No UI switch was made. `index.html` and `portal.html` were not modified.
+- Existing live functions remain legacy: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
+- `PAYMENT_GROUP_ID` represents one original source row/resit/payment; `PAYMENT_ID` represents one student-level row. Multi-student source rows should be split later while preserving the same group ID.
+- If allocation is unclear, preserve original value in `AMOUNT_TOTAL` and leave `AMOUNT_ALLOCATED` blank/null with `NOTE`.
+
+### Git / Deploy
+- Commit pushed to `origin`: `298768c` — `feat: add ebayar master v2 shadow helpers`.
+- Earlier hygiene commit: `88d8b26` — `chore: ignore local workspace files`.
+- `.gitignore` now ignores `.vs/` and `before-ebayar-master-v2.patch`.
+- No GAS production deployment was done.
+- No `git push pages main` was done.
+- No live web app update was done.
+
+---
+
 ## [30 Jun 2026] — Admin: Pertukaran Guru (Permanent Reassign Murid)
 
 ### Added
