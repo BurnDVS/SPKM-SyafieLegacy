@@ -5381,13 +5381,17 @@
     if (countEl) countEl.textContent = '(' + list.length + ' murid)';
     const cariEl = document.getElementById('rekodCariMurid');
     if (cariEl) cariEl.value = '';
-    document.getElementById('rekodMuridList').innerHTML = list.map((nama, i) =>
-      `<div class="murid-row" data-nama="${escHtml(nama.toLowerCase())}"
+    document.getElementById('rekodMuridList').innerHTML = list.map((item, i) => {
+      const nama  = item.nama;
+      const badge = item.peranan === 'BACKUP'
+        ? `<span style="font-size:10px;font-weight:600;color:#7a6200;background:#FFD700;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle;">Ganti</span>`
+        : '';
+      return `<div class="murid-row" data-nama="${escHtml(nama.toLowerCase())}"
             style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border);">
         <input type="checkbox" id="muridChk_${i}" class="murid-chk" value="${escHtml(nama)}" onchange="updateMuridCount()">
-        <label for="muridChk_${i}" style="flex:1; cursor:pointer; font-size:14px;">${escHtml(nama)}</label>
-      </div>`
-    ).join('');
+        <label for="muridChk_${i}" style="flex:1; cursor:pointer; font-size:14px;">${escHtml(nama)}${badge}</label>
+      </div>`;
+    }).join('');
     updateMuridCount();
   }
 

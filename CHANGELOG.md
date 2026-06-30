@@ -4,6 +4,34 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Jun 2026] — Sokongan Guru Backup / Relief dalam Panel Kehadiran
+
+### Added
+- **`cariGuruTetapMurid(namaMurid, kanakData, dewasaData)`** — helper baru, cari guru tetap bagi murid tertentu dari PendaftaranBaru atau KelasDewasa (data pre-loaded untuk performance).
+- **`testGuruBackup()`** — test function untuk verify guru backup dapat senarai murid bukan kosong dengan peranan BACKUP.
+- Kolum baru di tab kehadiran baharu: **'Guru Tetap' (H)** dan **'Guru Hadir' (I)** — untuk bezakan rekod biasa vs relief.
+- Tab kehadiran sedia ada (7 kolum) akan auto-upgrade header H/I bila ada rekod ditulis; row lama tidak disentuh/backfill.
+
+### Changed
+- **`getMuridByGuru`** — kini check `COL_KANAK.GURU` DAN `COL_KANAK.GURU_BACKUP` untuk PendaftaranBaru.
+  - Return shape berubah: `{ success, murid: [{nama, peranan}, ...] }` (bukan array string).
+  - `peranan`: `'TETAP'` jika match kolum GURU, `'BACKUP'` jika match GURU_BACKUP sahaja. TETAP menang jika ada conflict.
+  - KelasDewasa kekal check GURU sahaja (tiada konsep backup untuk kelas dewasa).
+- **`simpanKehadiran`** — kini group murid ikut guru tetap masing-masing, tulis ke tab guru tetap (bukan tab guru yang login).
+  - Setiap row tulis 9 nilai termasuk `guruTetapNama` (H) dan `namaGuru` yang login (I).
+  - Kolum C "Nama Guru" kekal nama guru yang sebenarnya rekod (untuk backward compat `getKehadiranStats`/`getKehadiranRekod`).
+  - Murid yang guru tetap tidak jumpa → fallback ke tab namaGuru, warning di Logger.
+- **`getKehadiranStats`** — cascade fix: ekstrak `.nama` dari `enrol.murid` (kini array object) sebelum bina `senarai`. Tiada perubahan logik atau output.
+- **`renderGuruMuridChecklist`** (portal.html + index.html) — terima `[{nama, peranan}]`, papar badge kuning **"Ganti"** untuk murid dengan peranan BACKUP. Checkbox `value` dan payload submit kekal nama string sahaja.
+
+### Behavior
+- Guru backup login → checklist panel Kehadiran papar murid mereka dengan badge "Ganti".
+- Guru backup submit kehadiran → rekod masuk tab guru tetap murid tersebut, bukan tab guru backup.
+- Guru tetap semak stats mereka → sesi yang direkodkan oleh backup turut dikira (rekod sudah dalam tab mereka).
+- Stats panel untuk guru backup: `totalSesi: 0` (out of scope — rekod dalam tab guru tetap, bukan tab backup). Akan ditangani dalam task berasingan.
+
+---
+
 ## [30 Jun 2026] — Duplicate registration guard + Yuran name normalization
 
 ### Fixed
