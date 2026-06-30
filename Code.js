@@ -480,6 +480,9 @@ function registerKanak(params) {
     var sheet = ss.getSheetByName(TAB.KANAK);
     if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
 
+    var existing = findExistingKanakByMykid_(sheet, params.mykid);
+    if (existing) return duplicateKanakMessage_(params.mykid, existing);
+
     var lastRow   = sheet.getLastRow();
     var nextBil   = lastRow;
     var timestamp = new Date();
@@ -540,6 +543,9 @@ function registerDewasa(params) {
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.DEWASA);
     if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
+
+    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
+    if (existing) return duplicateDewasaMessage_(params.mykad, existing);
 
     var lastRow   = sheet.getLastRow();
     var nextBil   = lastRow;
@@ -875,6 +881,82 @@ function sanitizeInput(str) {
   s = s.replace(/<[^>]*>/g, '');
   s = s.replace(/[<>"'&;(){}]/g, '');
   return s.trim();
+}
+
+function normalizeMykid_(mykid) {
+  return (mykid || '').toString().replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+}
+
+function findExistingKanakByMykid_(sheet, mykid) {
+  var needle = normalizeMykid_(mykid);
+  if (!needle || !sheet || sheet.getLastRow() <= 1) return null;
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (normalizeMykid_(data[i][COL_KANAK.NO_MYKID]) === needle) {
+      return {
+        row: i + 2,
+        nama: (data[i][COL_KANAK.NAMA] || '').toString().trim(),
+        status: (data[i][COL_KANAK.STATUS] || '').toString().trim().toUpperCase()
+      };
+    }
+  }
+  return null;
+}
+
+function duplicateKanakMessage_(mykid, existing) {
+  var nama = existing && existing.nama ? ' untuk ' + existing.nama : '';
+  if (existing && existing.status === 'TIDAK AKTIF') {
+    return {
+      success: false,
+      duplicate: true,
+      inactive: true,
+      message: 'Murid ini pernah berdaftar' + nama + ' tetapi status tidak aktif. Sila hubungi admin untuk aktifkan semula. No. MYKID ' + mykid + ' telah wujud dalam sistem.'
+    };
+  }
+  return {
+    success: false,
+    duplicate: true,
+    message: 'Murid ini sudah berdaftar' + nama + '. No. MYKID ' + mykid + ' telah wujud dalam sistem.'
+  };
+}
+
+function normalizeMykad_(mykad) {
+  return (mykad || '').toString().replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+}
+
+function findExistingDewasaByMykad_(sheet, mykad) {
+  var needle = normalizeMykad_(mykad);
+  if (!needle || !sheet || sheet.getLastRow() <= 1) return null;
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (normalizeMykad_(data[i][COL_DEWASA.NO_MYKAD]) === needle) {
+      return {
+        row: i + 2,
+        nama: (data[i][COL_DEWASA.NAMA] || '').toString().trim(),
+        status: (data[i][COL_DEWASA.STATUS] || '').toString().trim().toUpperCase()
+      };
+    }
+  }
+  return null;
+}
+
+function duplicateDewasaMessage_(mykad, existing) {
+  var nama = existing && existing.nama ? ' untuk ' + existing.nama : '';
+  if (existing && existing.status === 'TIDAK AKTIF') {
+    return {
+      success: false,
+      duplicate: true,
+      inactive: true,
+      message: 'Murid dewasa ini pernah berdaftar' + nama + ' tetapi status tidak aktif. Sila hubungi admin untuk aktifkan semula. No. MYKAD ' + mykad + ' telah wujud dalam sistem.'
+    };
+  }
+  return {
+    success: false,
+    duplicate: true,
+    message: 'Murid dewasa ini sudah berdaftar' + nama + '. No. MYKAD ' + mykad + ' telah wujud dalam sistem.'
+  };
 }
 
 // ============================================================
@@ -2799,6 +2881,12 @@ function sendOTPKanak(params) {
         return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
       }
     }
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.KANAK);
+    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
+    var existing = findExistingKanakByMykid_(sheet, params.mykid);
+    if (existing) return duplicateKanakMessage_(params.mykid, existing);
+
     var nama = ((params.namaIbu || '') + ' (' + (params.namaAnak || '') + ')').trim();
     sendOTP_(params.email.trim(), nama);
     return { success: true, step: 'otp' };
@@ -2823,6 +2911,12 @@ function sendOTPDewasa(params) {
         return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
       }
     }
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.DEWASA);
+    if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
+    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
+    if (existing) return duplicateDewasaMessage_(params.mykad, existing);
+
     sendOTP_(params.email.trim(), params.nama.trim());
     return { success: true, step: 'otp' };
   } catch (err) {
@@ -2852,6 +2946,9 @@ function confirmRegisterKanak(params) {
     var sheet = ss.getSheetByName(TAB.KANAK);
     if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
 
+    var existing = findExistingKanakByMykid_(sheet, params.mykid);
+    if (existing) return duplicateKanakMessage_(params.mykid, existing);
+
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
     var newRow    = new Array(19).fill('');
@@ -2868,15 +2965,6 @@ function confirmRegisterKanak(params) {
     newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
     newRow[COL_KANAK.STATUS]    = 'AKTIF';
 
-    if (sheet.getLastRow() > 1) {
-      var existingKanak = sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues();
-      var mykidCari = params.mykid.trim().toLowerCase();
-      for (var i = 0; i < existingKanak.length; i++) {
-        if ((existingKanak[i][COL_KANAK.NO_MYKID] || '').toString().trim().toLowerCase() === mykidCari) {
-          return { success: false, message: 'Murid ini sudah berdaftar. No. MYKID ' + params.mykid + ' telah wujud dalam sistem.' };
-        }
-      }
-    }
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 
@@ -2914,6 +3002,9 @@ function confirmRegisterDewasa(params) {
     var sheet = ss.getSheetByName(TAB.DEWASA);
     if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
 
+    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
+    if (existing) return duplicateDewasaMessage_(params.mykad, existing);
+
     var nextBil   = sheet.getLastRow();
     var timestamp = new Date();
     var newRow    = new Array(19).fill('');
@@ -2929,15 +3020,6 @@ function confirmRegisterDewasa(params) {
     newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
     newRow[COL_DEWASA.STATUS]    = 'AKTIF';
 
-    if (sheet.getLastRow() > 1) {
-      var existingDewasa = sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues();
-      var mykadCari = params.mykad.trim().toLowerCase();
-      for (var i = 0; i < existingDewasa.length; i++) {
-        if ((existingDewasa[i][COL_DEWASA.NO_MYKAD] || '').toString().trim().toLowerCase() === mykadCari) {
-          return { success: false, message: 'Murid ini sudah berdaftar. No. MYKAD ' + params.mykad + ' telah wujud dalam sistem.' };
-        }
-      }
-    }
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 
