@@ -182,6 +182,8 @@ var ALLOWED_ACTIONS = [
   'simpanDeviceToken', 'getNotifikasi',
   'searchSijilKhatam',
   'renewSession',
+  'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
+  'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
@@ -192,6 +194,8 @@ var AUTH_REQUIRED_ACTIONS = [
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus',
   'simpanDeviceToken', 'getNotifikasi',
+  'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
+  'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
@@ -266,6 +270,12 @@ function doPost(e) {
     else if (action === 'getNotifikasi')          result = getNotifikasi(body);
     else if (action === 'searchSijilKhatam')           result = searchSijilKhatam(body);
     else if (action === 'renewSession')                result = renewSession(body);
+    else if (action === 'ensureEbayarMasterSchemaV2')  result = ensureEbayarMasterSchemaV2(body);
+    else if (action === 'listEbayarYears')             result = listEbayarYears(body);
+    else if (action === 'getMonthlyPaymentSummaryV2')  result = getMonthlyPaymentSummaryV2(body);
+    else if (action === 'getYuranStatsV2')             result = getYuranStatsV2(body);
+    else if (action === 'getYuranParentV2')            result = getYuranParentV2(body);
+    else if (action === 'compareYuranLegacyVsV2')      result = compareYuranLegacyVsV2(body);
     else if (action === 'getMuridByGuruUntukTukar')    result = getMuridByGuruUntukTukar(body);
     else if (action === 'tukarGuruMurid')              result = tukarGuruMurid(body);
 
@@ -400,6 +410,12 @@ function doAction(action, payload) {
   else if (action === 'getNotifikasi')         return getNotifikasi(payload);
   else if (action === 'searchSijilKhatam')            return searchSijilKhatam(payload);
   else if (action === 'renewSession')                 return renewSession(payload);
+  else if (action === 'ensureEbayarMasterSchemaV2')   return ensureEbayarMasterSchemaV2(payload);
+  else if (action === 'listEbayarYears')              return listEbayarYears(payload);
+  else if (action === 'getMonthlyPaymentSummaryV2')   return getMonthlyPaymentSummaryV2(payload);
+  else if (action === 'getYuranStatsV2')              return getYuranStatsV2(payload);
+  else if (action === 'getYuranParentV2')             return getYuranParentV2(payload);
+  else if (action === 'compareYuranLegacyVsV2')       return compareYuranLegacyVsV2(payload);
   else if (action === 'getMuridByGuruUntukTukar')     return getMuridByGuruUntukTukar(payload);
   else if (action === 'tukarGuruMurid')               return tukarGuruMurid(payload);
 }
@@ -1976,6 +1992,463 @@ function createKhatamTriggers() {
 // ============================================================
 var YURAN_SS_ID     = '1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM';
 var KEHADIRAN_SS_ID = '1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4';
+
+// ============================================================
+// EBAYAR MASTER / YURAN V2 — SHADOW READ MODEL ONLY
+// Tidak menggantikan flow live YURAN_SS_ID / eBayar sedia ada.
+// ============================================================
+var EBAYAR_MASTER_PROP_KEY_V2 = 'EBAYAR_MASTER_SS_ID';
+var EBAYAR_MASTER_NAME_V2     = 'SPKM eBayar Master';
+var EBAYAR_PAYMENTS_TAB_V2    = 'Payments';
+var EBAYAR_PAYMENTS_HEADERS_V2 = [
+  'PAYMENT_ID',
+  'PAYMENT_GROUP_ID',
+  'TIMESTAMP',
+  'TAHUN',
+  'BULAN',
+  'BULAN_KEY',
+  'NAMA_MURID_RAW',
+  'NAMA_MURID_NORM',
+  'STUDENT_ID',
+  'NO_MYKID_MYKAD',
+  'STUDENT_TYPE',
+  'JUMLAH',
+  'AMOUNT_TOTAL',
+  'AMOUNT_ALLOCATED',
+  'STATUS',
+  'KAEDAH',
+  'RESIT_URL',
+  'SOURCE_YEAR',
+  'SOURCE_SHEET',
+  'SOURCE_ROW',
+  'SOURCE_ROW_HASH',
+  'MATCH_STATUS',
+  'MATCH_CONFIDENCE',
+  'NOTE',
+  'CREATED_AT',
+  'UPDATED_AT'
+];
+
+var EBAYAR_SUPPORT_TABS_V2 = [
+  'Config',
+  'ImportLog',
+  'MonthlySummary',
+  'YearlySummary',
+  'StudentsSnapshot'
+];
+
+var EBAYAR_MONTHS_V2 = [
+  { key: '01', short: 'JAN',   label: 'Januari',   legacy: 'JAN2026' },
+  { key: '02', short: 'FEB',   label: 'Februari',  legacy: 'FEB2026' },
+  { key: '03', short: 'MAC',   label: 'Mac',       legacy: 'MAC2026' },
+  { key: '04', short: 'APRIL', label: 'April',     legacy: 'APRIL2026' },
+  { key: '05', short: 'MEI',   label: 'Mei',       legacy: 'MEI2026' },
+  { key: '06', short: 'JUN',   label: 'Jun',       legacy: 'JUN2026' },
+  { key: '07', short: 'JULAI', label: 'Julai',     legacy: 'JULAI2026' },
+  { key: '08', short: 'OGOS',  label: 'Ogos',      legacy: 'OGOS2026' },
+  { key: '09', short: 'SEPT',  label: 'September', legacy: 'SEPT2026' },
+  { key: '10', short: 'OKT',   label: 'Oktober',   legacy: 'OKT2026' },
+  { key: '11', short: 'NOV',   label: 'November',  legacy: 'NOV2026' },
+  { key: '12', short: 'DIS',   label: 'Disember',  legacy: 'DIS2026' }
+];
+
+function normalizeYuranNameV2_(name) {
+  return (name || '').toString().replace(/\s+/g, ' ').trim().toUpperCase();
+}
+
+function makeBulanKeyV2_(tahun, bulan) {
+  var y = (tahun || '').toString().replace(/[^0-9]/g, '');
+  var raw = (bulan || '').toString().trim().toUpperCase();
+  if (!y) {
+    var yearMatch = raw.match(/(20\d{2})/);
+    if (yearMatch) y = yearMatch[1];
+  }
+  var monthNo = '';
+  if (/^\d{1,2}$/.test(raw)) {
+    monthNo = ('0' + parseInt(raw, 10)).slice(-2);
+  } else {
+    for (var i = 0; i < EBAYAR_MONTHS_V2.length; i++) {
+      var m = EBAYAR_MONTHS_V2[i];
+      if (raw.indexOf(m.short) === 0 || raw.indexOf(m.label.toUpperCase()) === 0 || raw === m.legacy) {
+        monthNo = m.key;
+        break;
+      }
+    }
+  }
+  if (!y || !monthNo) return '';
+  return y + '-' + monthNo;
+}
+
+function getEbayarMasterSpreadsheet_(options) {
+  options = options || {};
+  var props = PropertiesService.getScriptProperties();
+  var id = (options.spreadsheetId || props.getProperty(EBAYAR_MASTER_PROP_KEY_V2) || '').toString().trim();
+  if (id) return SpreadsheetApp.openById(id);
+
+  var files = DriveApp.getFilesByName(EBAYAR_MASTER_NAME_V2);
+  if (files.hasNext()) {
+    var file = files.next();
+    props.setProperty(EBAYAR_MASTER_PROP_KEY_V2, file.getId());
+    return SpreadsheetApp.openById(file.getId());
+  }
+
+  if (options.create === true) {
+    var ss = SpreadsheetApp.create(EBAYAR_MASTER_NAME_V2);
+    props.setProperty(EBAYAR_MASTER_PROP_KEY_V2, ss.getId());
+    return ss;
+  }
+
+  throw new Error('SPKM eBayar Master belum dijumpai. Set Script Property ' + EBAYAR_MASTER_PROP_KEY_V2 + ' atau jalankan ensureEbayarMasterSchemaV2({create:true}).');
+}
+
+function ensureEbayarMasterSchemaV2(params) {
+  params = params || {};
+  try {
+    var ss = getEbayarMasterSpreadsheet_({ create: params.create === true, spreadsheetId: params.spreadsheetId });
+    var payments = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2) || ss.insertSheet(EBAYAR_PAYMENTS_TAB_V2);
+    var existingHeaders = payments.getLastColumn() > 0
+      ? payments.getRange(1, 1, 1, Math.max(payments.getLastColumn(), EBAYAR_PAYMENTS_HEADERS_V2.length)).getValues()[0]
+      : [];
+    var changed = false;
+    for (var h = 0; h < EBAYAR_PAYMENTS_HEADERS_V2.length; h++) {
+      if ((existingHeaders[h] || '').toString().trim() !== EBAYAR_PAYMENTS_HEADERS_V2[h]) {
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      payments.getRange(1, 1, 1, EBAYAR_PAYMENTS_HEADERS_V2.length).setValues([EBAYAR_PAYMENTS_HEADERS_V2]);
+      payments.setFrozenRows(1);
+    }
+
+    EBAYAR_SUPPORT_TABS_V2.forEach(function(tabName) {
+      if (!ss.getSheetByName(tabName)) ss.insertSheet(tabName);
+    });
+
+    return {
+      success: true,
+      spreadsheetId: ss.getId(),
+      spreadsheetName: ss.getName(),
+      paymentsTab: EBAYAR_PAYMENTS_TAB_V2,
+      headers: EBAYAR_PAYMENTS_HEADERS_V2,
+      changed: changed
+    };
+  } catch (err) {
+    Logger.log('ensureEbayarMasterSchemaV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function getPaymentsRowsV2_() {
+  var ss = getEbayarMasterSpreadsheet_();
+  var sheet = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2);
+  if (!sheet || sheet.getLastRow() < 2) return { rows: [], headers: EBAYAR_PAYMENTS_HEADERS_V2 };
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(h) {
+    return (h || '').toString().trim();
+  });
+  var idx = {};
+  headers.forEach(function(h, i) { if (h) idx[h] = i; });
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  var rows = data.map(function(r, offset) {
+    var obj = { _rowNumber: offset + 2 };
+    headers.forEach(function(h, i) { if (h) obj[h] = r[i]; });
+    obj._idx = idx;
+    return obj;
+  });
+  return { rows: rows, headers: headers };
+}
+
+function getMonthMetaV2_(bulanKey) {
+  var key = (bulanKey || '').toString();
+  var monthNo = key.indexOf('-') !== -1 ? key.split('-')[1] : key;
+  for (var i = 0; i < EBAYAR_MONTHS_V2.length; i++) {
+    if (EBAYAR_MONTHS_V2[i].key === monthNo) return EBAYAR_MONTHS_V2[i];
+  }
+  return null;
+}
+
+function getEligibleYuranStudentsV2_(tahun, bulanKey) {
+  var monthNo = (bulanKey || '').toString().split('-')[1] || '';
+  var monthIdx = monthNo ? parseInt(monthNo, 10) - 1 : -1;
+  var yearNo = parseInt(tahun, 10);
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var students = {};
+
+  function parseRegMonthIdx(tarikhRaw) {
+    if (!tarikhRaw) return -1;
+    var d = null;
+    if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) d = tarikhRaw;
+    else {
+      var ts = tarikhRaw.toString().trim();
+      var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m1) d = new Date(parseInt(m1[3], 10), parseInt(m1[2], 10) - 1, parseInt(m1[1], 10));
+      if (!d) {
+        var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m2) d = new Date(parseInt(m2[1], 10), parseInt(m2[2], 10) - 1, parseInt(m2[3], 10));
+      }
+    }
+    if (!d || isNaN(d.getTime())) return -1;
+    var yr = d.getFullYear();
+    if (yr < yearNo) return -1;
+    if (yr === yearNo) return d.getMonth();
+    return 999;
+  }
+
+  function collect(sheetName, col, studentType) {
+    var sheet = ss.getSheetByName(sheetName);
+    var data = (sheet && sheet.getLastRow() > 1) ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues() : [];
+    data.forEach(function(r) {
+      var nama = normalizeYuranNameV2_(r[col.NAMA]);
+      var status = (r[col.STATUS] || '').toString().trim().toUpperCase();
+      if (!nama || (status && status !== 'AKTIF')) return;
+      var regMonthIdx = parseRegMonthIdx(r[col.TIMESTAMP]);
+      if (monthIdx >= 0 && regMonthIdx > monthIdx) return;
+      students[nama] = { nama: nama, studentType: studentType, regMonthIdx: regMonthIdx };
+    });
+  }
+
+  collect(TAB.KANAK, COL_KANAK, 'KANAK');
+  collect(TAB.DEWASA, COL_DEWASA, 'DEWASA');
+  return Object.keys(students).sort().map(function(k) { return students[k]; });
+}
+
+function getTelefonMapV2_() {
+  var map = {};
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('WARemind');
+    if (sheet && sheet.getLastRow() >= 3) {
+      var data = sheet.getRange(3, 2, sheet.getLastRow() - 2, 3).getValues();
+      data.forEach(function(r) {
+        var nama = normalizeYuranNameV2_(r[0]);
+        var tel = (r[2] || '').toString().trim();
+        if (nama && tel) map[nama] = tel;
+      });
+    }
+  } catch (err) {
+    Logger.log('getTelefonMapV2_ error: ' + err.message);
+  }
+  return map;
+}
+
+function listEbayarYears(params) {
+  params = params || {};
+  try {
+    var data = getPaymentsRowsV2_();
+    var years = {};
+    data.rows.forEach(function(r) {
+      var y = (r.TAHUN || r.SOURCE_YEAR || '').toString().replace(/[^0-9]/g, '');
+      if (y) years[y] = true;
+    });
+    return { success: true, years: Object.keys(years).sort(), count: Object.keys(years).length };
+  } catch (err) {
+    Logger.log('listEbayarYears error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function getMonthlyPaymentSummaryV2(params) {
+  params = params || {};
+  try {
+    var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '');
+    var bulanKeyFilter = params.bulanKey || makeBulanKeyV2_(tahun, params.bulan || params.bulanKey);
+    var data = getPaymentsRowsV2_();
+    var byMonth = {};
+
+    data.rows.forEach(function(r) {
+      var bulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
+      if (!bulanKey) return;
+      if (tahun && bulanKey.indexOf(tahun + '-') !== 0) return;
+      if (bulanKeyFilter && bulanKey !== bulanKeyFilter) return;
+      if (!byMonth[bulanKey]) {
+        byMonth[bulanKey] = { bulanKey: bulanKey, tahun: bulanKey.split('-')[0], paymentRows: 0, paidStudents: {}, paymentGroups: {}, totalKutipan: 0 };
+      }
+      var bucket = byMonth[bulanKey];
+      var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
+      var status = (r.STATUS || '').toString().trim().toUpperCase();
+      if (nama && (!status || status === 'SELESAI')) bucket.paidStudents[nama] = true;
+      bucket.paymentRows++;
+
+      var groupId = (r.PAYMENT_GROUP_ID || r.PAYMENT_ID || '').toString().trim() || ('ROW-' + r._rowNumber);
+      if (!bucket.paymentGroups[groupId]) {
+        var amount = parseFloat(r.AMOUNT_TOTAL || r.JUMLAH || 0);
+        bucket.paymentGroups[groupId] = true;
+        if (!isNaN(amount)) bucket.totalKutipan += amount;
+      }
+    });
+
+    var summaries = Object.keys(byMonth).sort().map(function(k) {
+      var b = byMonth[k];
+      return {
+        bulanKey: b.bulanKey,
+        tahun: b.tahun,
+        paymentRows: b.paymentRows,
+        paymentGroups: Object.keys(b.paymentGroups).length,
+        selesai: Object.keys(b.paidStudents).length,
+        totalKutipan: b.totalKutipan
+      };
+    });
+
+    return { success: true, summaries: summaries };
+  } catch (err) {
+    Logger.log('getMonthlyPaymentSummaryV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function getYuranStatsV2(params) {
+  params = params || {};
+  try {
+    var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '') || '2026';
+    var bulanKey = params.bulanKey || makeBulanKeyV2_(tahun, params.bulan || '');
+    if (!bulanKey) return { success: false, message: 'Parameter bulan atau bulanKey diperlukan.' };
+
+    var data = getPaymentsRowsV2_();
+    var paid = {};
+    var listResit = [];
+    var groups = {};
+    var totalKutipan = 0;
+
+    data.rows.forEach(function(r) {
+      var rowBulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
+      if (rowBulanKey !== bulanKey) return;
+      var status = (r.STATUS || '').toString().trim().toUpperCase();
+      if (status && status !== 'SELESAI') return;
+      var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
+      if (nama) {
+        paid[nama] = true;
+        listResit.push({ nama: nama, resitUrl: (r.RESIT_URL || '').toString().trim() });
+      }
+      var groupId = (r.PAYMENT_GROUP_ID || r.PAYMENT_ID || '').toString().trim() || ('ROW-' + r._rowNumber);
+      if (!groups[groupId]) {
+        var amount = parseFloat(r.AMOUNT_TOTAL || r.JUMLAH || 0);
+        groups[groupId] = true;
+        if (!isNaN(amount)) totalKutipan += amount;
+      }
+    });
+
+    var eligible = getEligibleYuranStudentsV2_(tahun, bulanKey);
+    var telefonMap = getTelefonMapV2_();
+    var belumBayar = eligible
+      .filter(function(m) { return !paid[m.nama]; })
+      .map(function(m) { return { nama: m.nama, telefon: telefonMap[m.nama] || '' }; });
+    var listNamaBayar = Object.keys(paid).sort();
+
+    return {
+      success: true,
+      mode: 'V2_SHADOW',
+      bulanKey: bulanKey,
+      sudahBayar: listNamaBayar.length,
+      totalKutipan: totalKutipan,
+      listNamaBayar: listNamaBayar,
+      listResit: listResit,
+      belumBayar: belumBayar,
+      totalMurid: eligible.length
+    };
+  } catch (err) {
+    Logger.log('getYuranStatsV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function getYuranParentV2(params) {
+  params = params || {};
+  try {
+    var keyword = normalizeYuranNameV2_(params.keyword || '');
+    var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '') || '2026';
+    var data = getPaymentsRowsV2_();
+    var found = [];
+    var paidByMonth = {};
+
+    data.rows.forEach(function(r) {
+      var bulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
+      if (!bulanKey || bulanKey.indexOf(tahun + '-') !== 0) return;
+      var status = (r.STATUS || '').toString().trim().toUpperCase();
+      if (status && status !== 'SELESAI') return;
+      var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
+      if (!nama) return;
+      if (!paidByMonth[bulanKey]) paidByMonth[bulanKey] = {};
+      paidByMonth[bulanKey][nama] = true;
+      if (keyword.length >= 2 && nama.indexOf(keyword) !== -1) {
+        found.push({
+          nama: nama,
+          bulan: bulanKey,
+          bulanKey: bulanKey,
+          resitUrl: (r.RESIT_URL || '').toString().trim()
+        });
+      }
+    });
+
+    var belumBayar = {};
+    EBAYAR_MONTHS_V2.forEach(function(m) {
+      var bulanKey = tahun + '-' + m.key;
+      var eligible = getEligibleYuranStudentsV2_(tahun, bulanKey);
+      var paidSet = paidByMonth[bulanKey] || {};
+      belumBayar[bulanKey] = eligible
+        .filter(function(st) { return !paidSet[st.nama]; })
+        .map(function(st) { return st.nama; });
+    });
+
+    return { success: true, mode: 'V2_SHADOW', found: found, belumBayar: belumBayar };
+  } catch (err) {
+    Logger.log('getYuranParentV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function compareYuranLegacyVsV2(params) {
+  params = params || {};
+  try {
+    var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '') || '2026';
+    var bulan = (params.bulan || '').toString().trim().toUpperCase();
+    var bulanKey = params.bulanKey || makeBulanKeyV2_(tahun, bulan);
+    var meta = getMonthMetaV2_(bulanKey);
+    if (!meta) return { success: false, message: 'Bulan tidak dikenali.' };
+    var legacyBulan = bulan || meta.legacy.replace('2026', tahun);
+    var legacy = getYuranStats({ bulan: legacyBulan });
+    var v2 = getYuranStatsV2({ tahun: tahun, bulanKey: bulanKey });
+    if (!legacy.success || !v2.success) {
+      return { success: false, legacy: legacy, v2: v2, message: 'Legacy atau V2 gagal dibaca.' };
+    }
+
+    var legacyPaid = {};
+    (legacy.listNamaBayar || []).forEach(function(n) { legacyPaid[normalizeYuranNameV2_(n)] = true; });
+    var v2Paid = {};
+    (v2.listNamaBayar || []).forEach(function(n) { v2Paid[normalizeYuranNameV2_(n)] = true; });
+    var onlyLegacy = Object.keys(legacyPaid).filter(function(n) { return !v2Paid[n]; }).sort();
+    var onlyV2 = Object.keys(v2Paid).filter(function(n) { return !legacyPaid[n]; }).sort();
+
+    return {
+      success: true,
+      mode: 'V2_SHADOW_COMPARE',
+      bulan: legacyBulan,
+      bulanKey: bulanKey,
+      legacy: {
+        sudahBayar: legacy.sudahBayar,
+        belumBayar: (legacy.belumBayar || []).length,
+        totalMurid: legacy.totalMurid,
+        totalKutipan: legacy.totalKutipan
+      },
+      v2: {
+        sudahBayar: v2.sudahBayar,
+        belumBayar: (v2.belumBayar || []).length,
+        totalMurid: v2.totalMurid,
+        totalKutipan: v2.totalKutipan
+      },
+      diff: {
+        sudahBayar: v2.sudahBayar - legacy.sudahBayar,
+        belumBayar: (v2.belumBayar || []).length - (legacy.belumBayar || []).length,
+        totalMurid: v2.totalMurid - legacy.totalMurid,
+        totalKutipan: v2.totalKutipan - legacy.totalKutipan,
+        onlyLegacy: onlyLegacy,
+        onlyV2: onlyV2
+      }
+    };
+  } catch (err) {
+    Logger.log('compareYuranLegacyVsV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
 
 function getYuranStats(params) {
   params = params || {};
