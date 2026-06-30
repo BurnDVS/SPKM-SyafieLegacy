@@ -4,6 +4,32 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Jun 2026] — Admin: Pertukaran Guru (Permanent Reassign Murid)
+
+### Added
+- **`ensureLogPertukaranGuruSheet(ss)`** — auto-cipta tab `LogPertukaranGuru` dalam Main DB (`SPREADSHEET_ID`) jika belum wujud. 7 kolum: `Timestamp | Admin | Guru Lama | Guru Baru | Nama Murid | Jenis Murid | Bil`. Row 1 frozen.
+- **`getMuridByGuruUntukTukar(params)`** — return senarai murid TETAP guru (`COL_KANAK.GURU` / `COL_DEWASA.GURU` sahaja, bukan `GURU_BACKUP`), filter `STATUS=AKTIF`, sort A-Z. Shape: `[{bil, nama, jenis:'KANAK'|'DEWASA'}]`.
+- **`tukarGuruMurid(params)`** — permanent reassign: loop `senarai[]`, match row by `Bil` (`String` comparison untuk handle number/string), safety check `GURU semasa === guruLama` sebelum update, tulis `guruBaru` ke kolum GURU, log setiap baris ke `LogPertukaranGuru`, panggil `simpanNotifikasi`. Return `{success, jumlahDipindah, ralat:[]}` — partial transfer disokong (item gagal masuk `ralat`, item lain diteruskan).
+- **Panel "Pertukaran Guru"** dalam panel Guru — admin-only (hidden via `updateNav()` untuk guru biasa):
+  - Dropdown Guru Asal → memuatkan senarai murid TETAP → Dropdown Guru Baharu (auto-exclude Guru Asal) → checklist murid dengan label `(Kanak-kanak)` / `(Dewasa)` → modal konfirmasi "tidak boleh diundur" → submit.
+  - Butang Pindah disabled sehingga Guru Baharu dipilih DAN sekurang-kurangnya 1 murid ditanda.
+  - `notifAdd('pertukaran', ...)` dipanggil selepas berjaya — ada dalam portal.html dan index.html.
+  - Selepas berjaya: form di-reset, success message kekal nampak.
+
+### Behavior
+- Partial transfer: admin boleh untick murid tertentu — hanya murid yang ditanda sahaja dipindah.
+- Safety check backend: jika GURU murid sudah berubah sejak checklist dimuatkan (race condition), row tersebut masuk `ralat[]` dan baris lain diteruskan.
+- Berbeza dari Guru Backup/Relief: ini kemaskini kolum `GURU` secara kekal — bukan tambah ke `GURU_BACKUP`.
+
+### Verified
+- Tested live: pertukaran beberapa murid SHAFIE → ZARUL berjaya. Kolum GURU tukar betul dalam PendaftaranBaru dan KelasDewasa. Tab `LogPertukaranGuru` tercipta automatik dengan header betul dan rekod audit lengkap. Data test dipulihkan selepas verifikasi.
+
+### Deploy
+- Code.js + portal.html: copy-paste manual ke GAS Editor → New version → Deploy (clasp tidak digunakan, lihat entry "Deployment Incident").
+- index.html: push via `git push pages main`.
+
+---
+
 ## [30 Jun 2026] — Sokongan Guru Backup / Relief dalam Panel Kehadiran
 
 ### Added

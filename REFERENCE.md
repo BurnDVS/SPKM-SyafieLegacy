@@ -90,7 +90,7 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
 
 | Spreadsheet | ID | Kegunaan |
 |---|---|---|
-| SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni |
+| SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni. Tab `LogPertukaranGuru` (ditambah 30 Jun 2026) — log audit Pertukaran Guru, 7 kolum: `Timestamp \| Admin \| Guru Lama \| Guru Baru \| Nama Murid \| Jenis Murid \| Bil` |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
 | Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
@@ -142,6 +142,15 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 1. Edit `config.json` → tukar `gasUrl`
 2. `git add config.json && git commit -m "..." && git push && git push pages main`
 3. TAK perlu edit `index.html` atau bump `sw.js` cache version
+
+### Row identifier pattern (Pertukaran Guru + update berstruktur)
+Fungsi `tukarGuruMurid` dan fungsi update lain **JANGAN** guna row position (index array) sebagai identifier — data boleh berubah antara `getValues()` dan `setValue()`.
+
+Pattern yang digunakan:
+- Match by **`Bil`** (kolum A, index 0) — nilai unik per murid yang tidak berubah walaupun row di-sort atau row lain ditambah.
+- Compare sebagai `String(data[i][colBil]).trim() === String(bil).trim()` — handle kes di mana Bil tersimpan sebagai number (formula spreadsheet) atau string (manual entry).
+- **Safety check sebelum update:** verify `GURU semasa === guruLama` sebelum tulis `guruBaru`. Elak overwrite jika data sudah berubah sejak checklist dimuatkan (race condition antara `getMuridByGuruUntukTukar` dan `tukarGuruMurid`).
+- Item yang gagal safety check masuk `ralat[]` — partial transfer diteruskan untuk item lain yang OK.
 
 ---
 
@@ -216,4 +225,4 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 
 ---
 
-*Last updated: 30 Jun 2026 (Guru Backup/Relief + Known Issues Tooling)*
+*Last updated: 30 Jun 2026 (Guru Backup/Relief + Pertukaran Guru + Known Issues Tooling)*

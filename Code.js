@@ -8,13 +8,14 @@ var SPREADSHEET_ID = '1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU';
 
 // Nama tab dalam spreadsheet
 var TAB = {
-  GURU:          'Maklumat Guru',
-  KANAK:         'PendaftaranBaru',
-  DEWASA:        'KelasDewasa',
-  KEHADIRAN:     'Kehadiran',
-  BLAST_QUEUE:   'BlastQueue',
-  DEVICE_TOKENS: 'DeviceTokens',
-  NOTIFIKASI:    'Notifikasi'
+  GURU:             'Maklumat Guru',
+  KANAK:            'PendaftaranBaru',
+  DEWASA:           'KelasDewasa',
+  KEHADIRAN:        'Kehadiran',
+  BLAST_QUEUE:      'BlastQueue',
+  DEVICE_TOKENS:    'DeviceTokens',
+  NOTIFIKASI:       'Notifikasi',
+  LOG_PERTUKARAN:   'LogPertukaranGuru'
 };
 
 // Kolum tab BlastQueue (0-indexed)
@@ -180,7 +181,8 @@ var ALLOWED_ACTIONS = [
   'queueWABlast', 'getBlastStatus', 'logout',
   'simpanDeviceToken', 'getNotifikasi',
   'searchSijilKhatam',
-  'renewSession'
+  'renewSession',
+  'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -189,7 +191,8 @@ var AUTH_REQUIRED_ACTIONS = [
   'getMuridListAll', 'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
   'queueWABlast', 'getBlastStatus',
-  'simpanDeviceToken', 'getNotifikasi'
+  'simpanDeviceToken', 'getNotifikasi',
+  'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
 function doPost(e) {
@@ -261,8 +264,10 @@ function doPost(e) {
     else if (action === 'logout')                 result = logout(body);
     else if (action === 'simpanDeviceToken')      result = simpanDeviceToken(body);
     else if (action === 'getNotifikasi')          result = getNotifikasi(body);
-    else if (action === 'searchSijilKhatam')      result = searchSijilKhatam(body);
-    else if (action === 'renewSession')           result = renewSession(body);
+    else if (action === 'searchSijilKhatam')           result = searchSijilKhatam(body);
+    else if (action === 'renewSession')                result = renewSession(body);
+    else if (action === 'getMuridByGuruUntukTukar')    result = getMuridByGuruUntukTukar(body);
+    else if (action === 'tukarGuruMurid')              result = tukarGuruMurid(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -393,8 +398,10 @@ function doAction(action, payload) {
   else if (action === 'getBlastStatus')        return getBlastStatus(payload);
   else if (action === 'simpanDeviceToken')     return simpanDeviceToken(payload);
   else if (action === 'getNotifikasi')         return getNotifikasi(payload);
-  else if (action === 'searchSijilKhatam')     return searchSijilKhatam(payload);
-  else if (action === 'renewSession')          return renewSession(payload);
+  else if (action === 'searchSijilKhatam')            return searchSijilKhatam(payload);
+  else if (action === 'renewSession')                 return renewSession(payload);
+  else if (action === 'getMuridByGuruUntukTukar')     return getMuridByGuruUntukTukar(payload);
+  else if (action === 'tukarGuruMurid')               return tukarGuruMurid(payload);
 }
 
 // ============================================================
@@ -2611,6 +2618,185 @@ function simpanKehadiran(params) {
 
   } catch (err) {
     Logger.log('simpanKehadiran error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// PERTUKARAN GURU — permanent reassign murid dari guru ke guru lain
+// ============================================================
+
+// ensureLogPertukaranGuruSheet — cipta tab LogPertukaranGuru jika belum ada
+function ensureLogPertukaranGuruSheet(ss) {
+  var sheet = ss.getSheetByName(TAB.LOG_PERTUKARAN);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB.LOG_PERTUKARAN);
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'Timestamp', 'Admin', 'Guru Lama', 'Guru Baru', 'Nama Murid', 'Jenis Murid', 'Bil'
+    ]]);
+    sheet.setFrozenRows(1);
+    Logger.log('LogPertukaranGuru tab dicipta.');
+  }
+  return sheet;
+}
+
+// ============================================================
+// 33. getMuridByGuruUntukTukar
+// Ambil senarai murid TETAP guru (untuk fungsi pertukaran guru).
+// Hanya check kolum GURU — bukan GURU_BACKUP.
+// Input:  { namaGuru }
+// Output: { success, murid: [{bil, nama, jenis}, ...] }
+// ============================================================
+function getMuridByGuruUntukTukar(params) {
+  params = params || {};
+  try {
+    var namaGuru = (params.namaGuru || '').toString().trim();
+    if (!namaGuru) return { success: false, message: 'namaGuru diperlukan.' };
+
+    var namaGuruUpper = namaGuru.toUpperCase();
+    var ss   = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var list = [];
+
+    // PendaftaranBaru — hanya COL_KANAK.GURU (bukan GURU_BACKUP)
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, kanakSheet.getLastColumn()).getValues();
+      kData.forEach(function(r) {
+        var guru   = (r[COL_KANAK.GURU]   || '').toString().trim().toUpperCase();
+        var status = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+        if (guru !== namaGuruUpper) return;
+        if (status && status !== 'AKTIF') return;
+        var nama = (r[COL_KANAK.NAMA] || '').toString().trim();
+        if (!nama) return;
+        list.push({ bil: r[COL_KANAK.BIL], nama: nama.toUpperCase(), jenis: 'KANAK' });
+      });
+    }
+
+    // KelasDewasa — COL_DEWASA.GURU
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues();
+      dData.forEach(function(r) {
+        var guru   = (r[COL_DEWASA.GURU]   || '').toString().trim().toUpperCase();
+        var status = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+        if (guru !== namaGuruUpper) return;
+        if (status && status !== 'AKTIF') return;
+        var nama = (r[COL_DEWASA.NAMA] || '').toString().trim();
+        if (!nama) return;
+        list.push({ bil: r[COL_DEWASA.BIL], nama: nama.toUpperCase(), jenis: 'DEWASA' });
+      });
+    }
+
+    list.sort(function(a, b) { return a.nama < b.nama ? -1 : a.nama > b.nama ? 1 : 0; });
+
+    Logger.log('getMuridByGuruUntukTukar: "' + namaGuru + '" → ' + list.length + ' murid TETAP AKTIF');
+    return { success: true, murid: list };
+
+  } catch (err) {
+    Logger.log('getMuridByGuruUntukTukar error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 34. tukarGuruMurid
+// Permanent reassign murid dari guruLama ke guruBaru (update kolum GURU).
+// Input:  { token, adminEmail, guruLama, guruBaru, senarai:[{bil,jenis},...] }
+// Output: { success, jumlahDipindah, ralat:[...] }
+// ============================================================
+function tukarGuruMurid(params) {
+  params = params || {};
+  try {
+    var adminEmail = (params.adminEmail || '').toString().trim();
+    var guruLama   = (params.guruLama   || '').toString().trim();
+    var guruBaru   = (params.guruBaru   || '').toString().trim();
+    var senarai    = params.senarai || [];
+
+    if (!guruLama || !guruBaru) {
+      return { success: false, message: 'guruLama dan guruBaru diperlukan.' };
+    }
+    if (guruLama.toUpperCase() === guruBaru.toUpperCase()) {
+      return { success: false, message: 'Guru lama dan guru baru tidak boleh sama.' };
+    }
+    if (!senarai.length) {
+      return { success: false, message: 'Senarai murid kosong.' };
+    }
+
+    var ss          = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var kanakSheet  = ss.getSheetByName(TAB.KANAK);
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+
+    // Pre-load data sekali untuk carian row
+    var kanakData  = (kanakSheet  && kanakSheet.getLastRow()  > 1)
+      ? kanakSheet.getRange(2,  1, kanakSheet.getLastRow()  - 1, kanakSheet.getLastColumn()).getValues()
+      : [];
+    var dewasaData = (dewasaSheet && dewasaSheet.getLastRow() > 1)
+      ? dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues()
+      : [];
+
+    var timestamp    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    var guruLamaUpr  = guruLama.toUpperCase();
+    var jumlahDipindah = 0;
+    var ralat          = [];
+    var logRows        = [];
+
+    senarai.forEach(function(item) {
+      var bil   = item.bil;
+      var jenis = (item.jenis || '').toString().trim().toUpperCase();
+
+      var data      = (jenis === 'KANAK') ? kanakData  : dewasaData;
+      var sheet     = (jenis === 'KANAK') ? kanakSheet : dewasaSheet;
+      var colBil    = (jenis === 'KANAK') ? COL_KANAK.BIL    : COL_DEWASA.BIL;
+      var colGuru   = (jenis === 'KANAK') ? COL_KANAK.GURU   : COL_DEWASA.GURU;
+      var colNama   = (jenis === 'KANAK') ? COL_KANAK.NAMA   : COL_DEWASA.NAMA;
+
+      var rowFound  = -1;
+      var namaMurid = '';
+
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i][colBil]).trim() === String(bil).trim()) {
+          // Safety check: GURU mesti masih guruLama
+          var guruSemasa = (data[i][colGuru] || '').toString().trim().toUpperCase();
+          if (guruSemasa !== guruLamaUpr) {
+            ralat.push('Bil ' + bil + ' (' + jenis + '): GURU tidak match — jangkaan ' + guruLama + ', sebenar ' + guruSemasa);
+            return;
+          }
+          rowFound  = i + 2; // +2: baris pertama = header, data mula dari baris 2
+          namaMurid = (data[i][colNama] || '').toString().trim();
+          break;
+        }
+      }
+
+      if (rowFound === -1) {
+        ralat.push('Bil ' + bil + ' (' + jenis + '): row tidak dijumpai dalam sheet.');
+        return;
+      }
+
+      sheet.getRange(rowFound, colGuru + 1).setValue(guruBaru);
+      jumlahDipindah++;
+      logRows.push([timestamp, adminEmail, guruLama, guruBaru, namaMurid, jenis, bil]);
+    });
+
+    SpreadsheetApp.flush();
+
+    // Log ke LogPertukaranGuru
+    if (logRows.length > 0) {
+      var logSheet = ensureLogPertukaranGuruSheet(ss);
+      logSheet.getRange(logSheet.getLastRow() + 1, 1, logRows.length, 7).setValues(logRows);
+    }
+
+    Logger.log('tukarGuruMurid: ' + guruLama + ' → ' + guruBaru + ', ' + jumlahDipindah + ' dipindah, ' + ralat.length + ' ralat');
+
+    try {
+      simpanNotifikasi('pertukaran', '🔄 Pertukaran Guru',
+        guruLama + ' → ' + guruBaru + ' (' + jumlahDipindah + ' murid)',
+        { jumlah: String(jumlahDipindah) });
+    } catch(e) {}
+
+    return { success: true, jumlahDipindah: jumlahDipindah, ralat: ralat };
+
+  } catch (err) {
+    Logger.log('tukarGuruMurid error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
