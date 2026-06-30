@@ -92,7 +92,7 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
 |---|---|---|
 | SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
-| Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()` |
+| Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
 
 📌 To-Do #9: gabung tab eBayar 2025 (dari SPKM Main DB) + eBayar 2026 (`YURAN_SS_ID`) jadi satu spreadsheet dengan tab per tahun. Catatan: SPKM Main DB akan kekal untuk tab pendaftaran/kehadiran — hanya tab eBayar 2025 yang dipindah/disalin.
@@ -191,6 +191,23 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 - `UPKK Bahasa Arab` = projek lain, TAK berkaitan SPKM
 - `clasp login --no-localhost` — bila browser redirect ke localhost fail, paste FULL URL (termasuk `http://localhost:8888/?iss=...`) dalam terminal, bukan code sahaja. URL expires cepat, copy terus lepas browser buka.
 
+### ⚠️ Known Issues — Tooling (30 Jun 2026)
+
+**clasp push tidak stabil — Node v24.17.0 + clasp 3.3.0**
+- Symptom: `clasp push` / `clasp login` / `clasp login --no-localhost` gagal dengan OAuth error `Premature close`. Punca belum disahkan (Node v24 atau clasp 3.3.0 regression).
+- **Fallback selamat:** Copy-paste `Code.js` dan `portal.html` terus ke GAS Editor (`https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit`) → Save → **Deploy → Manage deployments → Edit → New version → Deploy**.
+- `index.html` tidak melalui clasp — boleh push normal via `git push pages main` tanpa isu.
+
+**git push origin 403 — credential mismatch akaun GitHub**
+- Symptom: `Permission to BurnDVS/SPKM-SyafieLegacy.git denied to shafielegacy` — berlaku bila credential git Windows tersimpan adalah akaun `shafielegacy` (bukan `BurnDVS`).
+- `git push pages main` (shafielegacy/SPKM) tetap berjaya — PWA live tidak terjejas.
+- **Fix:**
+  ```powershell
+  cmdkey /delete:LegacyGeneric:target=git:https://github.com
+  ```
+  Lepas tu `git push origin main` semula, login sebagai `BurnDVS` bila diminta.
+- **Status semasa (30 Jun 2026):** `origin` tertinggal commit `f588c57` — perlu sync bila credential BurnDVS tersedia.
+
 ---
 
 ## 🚀 Second Project (early setup)
@@ -199,4 +216,4 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 
 ---
 
-*Last updated: 30 Jun 2026*
+*Last updated: 30 Jun 2026 (Guru Backup/Relief + Known Issues Tooling)*

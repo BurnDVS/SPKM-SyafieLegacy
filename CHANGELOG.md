@@ -30,6 +30,34 @@ Semua perubahan utama sistem direkodkan di sini.
 - Guru tetap semak stats mereka → sesi yang direkodkan oleh backup turut dikira (rekod sudah dalam tab mereka).
 - Stats panel untuk guru backup: `totalSesi: 0` (out of scope — rekod dalam tab guru tetap, bukan tab backup). Akan ditangani dalam task berasingan.
 
+### Verified
+- `testGuruBackup()` dijalankan live: ZARUL SUZAIMI BIN ZAILI → 27 murid, semua `peranan: 'BACKUP'` — betul.
+- Submit 3 murid sebagai ZARUL → rekod masuk tab **MUHAMMAD SHAFIE BIN BAHARI** dalam KEHADIRAN_SS_ID.
+- Spreadsheet disahkan: kolum C = `ZARUL SUZAIMI BIN ZAILI` (Guru Hadir), kolum H = `MUHAMMAD SHAFIE BIN BAHARI` (Guru Tetap) — correct.
+- `testKehadiranStats()` untuk SHAFIE: output kekal betul, `totalMurid` dan `unmatched` tidak terjejas oleh cascade fix.
+
+### Deploy
+- GAS deployed manual — `Code.js` + `portal.html` copy-paste ke GAS Editor → New version → Deploy (clasp tidak digunakan, lihat entry "Deployment Incident" bawah).
+- `index.html` berjaya push via `git push pages main` (shafielegacy/SPKM) — PWA live update.
+- `git push origin main` (BurnDVS/SPKM-SyafieLegacy) GAGAL — lihat entry "Deployment Incident" untuk detail dan status.
+
+---
+
+## [30 Jun 2026] — Deployment Incident: clasp + Node v24, git origin 403
+
+### clasp push gagal — Node v24 / clasp 3.3.0
+- `clasp push` dan `clasp login --no-localhost` gagal dengan OAuth error `Premature close`.
+- Punca: kemungkinan incompatibility Node v24.17.0 dengan clasp 3.3.0 OAuth flow — belum disahkan.
+- **Fallback yang digunakan:** Copy-paste manual `Code.js` dan `portal.html` terus ke GAS Editor → Save → Deploy → Manage deployments → Edit → New version → Deploy.
+- `index.html` tidak melalui clasp, berjaya di-push normal via git.
+
+### git push origin gagal — 403 credential mismatch
+- `git push origin main` (BurnDVS/SPKM-SyafieLegacy) return 403: `Permission to BurnDVS/SPKM-SyafieLegacy.git denied to shafielegacy`.
+- Punca: credential git Windows tersimpan adalah akaun `shafielegacy` (bukan `BurnDVS`) — kemungkinan ditukar semasa push ke `pages` sebelum ni.
+- `git push pages main` (shafielegacy/SPKM) berjaya — PWA live tidak terjejas.
+- **Status:** `origin` (BurnDVS/SPKM-SyafieLegacy) tertinggal commit `f588c57` — perlu sync apabila credential BurnDVS tersedia.
+- **Fix:** `cmdkey /delete:LegacyGeneric:target=git:https://github.com` → push semula → login sebagai BurnDVS bila diminta.
+
 ---
 
 ## [30 Jun 2026] — Duplicate registration guard + Yuran name normalization

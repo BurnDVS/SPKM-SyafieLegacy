@@ -29,6 +29,7 @@ Sistem ini dibina untuk kegunaan pentadbiran Syafie Legacy dan menggunakan Googl
 - Guru boleh rekod kehadiran murid mengikut sesi.
 - Paparan statistik kehadiran mengikut guru dan murid.
 - Senarai murid guru dibaca daripada data pendaftaran aktif.
+- ✅ Guru Backup/Relief — `getMuridByGuru` check `GURU_BACKUP` sekali, badge "Ganti" di checklist, `simpanKehadiran` auto-split rekod relief ke tab guru tetap (30 Jun 2026).
 
 ### Yuran
 - Dashboard yuran bulanan.
