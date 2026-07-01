@@ -297,3 +297,13 @@ Pattern yang digunakan:
   - Batch 5: 10 source groups -> 18 child rows
   - Total: 45 source groups -> 77 child payment rows
 - This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
+## Queue #9 eBayar V2 2026 Staging Import Checkpoint — 1 Jul 2026
+
+- 2026 staging import has progressed to 95 source groups -> 169 child payment rows.
+- Latest diagnostic: `lastRow=170`, `sourceRowHashColumn=21`, `existingHashCount=169` row entries.
+- Larger 25-source-group helpers were added and used successfully: `testImportEbayarPayments2026NextBatch25PreviewV2()` and `testImportEbayarPayments2026NextBatch25V2()`.
+- Staging import safety limit is now `limitSourceRows <= 25`.
+- Confirmed 25-group actual batch: `existingHashCount=70`, `sourceGroupsSelected=25`, `draftRows=46`, `rowsToAppend=46`, `appendedRows=46`.
+- A later 25-group preview was run only and not imported: `existingHashCount=95`, `sourceGroupsSelected=25`, `draftRows=45`, `rowsToAppend=45`, `appendedRows=0`; source continues at `FEB2026` row 33.
+- Important: the `FEB2026` row 33 preview batch has not been imported yet.
+- This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
