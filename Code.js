@@ -2244,7 +2244,11 @@ function detectEbayarSourceColumnsV2_(headers) {
     timestamp: null,
     resit: null,
     telefon: null,
-    bulan: null
+    bulan: null,
+    tahun: null,
+    tarikhBayaran: null,
+    noResit: null,
+    email: null
   };
 
   function cleanHeader(h) {
@@ -2261,8 +2265,23 @@ function detectEbayarSourceColumnsV2_(headers) {
     return false;
   }
 
+  var priority = [
+    'timestamp',
+    'email',
+    'nama',
+    'bulan',
+    'tahun',
+    'resit',
+    'jumlah',
+    'tarikhBayaran',
+    'noResit',
+    'status',
+    'telefon'
+  ];
+
   var rules = {
     nama: [
+      /NAMA.*ANAK/,
       /NAMA.*MURID/,
       /NAMA.*PENUH/,
       /^NAMA$/,
@@ -2274,14 +2293,12 @@ function detectEbayarSourceColumnsV2_(headers) {
       /JUMLAH/,
       /AMAUN/,
       /AMOUNT/,
-      /BAYARAN/,
       /RM/,
       /TOTAL/
     ],
     status: [
       /STATUS/,
       /SELESAI/,
-      /BAYAR/,
       /PAID/,
       /PAYMENT.*STATUS/
     ],
@@ -2294,13 +2311,12 @@ function detectEbayarSourceColumnsV2_(headers) {
       /DATE/
     ],
     resit: [
+      /MUAT NAIK.*RESIT/,
       /RESIT/,
       /RECEIPT/,
       /BUKTI/,
       /SLIP/,
-      /UPLOAD/,
-      /URL/,
-      /FAIL/
+      /UPLOAD/
     ],
     telefon: [
       /TELEFON/,
@@ -2311,17 +2327,40 @@ function detectEbayarSourceColumnsV2_(headers) {
       /NOMBOR/
     ],
     bulan: [
+      /BAYARAN.*YURAN.*BAGI.*BULAN/,
       /BULAN/,
       /MONTH/,
       /YURAN.*BAGI/,
       /BAYARAN.*BULAN/
+    ],
+    tahun: [
+      /^TAHUN$/,
+      /TAHUN.*YURAN/,
+      /^YEAR$/
+    ],
+    tarikhBayaran: [
+      /TARIKH.*BAYARAN.*DIBUAT/,
+      /TARIKH.*BAYAR/,
+      /PAYMENT.*DATE/,
+      /DATE.*PAID/
+    ],
+    noResit: [
+      /^NO\.?\s*RESIT$/,
+      /NOMBOR.*RESIT/,
+      /RECEIPT.*NO/,
+      /NO\.?\s*RECEIPT/
+    ],
+    email: [
+      /^EMAIL$/,
+      /EMAIL.*ADDRESS/,
+      /ALAMAT.*EMAIL/
     ]
   };
 
   for (var c = 0; c < headers.length; c++) {
     var cleaned = cleanHeader(headers[c]);
     if (!cleaned) continue;
-    Object.keys(rules).forEach(function(key) {
+    priority.forEach(function(key) {
       if (detected[key] === null && matchAny(cleaned, rules[key])) {
         detected[key] = {
           column: c + 1,
