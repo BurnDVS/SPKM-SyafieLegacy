@@ -49,6 +49,16 @@ Semua perubahan utama sistem direkodkan di sini.
 - Duplicate safety confirmed: multi-name payments intentionally share `SOURCE_ROW_HASH` and `PAYMENT_GROUP_ID`, while child rows have unique `PAYMENT_ID`.
 - Next planned step: real import to staging `Payments` only, starting with a small batch/limit and idempotent by `SOURCE_ROW_HASH`. Do not import yet.
 
+### Staging small-batch import — 1 Jul 2026
+- Added staging-only small batch import helper for `SPKM eBayar Master > Payments`.
+- Imported first 5 source payment groups from 2026 `JAN2026`.
+- First import result: `sourceYear=2026`, `limitSourceRows=5`, `sourceGroupsSelected=5`, `draftRows=7`, `existingHashCount=0`, `rowsToAppend=7`, `appendedRows=7`.
+- `Payments` tab now has 7 imported child payment rows below the header.
+- `testExistingPaymentSourceHashesV2` confirmed `lastRow=8`, `sourceRowHashColumn=21`, and 7 row-level hash entries.
+- Idempotent second run confirmed: `existingHashCount=5` unique source hashes, `rowsToAppend=0`, `skippedDuplicateRows=7`, `appendedRows=0`.
+- No duplicate rows were appended on the second run.
+- Live SPKM remains legacy; no GAS web app deployment, no `pages` push, and no frontend switch.
+
 ### Git / Deploy
 - Commit pushed to `origin`: `298768c` — `feat: add ebayar master v2 shadow helpers`.
 - Earlier hygiene commit: `88d8b26` — `chore: ignore local workspace files`.

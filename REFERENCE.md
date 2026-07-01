@@ -125,9 +125,14 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
   - 2026 data: 447 source payment rows, 768 generated payment rows, 212 multi-name rows, 427 skipped rows.
   - Total: 864 source payment rows, 1555 generated payment rows.
 - Duplicate safety: no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID` in dry-run. Multi-name rows share source group/hash by design but receive unique child `PAYMENT_ID`.
+- Staging import status:
+  - First small batch imported to `Payments`: 5 source payment groups from 2026 `JAN2026`, producing 7 child payment rows.
+  - `Payments` now has 7 imported child rows below the header.
+  - Diagnostic: `lastRow=8`, `sourceRowHashColumn=21`, 7 row entries in `SOURCE_ROW_HASH`.
+  - Idempotency confirmed on second run: 5 unique existing source hashes, 0 rows to append, 7 duplicate child rows skipped, 0 appended.
 - Next steps:
-  1. Do real import to staging `Payments` only, starting with small batch/limit.
-  2. Make import idempotent with `SOURCE_ROW_HASH`.
+  1. Continue staging-only imports in controlled batches.
+  2. Keep import idempotent with `SOURCE_ROW_HASH`.
   3. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
   4. Run `compareYuranLegacyVsV2` by month before any UI switch.
   5. Deploy/switch UI only in a later task after comparison passes.

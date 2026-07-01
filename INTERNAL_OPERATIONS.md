@@ -159,10 +159,17 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
   - 2026 month counts: `2026-01` 110, `2026-02` 120, `2026-03` 112, `2026-04` 113, `2026-05` 119, `2026-06` 174, `2026-07` 20.
   - Total preview: 864 source payment rows, 1555 generated payment rows.
 - Duplicate safety confirmed: no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID`. Multi-name payment rows intentionally share `SOURCE_ROW_HASH` and `PAYMENT_GROUP_ID`, but child rows have unique `PAYMENT_ID`.
-- No V2 data import/copy has been done yet.
-- Next step is staging-only real import into `Payments`, starting with small batch/limit and idempotent via `SOURCE_ROW_HASH`; do not import until explicitly requested.
+- Staging-only first import completed:
+  - Imported first 5 source payment groups from 2026 `JAN2026` into `SPKM eBayar Master > Payments`.
+  - First import appended 7 child payment rows: `sourceGroupsSelected=5`, `draftRows=7`, `existingHashCount=0`, `rowsToAppend=7`, `appendedRows=7`.
+  - `Payments` now has 7 imported child payment rows below the header.
+  - Diagnostic confirmed `lastRow=8`, `sourceRowHashColumn=21`, and 7 row-level hash entries.
+  - Second run was idempotent: 5 unique existing source hashes, `rowsToAppend=0`, `skippedDuplicateRows=7`, `appendedRows=0`.
+  - No duplicate rows were appended on the second run.
+- Continue imports only in staging batches; keep idempotency via `SOURCE_ROW_HASH`.
 - Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
-- `clasp push` has updated GAS editor source, but no GAS production deployment and no `git push pages main` was done for Queue #9 staging setup.
+- `clasp push` may update GAS editor source, but no GAS production deployment and no `git push pages main` has been done for Queue #9 staging work.
+- Live SPKM remains legacy; no frontend switch.
 
 ### WhatsApp Blast
 - Fonnte integration.
