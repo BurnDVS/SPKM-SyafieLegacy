@@ -64,7 +64,9 @@ Semua perubahan utama sistem direkodkan di sini.
 - Preview for next 2026 batch: `sourceYear=2026`, `limitSourceRows=10`, `skipExistingGroupsFirst=true`, `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=0`.
 - Actual next batch import: `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=21`.
 - Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, `existingHashCount=28` row entries.
-- Total staging imported so far: Batch 1 = 5 source groups -> 7 child rows; Batch 2 = 10 source groups -> 21 child rows; total = 15 source groups -> 28 child payment rows.
+- Third staging import batch completed with `skipExistingGroupsFirst:true`: `existingHashCount=15`, `sourceGroupsSelected=10`, `draftRows=16`, `rowsToAppend=16`, `appendedRows=16`.
+- Diagnostic after third batch: `lastRow=45`, `sourceRowHashColumn=21`, `existingHashCount=44` row entries.
+- Total staging imported so far: Batch 1 = 5 source groups -> 7 child rows; Batch 2 = 10 source groups -> 21 child rows; Batch 3 = 10 source groups -> 16 child rows; total = 25 source groups -> 44 child payment rows.
 - Live SPKM remains legacy; no GAS web app deployment, no `pages` push, and no frontend switch.
 
 ### Git / Deploy

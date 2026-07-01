@@ -171,7 +171,9 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
   - Preview for next 2026 batch: `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=0`.
   - Actual next batch appended 21 child rows from 10 additional source groups.
   - Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, `existingHashCount=28` row entries.
-  - Total staging imported so far: 15 source groups -> 28 child payment rows.
+  - Third batch appended 16 child rows from 10 additional source groups: `existingHashCount=15`, `sourceGroupsSelected=10`, `draftRows=16`, `rowsToAppend=16`, `appendedRows=16`.
+  - Diagnostic after third batch: `lastRow=45`, `sourceRowHashColumn=21`, `existingHashCount=44` row entries.
+  - Total staging imported so far: 25 source groups -> 44 child payment rows.
 - Continue imports only in staging batches; keep idempotency via `SOURCE_ROW_HASH`.
 - Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
 - `clasp push` may update GAS editor source, but no GAS production deployment and no `git push pages main` has been done for Queue #9 staging work.

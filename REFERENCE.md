@@ -133,7 +133,9 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
   - Next-batch import support uses `skipExistingGroupsFirst:true` to select unimported source groups first.
   - Second batch imported 10 additional source payment groups from 2026, producing 21 more child payment rows.
   - Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, 28 row entries in `SOURCE_ROW_HASH`.
-  - Total staging imported so far: 15 source groups -> 28 child payment rows.
+  - Third batch imported 10 additional source payment groups from 2026, producing 16 more child payment rows.
+  - Diagnostic after third batch: `lastRow=45`, `sourceRowHashColumn=21`, 44 row entries in `SOURCE_ROW_HASH`.
+  - Total staging imported so far: 25 source groups -> 44 child payment rows.
 - Next steps:
   1. Continue staging-only imports in controlled batches.
   2. Keep import idempotent with `SOURCE_ROW_HASH`.
