@@ -2552,6 +2552,183 @@ function testAuditEbayarSourceRawTabs2026V2() {
   return testAuditEbayarSourceRawTabsByYearV2_(2026);
 }
 
+function parseEbayarAmountV2_(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'number') return value;
+  var cleaned = value.toString().replace(/RM/ig, '').replace(/,/g, '').trim();
+  var amount = parseFloat(cleaned);
+  return isNaN(amount) ? value : amount;
+}
+
+function getDetectedCellV2_(row, detectedColumns, key) {
+  var col = detectedColumns && detectedColumns[key];
+  if (!col || col.index === undefined || col.index === null) return '';
+  return row[col.index];
+}
+
+function makePaymentGroupIdDryRunV2_(sourceYear, sourceSheet, sourceRow) {
+  var sheetKey = (sourceSheet || '').toString().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase();
+  return ['DRYRUN', sourceYear, sheetKey, sourceRow].join('-');
+}
+
+function makeBulanKeyDryRunV2_(tahun, bulan, sourceSheet) {
+  var bulanKey = makeBulanKeyV2_(tahun, bulan);
+  if (bulanKey) return bulanKey;
+  var sheetName = (sourceSheet || '').toString().trim().toUpperCase();
+  for (var i = 0; i < EBAYAR_MONTHS_V2.length; i++) {
+    var m = EBAYAR_MONTHS_V2[i];
+    if (sheetName.indexOf(m.short) !== -1 || sheetName.indexOf(m.label.toUpperCase()) !== -1) {
+      return tahun + '-' + m.key;
+    }
+  }
+  return '';
+}
+
+function splitEbayarNamesDryRunV2_(rawName) {
+  var raw = (rawName || '').toString().replace(/\s+/g, ' ').trim();
+  if (!raw) return [];
+  return raw.split(',')
+    .map(function(part) { return normalizeYuranNameV2_(part); })
+    .filter(function(name) { return !!name; });
+}
+
+function buildEbayarImportRowsDryRunV2_(options) {
+  options = options || {};
+  var requestedYear = options.sourceYear ? parseInt(options.sourceYear, 10) : null;
+  var limitRowsPerTab = parseInt(options.limitRowsPerTab, 10);
+  var hasLimit = !isNaN(limitRowsPerTab) && limitRowsPerTab > 0;
+  var audit = auditEbayarSourceTabsV2();
+  if (!audit || !audit.success) return { success: false, message: audit ? audit.message : 'Audit gagal.' };
+
+  var draftRows = [];
+  var sourceTabs = [];
+  var sourceRowCount = 0;
+  var multiNameRows = 0;
+  var skippedRows = 0;
+  var statusCounts = {};
+  var yearCounts = {};
+  var monthCounts = {};
+
+  (audit.sources || []).forEach(function(source) {
+    var sourceYear = parseInt(source.sourceYear, 10);
+    if (requestedYear && sourceYear !== requestedYear) return;
+    var ss = SpreadsheetApp.openById(source.spreadsheetId);
+
+    (source.tabs || []).forEach(function(tab) {
+      if (!isRawEbayarPaymentTabV2_(tab)) return;
+      var sheet = ss.getSheetByName(tab.name);
+      if (!sheet || sheet.getLastRow() < 2 || sheet.getLastColumn() < 1) return;
+
+      sourceTabs.push(tab.name);
+      var rowCount = sheet.getLastRow() - 1;
+      if (hasLimit) rowCount = Math.min(rowCount, limitRowsPerTab);
+      var values = sheet.getRange(2, 1, rowCount, sheet.getLastColumn()).getValues();
+
+      values.forEach(function(row, offset) {
+        var sourceRow = offset + 2;
+        var hasAnyValue = row.some(function(cell) {
+          return cell !== null && cell !== undefined && cell.toString().trim() !== '';
+        });
+        if (!hasAnyValue) {
+          skippedRows++;
+          return;
+        }
+
+        var rawName = getDetectedCellV2_(row, tab.detectedColumns, 'nama');
+        var splitNames = splitEbayarNamesDryRunV2_(rawName);
+        if (!splitNames.length) {
+          skippedRows++;
+          return;
+        }
+        if (splitNames.length > 1) multiNameRows++;
+
+        sourceRowCount++;
+        var timestamp = getDetectedCellV2_(row, tab.detectedColumns, 'timestamp');
+        var tahunRaw = getDetectedCellV2_(row, tab.detectedColumns, 'tahun');
+        var tahun = (tahunRaw || '').toString().replace(/[^0-9]/g, '');
+        if (!tahun) tahun = sourceYear.toString();
+        var bulan = getDetectedCellV2_(row, tab.detectedColumns, 'bulan') || tab.name;
+        var bulanKey = makeBulanKeyDryRunV2_(tahun, bulan || tab.name, tab.name);
+        var jumlahRaw = getDetectedCellV2_(row, tab.detectedColumns, 'jumlah');
+        var amountTotal = parseEbayarAmountV2_(jumlahRaw);
+        var status = (getDetectedCellV2_(row, tab.detectedColumns, 'status') || '').toString().trim().toUpperCase();
+        var resitUrl = (getDetectedCellV2_(row, tab.detectedColumns, 'resit') || '').toString().trim();
+        var paymentGroupId = makePaymentGroupIdDryRunV2_(sourceYear, tab.name, sourceRow);
+        var note = splitNames.length > 1
+          ? 'Dry-run split from one source row; AMOUNT_ALLOCATED left blank.'
+          : 'Dry-run only; no import/write performed.';
+
+        statusCounts[status || '(blank)'] = (statusCounts[status || '(blank)'] || 0) + 1;
+        yearCounts[tahun || '(blank)'] = (yearCounts[tahun || '(blank)'] || 0) + splitNames.length;
+        monthCounts[bulanKey || tab.name] = (monthCounts[bulanKey || tab.name] || 0) + splitNames.length;
+
+        splitNames.forEach(function(name, nameIndex) {
+          draftRows.push({
+            PAYMENT_ID: paymentGroupId + '-' + (nameIndex + 1),
+            PAYMENT_GROUP_ID: paymentGroupId,
+            SOURCE_YEAR: sourceYear,
+            SOURCE_SHEET: tab.name,
+            SOURCE_ROW: sourceRow,
+            TIMESTAMP: timestamp,
+            TAHUN: tahun,
+            BULAN: bulan,
+            BULAN_KEY: bulanKey,
+            NAMA_MURID_RAW: rawName,
+            NAMA_MURID_NORM: name,
+            JUMLAH: jumlahRaw,
+            AMOUNT_TOTAL: amountTotal,
+            AMOUNT_ALLOCATED: '',
+            STATUS: status,
+            KAEDAH: '',
+            RESIT_URL: resitUrl,
+            NOTE: note
+          });
+        });
+      });
+    });
+  });
+
+  return {
+    success: true,
+    mode: 'V2_IMPORT_DRY_RUN_READ_ONLY',
+    sourceYear: requestedYear || 'ALL',
+    sourceTabs: sourceTabs,
+    sourceRowCount: sourceRowCount,
+    generatedPaymentRows: draftRows.length,
+    multiNameRows: multiNameRows,
+    skippedRows: skippedRows,
+    statusCounts: statusCounts,
+    yearCounts: yearCounts,
+    monthCounts: monthCounts,
+    sampleDraftRows: draftRows.slice(0, 10)
+  };
+}
+
+function dryRunImportEbayarSourceV2(params) {
+  params = params || {};
+  try {
+    return buildEbayarImportRowsDryRunV2_({
+      sourceYear: params.sourceYear,
+      limitRowsPerTab: params.limitRowsPerTab
+    });
+  } catch (err) {
+    Logger.log('dryRunImportEbayarSourceV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function testDryRunImportEbayar2025V2() {
+  var result = dryRunImportEbayarSourceV2({ sourceYear: 2025 });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testDryRunImportEbayar2026V2() {
+  var result = dryRunImportEbayarSourceV2({ sourceYear: 2026 });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 function listEbayarYears(params) {
   params = params || {};
   try {
