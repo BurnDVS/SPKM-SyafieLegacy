@@ -2460,20 +2460,20 @@ function testAuditEbayarSourceTabsV2() {
   return result;
 }
 
+function compactDetectedColumnsV2_(detectedColumns) {
+  var compact = {};
+  detectedColumns = detectedColumns || {};
+  Object.keys(detectedColumns).forEach(function(key) {
+    compact[key] = detectedColumns[key] ? detectedColumns[key].header : null;
+  });
+  return compact;
+}
+
 function testAuditEbayarSourceTabsCompactV2() {
   var result = auditEbayarSourceTabsV2();
   if (!result || !result.success) {
     Logger.log(JSON.stringify(result, null, 2));
     return result;
-  }
-
-  function compactDetectedColumns(detectedColumns) {
-    var compact = {};
-    detectedColumns = detectedColumns || {};
-    Object.keys(detectedColumns).forEach(function(key) {
-      compact[key] = detectedColumns[key] ? detectedColumns[key].header : null;
-    });
-    return compact;
   }
 
   var summary = {
@@ -2489,7 +2489,7 @@ function testAuditEbayarSourceTabsCompactV2() {
             name: tab.name,
             lastRow: tab.lastRow,
             lastColumn: tab.lastColumn,
-            detectedColumns: compactDetectedColumns(tab.detectedColumns)
+            detectedColumns: compactDetectedColumnsV2_(tab.detectedColumns)
           };
         })
       };
@@ -2498,6 +2498,58 @@ function testAuditEbayarSourceTabsCompactV2() {
 
   Logger.log(JSON.stringify(summary, null, 2));
   return summary;
+}
+
+function isRawEbayarPaymentTabV2_(tab) {
+  var name = (tab && tab.name ? tab.name : '').toString().trim().toUpperCase();
+  if (!tab || !tab.detectedColumns) return false;
+  if (/CALCULATION|SUMMARY|RINGKASAN|LAPORAN|REPORT|DASHBOARD|CONFIG|IMPORT|SNAPSHOT/.test(name)) return false;
+  return !!(
+    tab.detectedColumns.nama &&
+    tab.detectedColumns.jumlah &&
+    tab.detectedColumns.status &&
+    tab.detectedColumns.timestamp
+  );
+}
+
+function testAuditEbayarSourceRawTabsByYearV2_(sourceYear) {
+  var result = auditEbayarSourceTabsV2();
+  if (!result || !result.success) {
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  var tabs = [];
+  (result.sources || []).forEach(function(source) {
+    if (parseInt(source.sourceYear, 10) !== parseInt(sourceYear, 10)) return;
+    (source.tabs || []).forEach(function(tab) {
+      if (!isRawEbayarPaymentTabV2_(tab)) return;
+      tabs.push({
+        name: tab.name,
+        lastRow: tab.lastRow,
+        lastColumn: tab.lastColumn,
+        detectedColumns: compactDetectedColumnsV2_(tab.detectedColumns)
+      });
+    });
+  });
+
+  var summary = {
+    success: true,
+    mode: 'V2_SOURCE_RAW_TABS_AUDIT_READ_ONLY',
+    sourceYear: parseInt(sourceYear, 10),
+    rawTabCount: tabs.length,
+    tabs: tabs
+  };
+  Logger.log(JSON.stringify(summary, null, 2));
+  return summary;
+}
+
+function testAuditEbayarSourceRawTabs2025V2() {
+  return testAuditEbayarSourceRawTabsByYearV2_(2025);
+}
+
+function testAuditEbayarSourceRawTabs2026V2() {
+  return testAuditEbayarSourceRawTabsByYearV2_(2026);
 }
 
 function listEbayarYears(params) {
