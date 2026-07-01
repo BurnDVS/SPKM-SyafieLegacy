@@ -106,11 +106,31 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
 - `Payments` row 1 has full headers from `PAYMENT_ID` through `UPDATED_AT`.
 - `PAYMENT_GROUP_ID` = one original source row/resit/payment. `PAYMENT_ID` = one student-level row.
 - `clasp push` succeeded with `shafielegacykelasmengaji@gmail.com`, but no GAS web app deployment was done.
+- Source audit completed:
+  - 2025 source group from Main DB: `Yuran Mei`, `Yuran Jun`, `Yuran Julai`, `Yuran Ogos`, `Yuran September`, `Yuran Oktober`, `Yuran November`, `Yuran Disember`. These source tabs contain actual `TAHUN` 2024 data.
+  - 2026 source group from `YURAN_SS_ID`: `JAN2026`, `FEB2026`, `MAC2026`, `APRIL2026`, `MEI2026`, `JUN2026`, `JULAI2026`, `OGOS2026`, `SEPT2026`, `OKT2026`, `NOV2026`, `DIS2026`.
+- Confirmed source column mapping:
+  - `timestamp` = `Timestamp`
+  - `email` = `Email address` / `Email Address`
+  - `nama` = `NAMA PENUH ANAK` / `NAMA PENUH MURID`
+  - `bulan` = `BAYARAN YURAN BAGI BULAN`
+  - `tahun` = `TAHUN`
+  - `resit` = `MUAT NAIK RESIT BAYARAN`
+  - `jumlah` = `JUMLAH BAYARAN (RM)`
+  - `tarikhBayaran` = `TARIKH BAYARAN DIBUAT`
+  - `noResit` = `NO RESIT`
+  - `status` = `STATUS BAYARAN` / `STATUS`
+- Dry-run import totals:
+  - 2024 legacy data: 417 source payment rows, 787 generated payment rows, 248 multi-name rows, 13 skipped rows.
+  - 2026 data: 447 source payment rows, 768 generated payment rows, 212 multi-name rows, 427 skipped rows.
+  - Total: 864 source payment rows, 1555 generated payment rows.
+- Duplicate safety: no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID` in dry-run. Multi-name rows share source group/hash by design but receive unique child `PAYMENT_ID`.
 - Next steps:
-  1. Import/copy only eBayar data later: 2025 from SPKM Main DB, 2026 from `YURAN_SS_ID`.
-  2. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
-  3. Run `compareYuranLegacyVsV2` by month before any UI switch.
-  4. Deploy/switch UI only in a later task after comparison passes.
+  1. Do real import to staging `Payments` only, starting with small batch/limit.
+  2. Make import idempotent with `SOURCE_ROW_HASH`.
+  3. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
+  4. Run `compareYuranLegacyVsV2` by month before any UI switch.
+  5. Deploy/switch UI only in a later task after comparison passes.
 
 ---
 

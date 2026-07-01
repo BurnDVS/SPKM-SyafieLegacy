@@ -37,6 +37,18 @@ Semua perubahan utama sistem direkodkan di sini.
 - `Payments` row 1 has full schema headers from `PAYMENT_ID` through `UPDATED_AT`.
 - No data import/copy has been done yet.
 
+### Source audit + import dry-run — 1 Jul 2026
+- Source audit completed. Confirmed raw source tabs:
+  - 2025 source group from Main DB: `Yuran Mei`, `Yuran Jun`, `Yuran Julai`, `Yuran Ogos`, `Yuran September`, `Yuran Oktober`, `Yuran November`, `Yuran Disember`. Note: these tabs contain actual `TAHUN` 2024 data.
+  - 2026 source group from `YURAN_SS_ID`: `JAN2026`, `FEB2026`, `MAC2026`, `APRIL2026`, `MEI2026`, `JUN2026`, `JULAI2026`, `OGOS2026`, `SEPT2026`, `OKT2026`, `NOV2026`, `DIS2026`.
+- Column mapping confirmed: `timestamp`, `email`, `nama`, `bulan`, `tahun`, `resit`, `jumlah`, `tarikhBayaran`, `noResit`, `status`.
+- Dry-run import helpers added and tested. No real import to `Payments` yet.
+- 2024 legacy dry-run: 417 source payment rows -> 787 generated payment rows; 248 multi-name rows; 13 skipped rows; no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID`.
+- 2026 dry-run: 447 source payment rows -> 768 generated payment rows; 212 multi-name rows; 427 skipped rows; no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID`.
+- Total dry-run preview: 864 source payment rows -> 1555 generated payment rows.
+- Duplicate safety confirmed: multi-name payments intentionally share `SOURCE_ROW_HASH` and `PAYMENT_GROUP_ID`, while child rows have unique `PAYMENT_ID`.
+- Next planned step: real import to staging `Payments` only, starting with a small batch/limit and idempotent by `SOURCE_ROW_HASH`. Do not import yet.
+
 ### Git / Deploy
 - Commit pushed to `origin`: `298768c` — `feat: add ebayar master v2 shadow helpers`.
 - Earlier hygiene commit: `88d8b26` — `chore: ignore local workspace files`.

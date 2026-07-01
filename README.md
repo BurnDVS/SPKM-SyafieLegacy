@@ -36,6 +36,7 @@ Sistem ini dibina untuk kegunaan pentadbiran Syafie Legacy dan menggunakan Googl
 - Rekod bayaran tunai.
 - Semakan status bayaran oleh ibu bapa atau penjaga.
 - Senarai murid belum bayar untuk tindakan susulan.
+- eBayar Master / Yuran V2 sedang disediakan secara internal/shadow sahaja; live SPKM masih guna flow legacy.
 
 ### Guru & Murid
 - Senarai murid kanak-kanak dan dewasa.

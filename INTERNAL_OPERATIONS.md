@@ -148,10 +148,19 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 - 1 Jul 2026: `SPKM eBayar Master` has been created, `EBAYAR_MASTER_SS_ID` has been set, and `ensureEbayarMasterSchemaV2` has initialized the schema.
 - Initialized tabs: `Payments`, `Config`, `ImportLog`, `MonthlySummary`, `YearlySummary`, `StudentsSnapshot`.
 - `Payments` row 1 has full schema headers from `PAYMENT_ID` through `UPDATED_AT`.
-- Import/copy eBayar data later only after source mapping is confirmed:
-  - 2025 eBayar tabs from SPKM Main DB.
-  - 2026 eBayar tabs from `YURAN_SS_ID`.
+- Source mapping confirmed:
+  - Main DB source group: `Yuran Mei`, `Yuran Jun`, `Yuran Julai`, `Yuran Ogos`, `Yuran September`, `Yuran Oktober`, `Yuran November`, `Yuran Disember`. These tabs contain actual `TAHUN` 2024 data.
+  - `YURAN_SS_ID` source group: `JAN2026`, `FEB2026`, `MAC2026`, `APRIL2026`, `MEI2026`, `JUN2026`, `JULAI2026`, `OGOS2026`, `SEPT2026`, `OKT2026`, `NOV2026`, `DIS2026`.
+- Confirmed column mapping: `Timestamp`, `Email address`, `NAMA PENUH ANAK` / `NAMA PENUH MURID`, `BAYARAN YURAN BAGI BULAN`, `TAHUN`, `MUAT NAIK RESIT BAYARAN`, `JUMLAH BAYARAN (RM)`, `TARIKH BAYARAN DIBUAT`, `NO RESIT`, `STATUS BAYARAN` / `STATUS`.
+- Dry-run results:
+  - 2024 legacy: 417 source payment rows, 787 generated payment rows, 248 multi-name rows, 13 skipped, `STATUS=SELESAI` 417.
+  - 2024 month counts: `2024-05` 81, `2024-06` 104, `2024-07` 108, `2024-08` 101, `2024-09` 104, `2024-10` 88, `2024-11` 110, `2024-12` 91.
+  - 2026: 447 source payment rows, 768 generated payment rows, 212 multi-name rows, 427 skipped, `STATUS=SELESAI` 447.
+  - 2026 month counts: `2026-01` 110, `2026-02` 120, `2026-03` 112, `2026-04` 113, `2026-05` 119, `2026-06` 174, `2026-07` 20.
+  - Total preview: 864 source payment rows, 1555 generated payment rows.
+- Duplicate safety confirmed: no duplicate `SOURCE_ROW_HASH`, `PAYMENT_GROUP_ID`, or `PAYMENT_ID`. Multi-name payment rows intentionally share `SOURCE_ROW_HASH` and `PAYMENT_GROUP_ID`, but child rows have unique `PAYMENT_ID`.
 - No V2 data import/copy has been done yet.
+- Next step is staging-only real import into `Payments`, starting with small batch/limit and idempotent via `SOURCE_ROW_HASH`; do not import until explicitly requested.
 - Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
 - `clasp push` has updated GAS editor source, but no GAS production deployment and no `git push pages main` was done for Queue #9 staging setup.
 
