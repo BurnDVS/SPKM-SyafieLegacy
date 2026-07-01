@@ -2976,8 +2976,8 @@ function importEbayarPaymentsToMasterV2(params) {
     var limitSourceRows = params.limitSourceRows === undefined || params.limitSourceRows === null || params.limitSourceRows === ''
       ? 5
       : parseInt(params.limitSourceRows, 10);
-    if (isNaN(limitSourceRows) || limitSourceRows <= 0 || limitSourceRows > 10) {
-      return { success: false, message: 'Safety limit: limitSourceRows mesti > 0 dan <= 10.' };
+    if (isNaN(limitSourceRows) || limitSourceRows <= 0 || limitSourceRows > 25) {
+      return { success: false, message: 'Safety limit: limitSourceRows mesti > 0 dan <= 25.' };
     }
 
     var dryRun = params.dryRun === true;
@@ -3101,6 +3101,28 @@ function testImportEbayarPayments2026NextBatchV2() {
   var result = importEbayarPaymentsToMasterV2({
     sourceYear: 2026,
     limitSourceRows: 10,
+    skipExistingGroupsFirst: true,
+    allowWrite: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2026NextBatch25PreviewV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 25,
+    skipExistingGroupsFirst: true,
+    dryRun: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2026NextBatch25V2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 25,
     skipExistingGroupsFirst: true,
     allowWrite: true
   });
