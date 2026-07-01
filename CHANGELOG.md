@@ -28,6 +28,15 @@ Semua perubahan utama sistem direkodkan di sini.
 - `PAYMENT_GROUP_ID` represents one original source row/resit/payment; `PAYMENT_ID` represents one student-level row. Multi-student source rows should be split later while preserving the same group ID.
 - If allocation is unclear, preserve original value in `AMOUNT_TOTAL` and leave `AMOUNT_ALLOCATED` blank/null with `NOTE`.
 
+### Staging setup update — 1 Jul 2026
+- Created new Google Sheet: `SPKM eBayar Master`.
+- Script Property `EBAYAR_MASTER_SS_ID` set successfully.
+- `clasp push` completed successfully using `shafielegacykelasmengaji@gmail.com`; GAS editor source now includes V2 shadow helpers.
+- `ensureEbayarMasterSchemaV2` ran successfully.
+- Staging spreadsheet tabs initialized: `Payments`, `Config`, `ImportLog`, `MonthlySummary`, `YearlySummary`, `StudentsSnapshot`.
+- `Payments` row 1 has full schema headers from `PAYMENT_ID` through `UPDATED_AT`.
+- No data import/copy has been done yet.
+
 ### Git / Deploy
 - Commit pushed to `origin`: `298768c` — `feat: add ebayar master v2 shadow helpers`.
 - Earlier hygiene commit: `88d8b26` — `chore: ignore local workspace files`.

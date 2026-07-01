@@ -99,16 +99,18 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
 ### eBayar Master / Yuran V2 Shadow Note
 
 - Queue #9 foundation is backend-only and not live. `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `YURAN_SS_ID` flow remain legacy.
-- Future Script Property: `EBAYAR_MASTER_SS_ID`.
-- Staging spreadsheet name: `SPKM eBayar Master`.
+- Script Property: `EBAYAR_MASTER_SS_ID` — set successfully on 1 Jul 2026.
+- Staging spreadsheet name: `SPKM eBayar Master` — created on 1 Jul 2026.
 - Canonical tab: `Payments`, one table for all years.
+- Schema initialized with tabs: `Payments`, `Config`, `ImportLog`, `MonthlySummary`, `YearlySummary`, `StudentsSnapshot`.
+- `Payments` row 1 has full headers from `PAYMENT_ID` through `UPDATED_AT`.
 - `PAYMENT_GROUP_ID` = one original source row/resit/payment. `PAYMENT_ID` = one student-level row.
+- `clasp push` succeeded with `shafielegacykelasmengaji@gmail.com`, but no GAS web app deployment was done.
 - Next steps:
-  1. Create staging spreadsheet by running `ensureEbayarMasterSchemaV2({create:true})`.
-  2. Import/copy only eBayar data later: 2025 from SPKM Main DB, 2026 from `YURAN_SS_ID`.
-  3. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
-  4. Run `compareYuranLegacyVsV2` by month before any UI switch.
-  5. Deploy/switch UI only in a later task after comparison passes.
+  1. Import/copy only eBayar data later: 2025 from SPKM Main DB, 2026 from `YURAN_SS_ID`.
+  2. Keep `AMOUNT_TOTAL` from source row; leave `AMOUNT_ALLOCATED` blank/null when split allocation is unclear.
+  3. Run `compareYuranLegacyVsV2` by month before any UI switch.
+  4. Deploy/switch UI only in a later task after comparison passes.
 
 ---
 

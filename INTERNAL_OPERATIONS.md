@@ -145,12 +145,15 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 - V2 is backend-only shadow/read model in `Code.js`; no UI is switched to V2 yet.
 - Do not deploy or switch `index.html` / `portal.html` to V2 until `compareYuranLegacyVsV2` passes for the target months.
 - Staging spreadsheet should be `SPKM eBayar Master`, stored via Script Property `EBAYAR_MASTER_SS_ID`.
-- Use `ensureEbayarMasterSchemaV2({create:true})` only to create/verify the staging schema.
+- 1 Jul 2026: `SPKM eBayar Master` has been created, `EBAYAR_MASTER_SS_ID` has been set, and `ensureEbayarMasterSchemaV2` has initialized the schema.
+- Initialized tabs: `Payments`, `Config`, `ImportLog`, `MonthlySummary`, `YearlySummary`, `StudentsSnapshot`.
+- `Payments` row 1 has full schema headers from `PAYMENT_ID` through `UPDATED_AT`.
 - Import/copy eBayar data later only after source mapping is confirmed:
   - 2025 eBayar tabs from SPKM Main DB.
   - 2026 eBayar tabs from `YURAN_SS_ID`.
+- No V2 data import/copy has been done yet.
 - Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
-- No GAS production deployment and no `git push pages main` was done for Queue #9 shadow foundation.
+- `clasp push` has updated GAS editor source, but no GAS production deployment and no `git push pages main` was done for Queue #9 staging setup.
 
 ### WhatsApp Blast
 - Fonnte integration.
