@@ -184,6 +184,7 @@ var ALLOWED_ACTIONS = [
   'renewSession',
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
+  'auditEbayarSourceTabsV2',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
@@ -196,6 +197,7 @@ var AUTH_REQUIRED_ACTIONS = [
   'simpanDeviceToken', 'getNotifikasi',
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
+  'auditEbayarSourceTabsV2',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid'
 ];
 
@@ -276,6 +278,7 @@ function doPost(e) {
     else if (action === 'getYuranStatsV2')             result = getYuranStatsV2(body);
     else if (action === 'getYuranParentV2')            result = getYuranParentV2(body);
     else if (action === 'compareYuranLegacyVsV2')      result = compareYuranLegacyVsV2(body);
+    else if (action === 'auditEbayarSourceTabsV2')     result = auditEbayarSourceTabsV2(body);
     else if (action === 'getMuridByGuruUntukTukar')    result = getMuridByGuruUntukTukar(body);
     else if (action === 'tukarGuruMurid')              result = tukarGuruMurid(body);
 
@@ -416,6 +419,7 @@ function doAction(action, payload) {
   else if (action === 'getYuranStatsV2')              return getYuranStatsV2(payload);
   else if (action === 'getYuranParentV2')             return getYuranParentV2(payload);
   else if (action === 'compareYuranLegacyVsV2')       return compareYuranLegacyVsV2(payload);
+  else if (action === 'auditEbayarSourceTabsV2')      return auditEbayarSourceTabsV2(payload);
   else if (action === 'getMuridByGuruUntukTukar')     return getMuridByGuruUntukTukar(payload);
   else if (action === 'tukarGuruMurid')               return tukarGuruMurid(payload);
 }
@@ -2229,6 +2233,192 @@ function getTelefonMapV2_() {
     Logger.log('getTelefonMapV2_ error: ' + err.message);
   }
   return map;
+}
+
+function detectEbayarSourceColumnsV2_(headers) {
+  headers = headers || [];
+  var detected = {
+    nama: null,
+    jumlah: null,
+    status: null,
+    timestamp: null,
+    resit: null,
+    telefon: null,
+    bulan: null
+  };
+
+  function cleanHeader(h) {
+    return (h || '').toString()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
+  }
+
+  function matchAny(text, patterns) {
+    for (var i = 0; i < patterns.length; i++) {
+      if (patterns[i].test(text)) return true;
+    }
+    return false;
+  }
+
+  var rules = {
+    nama: [
+      /NAMA.*MURID/,
+      /NAMA.*PENUH/,
+      /^NAMA$/,
+      /MURID/,
+      /PELAJAR/,
+      /STUDENT/
+    ],
+    jumlah: [
+      /JUMLAH/,
+      /AMAUN/,
+      /AMOUNT/,
+      /BAYARAN/,
+      /RM/,
+      /TOTAL/
+    ],
+    status: [
+      /STATUS/,
+      /SELESAI/,
+      /BAYAR/,
+      /PAID/,
+      /PAYMENT.*STATUS/
+    ],
+    timestamp: [
+      /TIMESTAMP/,
+      /CAP MASA/,
+      /MASA/,
+      /TARIKH.*HANTAR/,
+      /SUBMIT/,
+      /DATE/
+    ],
+    resit: [
+      /RESIT/,
+      /RECEIPT/,
+      /BUKTI/,
+      /SLIP/,
+      /UPLOAD/,
+      /URL/,
+      /FAIL/
+    ],
+    telefon: [
+      /TELEFON/,
+      /PHONE/,
+      /WHATSAPP/,
+      /WASAP/,
+      /NO\.?\s*HP/,
+      /NOMBOR/
+    ],
+    bulan: [
+      /BULAN/,
+      /MONTH/,
+      /YURAN.*BAGI/,
+      /BAYARAN.*BULAN/
+    ]
+  };
+
+  for (var c = 0; c < headers.length; c++) {
+    var cleaned = cleanHeader(headers[c]);
+    if (!cleaned) continue;
+    Object.keys(rules).forEach(function(key) {
+      if (detected[key] === null && matchAny(cleaned, rules[key])) {
+        detected[key] = {
+          column: c + 1,
+          index: c,
+          header: headers[c],
+          normalizedHeader: cleaned
+        };
+      }
+    });
+  }
+
+  return detected;
+}
+
+function isLikelyEbayarSourceTabV2_(sheetName, sourceYear) {
+  var name = (sheetName || '').toString().trim().toUpperCase();
+  if (!name) return false;
+  if (sourceYear === 2026) {
+    for (var i = 0; i < EBAYAR_MONTHS_V2.length; i++) {
+      if (name === EBAYAR_MONTHS_V2[i].legacy || name === ('CALCULATION' + EBAYAR_MONTHS_V2[i].label + '2026').toUpperCase()) {
+        return true;
+      }
+    }
+    return /2026|YURAN|EBAYAR|BAYAR|PAYMENT|CALCULATION|NAMA MURID/.test(name);
+  }
+  return /2025|YURAN|EBAYAR|BAYAR|PAYMENT|BULAN|MEI|JUN|JULAI|OGOS|SEPT|OKT|NOV|DIS/.test(name);
+}
+
+function inspectEbayarSourceSheetV2_(sheet, sourceYear) {
+  var lastRow = sheet.getLastRow();
+  var lastColumn = sheet.getLastColumn();
+  var headers = [];
+  var sampleRows = [];
+
+  if (lastRow >= 1 && lastColumn >= 1) {
+    headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  }
+
+  if (lastRow >= 2 && lastColumn >= 1) {
+    var sampleCount = Math.min(5, lastRow - 1);
+    sampleRows = sheet.getRange(2, 1, sampleCount, lastColumn).getValues();
+  }
+
+  return {
+    name: sheet.getName(),
+    sourceYear: sourceYear,
+    lastRow: lastRow,
+    lastColumn: lastColumn,
+    headers: headers,
+    detectedColumns: detectEbayarSourceColumnsV2_(headers),
+    sampleRows: sampleRows
+  };
+}
+
+function auditEbayarSourceTabsV2(params) {
+  params = params || {};
+  try {
+    var includeAllTabs = params.includeAllTabs === true;
+    var mainSS = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+
+    function auditSpreadsheet(ss, sourceYear, sourceLabel) {
+      var tabs = [];
+      ss.getSheets().forEach(function(sheet) {
+        var tabName = sheet.getName();
+        if (!includeAllTabs && !isLikelyEbayarSourceTabV2_(tabName, sourceYear)) return;
+        tabs.push(inspectEbayarSourceSheetV2_(sheet, sourceYear));
+      });
+      return {
+        sourceLabel: sourceLabel,
+        spreadsheetId: ss.getId(),
+        spreadsheetName: ss.getName(),
+        sourceYear: sourceYear,
+        tabCount: tabs.length,
+        tabs: tabs
+      };
+    }
+
+    return {
+      success: true,
+      mode: 'V2_SOURCE_AUDIT_READ_ONLY',
+      note: 'Read-only audit only. No spreadsheet writes/imports performed.',
+      sources: [
+        auditSpreadsheet(mainSS, 2025, 'SPKM Main DB possible eBayar 2025 tabs'),
+        auditSpreadsheet(yuranSS, 2026, 'YURAN_SS_ID eBayar 2026 tabs')
+      ]
+    };
+  } catch (err) {
+    Logger.log('auditEbayarSourceTabsV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function testAuditEbayarSourceTabsV2() {
+  var result = auditEbayarSourceTabsV2();
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function listEbayarYears(params) {
