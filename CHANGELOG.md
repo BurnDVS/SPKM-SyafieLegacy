@@ -445,3 +445,12 @@ Ustaz Shafie → 71 murid AKTIF, totalSesi 159, `unmatched []`
 - Source has progressed into `MEI2026`; the latest imported batch sample starts around `MEI2026` row 15.
 - Staging import safety limit remains `limitSourceRows <= 25`.
 - Live SPKM remains on the legacy yuran/eBayar flow. No GAS web app deployment, pages push, or frontend switch was done.
+## 2 Jul 2026 — Queue #9 eBayar V2 2026 staging import checkpoint
+
+- 2026 staging import has progressed to 345 source groups -> 605 child payment rows.
+- Latest diagnostic: `lastRow=606`, `sourceRowHashColumn=21`, `existingHashCount=605` row entries.
+- Recent accelerated import continued after the previous checkpoint:
+  - 295 -> 320 source groups: +45 child rows, diagnostic `lastRow=564`, `existingHashCount=563`
+  - 320 -> 345 source groups: +42 child rows, diagnostic `lastRow=606`, `existingHashCount=605`
+- Staging import safety limit remains `limitSourceRows <= 25`.
+- Live SPKM remains on the legacy yuran/eBayar flow. No GAS web app deployment, pages push, or frontend switch was done.
