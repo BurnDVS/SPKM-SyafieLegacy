@@ -284,3 +284,16 @@ Pattern yang digunakan:
   - Batch 4: 10 source groups -> 15 child rows
   - Total: 35 source groups -> 59 child payment rows
 - This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
+## Queue #9 eBayar V2 Staging Import Batch 5 — 1 Jul 2026
+
+- Fifth staging import batch completed for 2026 using `skipExistingGroupsFirst:true`.
+- Batch 5 result: `existingHashCount=35`, `sourceGroupsSelected=10`, `draftRows=18`, `rowsToAppend=18`, `appendedRows=18`.
+- Diagnostic after batch 5: `lastRow=78`, `sourceRowHashColumn=21`, `existingHashCount=77` row entries.
+- Total staging imported so far:
+  - Batch 1: 5 source groups -> 7 child rows
+  - Batch 2: 10 source groups -> 21 child rows
+  - Batch 3: 10 source groups -> 16 child rows
+  - Batch 4: 10 source groups -> 15 child rows
+  - Batch 5: 10 source groups -> 18 child rows
+  - Total: 45 source groups -> 77 child payment rows
+- This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.

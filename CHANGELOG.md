@@ -398,3 +398,16 @@ Ustaz Shafie → 71 murid AKTIF, totalSesi 159, `unmatched []`
   - Batch 4: 10 source groups -> 15 child rows
   - Total: 35 source groups -> 59 child payment rows
 - Live SPKM remains on the legacy yuran/eBayar flow. No GAS web app deployment, pages push, frontend switch, or production import was done.
+## 1 Jul 2026 — Queue #9 eBayar V2 staging import batch 5
+
+- Fifth staging import batch completed for 2026 using `skipExistingGroupsFirst:true`.
+- Batch 5 result: `existingHashCount=35`, `sourceGroupsSelected=10`, `draftRows=18`, `rowsToAppend=18`, `appendedRows=18`.
+- Diagnostic after batch 5: `lastRow=78`, `sourceRowHashColumn=21`, `existingHashCount=77` row entries.
+- Total staging imported so far:
+  - Batch 1: 5 source groups -> 7 child rows
+  - Batch 2: 10 source groups -> 21 child rows
+  - Batch 3: 10 source groups -> 16 child rows
+  - Batch 4: 10 source groups -> 15 child rows
+  - Batch 5: 10 source groups -> 18 child rows
+  - Total: 45 source groups -> 77 child payment rows
+- Live SPKM remains on the legacy yuran/eBayar flow. No GAS web app deployment, pages push, or frontend switch was done.
