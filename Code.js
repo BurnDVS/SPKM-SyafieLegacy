@@ -2460,6 +2460,46 @@ function testAuditEbayarSourceTabsV2() {
   return result;
 }
 
+function testAuditEbayarSourceTabsCompactV2() {
+  var result = auditEbayarSourceTabsV2();
+  if (!result || !result.success) {
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  function compactDetectedColumns(detectedColumns) {
+    var compact = {};
+    detectedColumns = detectedColumns || {};
+    Object.keys(detectedColumns).forEach(function(key) {
+      compact[key] = detectedColumns[key] ? detectedColumns[key].header : null;
+    });
+    return compact;
+  }
+
+  var summary = {
+    success: true,
+    mode: result.mode,
+    sources: (result.sources || []).map(function(source) {
+      return {
+        sourceLabel: source.sourceLabel,
+        sourceYear: source.sourceYear,
+        tabCount: source.tabCount,
+        tabs: (source.tabs || []).map(function(tab) {
+          return {
+            name: tab.name,
+            lastRow: tab.lastRow,
+            lastColumn: tab.lastColumn,
+            detectedColumns: compactDetectedColumns(tab.detectedColumns)
+          };
+        })
+      };
+    })
+  };
+
+  Logger.log(JSON.stringify(summary, null, 2));
+  return summary;
+}
+
 function listEbayarYears(params) {
   params = params || {};
   try {
