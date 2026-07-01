@@ -2819,22 +2819,78 @@ function getPaymentsHeaderIndexV2_(sheet) {
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var idx = {};
   headers.forEach(function(header, i) {
-    var key = (header || '').toString().trim();
+    var key = normalizePaymentsHeaderKeyV2_(header);
     if (key) idx[key] = i;
   });
   return idx;
 }
 
+function normalizePaymentsHeaderKeyV2_(header) {
+  return (header || '').toString()
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function getPaymentsHeaderColumnNumberV2_(sheet, headerName) {
+  if (!sheet || sheet.getLastRow() < 1 || sheet.getLastColumn() < 1) return null;
+  var target = normalizePaymentsHeaderKeyV2_(headerName);
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (normalizePaymentsHeaderKeyV2_(headers[i]) === target) return i + 1;
+  }
+  return null;
+}
+
 function getExistingPaymentSourceHashesV2_(sheet, headerIndex) {
   var hashes = {};
-  var hashIndex = headerIndex.SOURCE_ROW_HASH;
-  if (hashIndex === undefined || hashIndex === null || sheet.getLastRow() < 2) return hashes;
-  var values = sheet.getRange(2, hashIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+  var hashColumn = getPaymentsHeaderColumnNumberV2_(sheet, 'SOURCE_ROW_HASH');
+  if (!hashColumn && headerIndex && headerIndex.SOURCE_ROW_HASH !== undefined && headerIndex.SOURCE_ROW_HASH !== null) {
+    hashColumn = headerIndex.SOURCE_ROW_HASH + 1;
+  }
+  if (!hashColumn) return hashes;
+  if (sheet.getLastRow() < 2) return hashes;
+  var values = sheet.getRange(2, hashColumn, sheet.getLastRow() - 1, 1).getValues();
   values.forEach(function(row) {
     var hash = (row[0] || '').toString().trim();
     if (hash) hashes[hash] = true;
   });
   return hashes;
+}
+
+function testExistingPaymentSourceHashesV2() {
+  var ss = getEbayarMasterSpreadsheetForImportV2_();
+  var sheet = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2);
+  if (!sheet) {
+    var missing = { success: false, message: 'Payments tab tidak dijumpai.' };
+    Logger.log(JSON.stringify(missing, null, 2));
+    return missing;
+  }
+
+  var hashColumn = getPaymentsHeaderColumnNumberV2_(sheet, 'SOURCE_ROW_HASH');
+  var first10Hashes = [];
+  var existingHashCount = 0;
+  if (hashColumn && sheet.getLastRow() >= 2) {
+    var values = sheet.getRange(2, hashColumn, sheet.getLastRow() - 1, 1).getValues();
+    values.forEach(function(row) {
+      var hash = (row[0] || '').toString().trim();
+      if (!hash) return;
+      existingHashCount++;
+      if (first10Hashes.length < 10) first10Hashes.push(hash);
+    });
+  }
+
+  var result = {
+    success: true,
+    mode: 'V2_EXISTING_SOURCE_HASH_DIAGNOSTIC_READ_ONLY',
+    lastRow: sheet.getLastRow(),
+    sourceRowHashColumn: hashColumn,
+    existingHashCount: existingHashCount,
+    first10Hashes: first10Hashes
+  };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function getEbayarMasterSpreadsheetForImportV2_() {
