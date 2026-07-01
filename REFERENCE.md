@@ -321,3 +321,13 @@ Pattern yang digunakan:
 - Source has progressed through `FEB2026` and into `MAC2026`.
 - Staging import safety limit remains `limitSourceRows <= 25`.
 - This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
+## Queue #9 eBayar V2 2026 Staging Import Checkpoint — 2 Jul 2026
+
+- 2026 staging import has progressed to 295 source groups -> 518 child payment rows.
+- Latest diagnostic: `lastRow=519`, `sourceRowHashColumn=21`, `existingHashCount=518` row entries.
+- Recent accelerated import continued after the previous checkpoint:
+  - 245 -> 270 source groups: +44 child rows, diagnostic `lastRow=479`, `existingHashCount=478`
+  - 270 -> 295 source groups: +40 child rows, diagnostic `lastRow=519`, `existingHashCount=518`
+- Source has progressed into `MEI2026`; the latest imported batch sample starts around `MEI2026` row 15.
+- Staging import safety limit remains `limitSourceRows <= 25`.
+- This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
