@@ -2571,6 +2571,14 @@ function makePaymentGroupIdDryRunV2_(sourceYear, sourceSheet, sourceRow) {
   return ['DRYRUN', sourceYear, sheetKey, sourceRow].join('-');
 }
 
+function makeImportPaymentGroupIdV2_(draftRow) {
+  return (draftRow.PAYMENT_GROUP_ID || '').toString().replace(/^DRYRUN-/, 'PG-');
+}
+
+function makeImportPaymentIdV2_(draftRow) {
+  return (draftRow.PAYMENT_ID || '').toString().replace(/^DRYRUN-/, 'PAY-');
+}
+
 function makeSourceRowHashDryRunV2_(sourceYear, sourceSheet, sourceRow, row) {
   row = row || {};
   var parts = [
@@ -2641,6 +2649,8 @@ function buildEbayarImportRowsDryRunV2_(options) {
   var requestedYear = options.sourceYear ? parseInt(options.sourceYear, 10) : null;
   var limitRowsPerTab = parseInt(options.limitRowsPerTab, 10);
   var hasLimit = !isNaN(limitRowsPerTab) && limitRowsPerTab > 0;
+  var limitSourceRows = parseInt(options.limitSourceRows, 10);
+  var hasSourceLimit = !isNaN(limitSourceRows) && limitSourceRows > 0;
   var audit = auditEbayarSourceTabsV2();
   if (!audit || !audit.success) return { success: false, message: audit ? audit.message : 'Audit gagal.' };
 
@@ -2660,6 +2670,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
     var ss = SpreadsheetApp.openById(source.spreadsheetId);
 
     (source.tabs || []).forEach(function(tab) {
+      if (hasSourceLimit && sourceRowCount >= limitSourceRows) return;
       if (!isRawEbayarPaymentTabV2_(tab)) return;
       var sheet = ss.getSheetByName(tab.name);
       if (!sheet || sheet.getLastRow() < 2 || sheet.getLastColumn() < 1) return;
@@ -2670,6 +2681,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
       var values = sheet.getRange(2, 1, rowCount, sheet.getLastColumn()).getValues();
 
       values.forEach(function(row, offset) {
+        if (hasSourceLimit && sourceRowCount >= limitSourceRows) return;
         var sourceRow = offset + 2;
         var hasAnyValue = row.some(function(cell) {
           return cell !== null && cell !== undefined && cell.toString().trim() !== '';
@@ -2754,7 +2766,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
   var duplicatePaymentGroupIds = findDuplicateKeysV2_(sourceGroups, 'PAYMENT_GROUP_ID');
   var duplicatePaymentIds = findDuplicateKeysV2_(draftRows, 'PAYMENT_ID');
 
-  return {
+  var result = {
     success: true,
     mode: 'V2_IMPORT_DRY_RUN_READ_ONLY',
     sourceYear: requestedYear || 'ALL',
@@ -2783,6 +2795,9 @@ function buildEbayarImportRowsDryRunV2_(options) {
     monthCounts: monthCounts,
     sampleDraftRows: draftRows.slice(0, 10)
   };
+
+  if (options.includeDraftRows === true) result.draftRows = draftRows;
+  return result;
 }
 
 function dryRunImportEbayarSourceV2(params) {
@@ -2790,12 +2805,220 @@ function dryRunImportEbayarSourceV2(params) {
   try {
     return buildEbayarImportRowsDryRunV2_({
       sourceYear: params.sourceYear,
-      limitRowsPerTab: params.limitRowsPerTab
+      limitRowsPerTab: params.limitRowsPerTab,
+      limitSourceRows: params.limitSourceRows
     });
   } catch (err) {
     Logger.log('dryRunImportEbayarSourceV2 error: ' + err.message);
     return { success: false, message: err.message };
   }
+}
+
+function getPaymentsHeaderIndexV2_(sheet) {
+  if (!sheet || sheet.getLastRow() < 1 || sheet.getLastColumn() < 1) return {};
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var idx = {};
+  headers.forEach(function(header, i) {
+    var key = (header || '').toString().trim();
+    if (key) idx[key] = i;
+  });
+  return idx;
+}
+
+function getExistingPaymentSourceHashesV2_(sheet, headerIndex) {
+  var hashes = {};
+  var hashIndex = headerIndex.SOURCE_ROW_HASH;
+  if (hashIndex === undefined || hashIndex === null || sheet.getLastRow() < 2) return hashes;
+  var values = sheet.getRange(2, hashIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+  values.forEach(function(row) {
+    var hash = (row[0] || '').toString().trim();
+    if (hash) hashes[hash] = true;
+  });
+  return hashes;
+}
+
+function getEbayarMasterSpreadsheetForImportV2_() {
+  var id = (PropertiesService.getScriptProperties().getProperty(EBAYAR_MASTER_PROP_KEY_V2) || '').toString().trim();
+  if (!id) throw new Error('Script Property ' + EBAYAR_MASTER_PROP_KEY_V2 + ' belum ditetapkan.');
+  return SpreadsheetApp.openById(id);
+}
+
+function mapDraftPaymentToImportObjectV2_(draftRow, timestampNow) {
+  return {
+    PAYMENT_ID: makeImportPaymentIdV2_(draftRow),
+    PAYMENT_GROUP_ID: makeImportPaymentGroupIdV2_(draftRow),
+    TIMESTAMP: draftRow.TIMESTAMP,
+    TAHUN: draftRow.TAHUN,
+    BULAN: draftRow.BULAN,
+    BULAN_KEY: draftRow.BULAN_KEY,
+    NAMA_MURID_RAW: draftRow.NAMA_MURID_RAW,
+    NAMA_MURID_NORM: draftRow.NAMA_MURID_NORM,
+    JUMLAH: draftRow.JUMLAH,
+    AMOUNT_TOTAL: draftRow.AMOUNT_TOTAL,
+    AMOUNT_ALLOCATED: draftRow.AMOUNT_ALLOCATED || '',
+    STATUS: draftRow.STATUS,
+    KAEDAH: draftRow.KAEDAH || '',
+    RESIT_URL: draftRow.RESIT_URL,
+    SOURCE_YEAR: draftRow.SOURCE_YEAR,
+    SOURCE_SHEET: draftRow.SOURCE_SHEET,
+    SOURCE_ROW: draftRow.SOURCE_ROW,
+    SOURCE_ROW_HASH: draftRow.SOURCE_ROW_HASH,
+    MATCH_STATUS: 'UNMATCHED',
+    MATCH_CONFIDENCE: '',
+    NOTE: draftRow.NOTE,
+    CREATED_AT: timestampNow,
+    UPDATED_AT: timestampNow
+  };
+}
+
+function mapDraftPaymentToMasterRowV2_(draftRow, headerIndex, headers, timestampNow) {
+  var output = new Array(headers.length).fill('');
+  var mapped = mapDraftPaymentToImportObjectV2_(draftRow, timestampNow);
+
+  Object.keys(mapped).forEach(function(key) {
+    if (headerIndex[key] !== undefined && headerIndex[key] !== null) {
+      output[headerIndex[key]] = mapped[key];
+    }
+  });
+  return output;
+}
+
+function filterDraftRowsByFirstPaymentGroupsV2_(draftRows, limitSourceRows) {
+  draftRows = draftRows || [];
+  var allowedGroups = {};
+  var groupOrder = [];
+
+  draftRows.forEach(function(row) {
+    var groupId = (row.PAYMENT_GROUP_ID || '').toString();
+    if (!groupId || allowedGroups[groupId]) return;
+    if (groupOrder.length >= limitSourceRows) return;
+    allowedGroups[groupId] = true;
+    groupOrder.push(groupId);
+  });
+
+  return {
+    sourceGroupsSelected: groupOrder.length,
+    paymentGroupIds: groupOrder,
+    draftRows: draftRows.filter(function(row) {
+      return !!allowedGroups[(row.PAYMENT_GROUP_ID || '').toString()];
+    })
+  };
+}
+
+function importEbayarPaymentsToMasterV2(params) {
+  params = params || {};
+  try {
+    var sourceYear = parseInt(params.sourceYear, 10);
+    if (sourceYear !== 2025 && sourceYear !== 2026) {
+      return { success: false, message: 'sourceYear required: 2025 atau 2026.' };
+    }
+
+    var limitSourceRows = params.limitSourceRows === undefined || params.limitSourceRows === null || params.limitSourceRows === ''
+      ? 5
+      : parseInt(params.limitSourceRows, 10);
+    if (isNaN(limitSourceRows) || limitSourceRows <= 0 || limitSourceRows > 10) {
+      return { success: false, message: 'Safety limit: limitSourceRows mesti > 0 dan <= 10.' };
+    }
+
+    var dryRun = params.dryRun === true;
+    var draft = buildEbayarImportRowsDryRunV2_({
+      sourceYear: sourceYear,
+      includeDraftRows: true
+    });
+    if (!draft || !draft.success) return draft;
+    var selected = filterDraftRowsByFirstPaymentGroupsV2_(draft.draftRows || [], limitSourceRows);
+    var selectedDraftRows = selected.draftRows;
+
+    var ss = getEbayarMasterSpreadsheetForImportV2_();
+    var sheet = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2);
+    if (!sheet) return { success: false, message: 'Payments tab tidak dijumpai dalam SPKM eBayar Master.' };
+
+    var headerIndex = getPaymentsHeaderIndexV2_(sheet);
+    var requiredHeaders = ['PAYMENT_ID', 'PAYMENT_GROUP_ID', 'SOURCE_ROW_HASH'];
+    for (var h = 0; h < requiredHeaders.length; h++) {
+      if (headerIndex[requiredHeaders[h]] === undefined || headerIndex[requiredHeaders[h]] === null) {
+        return { success: false, message: 'Header Payments hilang: ' + requiredHeaders[h] };
+      }
+    }
+
+    var existingHashes = getExistingPaymentSourceHashesV2_(sheet, headerIndex);
+    var rowsToAppend = [];
+    var sampleRows = [];
+    var skippedDuplicateRows = 0;
+    var timestampNow = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss');
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(header) {
+      return (header || '').toString().trim();
+    });
+
+    selectedDraftRows.forEach(function(row) {
+      if (existingHashes[row.SOURCE_ROW_HASH]) {
+        skippedDuplicateRows++;
+        return;
+      }
+      if (sampleRows.length < 5) sampleRows.push(mapDraftPaymentToImportObjectV2_(row, timestampNow));
+      rowsToAppend.push(mapDraftPaymentToMasterRowV2_(row, headerIndex, headers, timestampNow));
+    });
+
+    var result = {
+      success: dryRun ? true : params.allowWrite === true,
+      mode: dryRun ? 'V2_IMPORT_PREVIEW_READ_ONLY' : 'V2_IMPORT_STAGING_SMALL_BATCH',
+      sourceYear: sourceYear,
+      limitSourceRows: limitSourceRows,
+      sourceGroupsSelected: selected.sourceGroupsSelected,
+      draftRows: selectedDraftRows.length,
+      existingHashCount: Object.keys(existingHashes).length,
+      rowsToAppend: rowsToAppend.length,
+      skippedDuplicateRows: skippedDuplicateRows,
+      appendedRows: 0,
+      sampleRows: sampleRows,
+      message: ''
+    };
+
+    if (dryRun) {
+      result.message = 'Preview sahaja. Tiada data ditulis.';
+      return result;
+    }
+
+    if (params.allowWrite !== true) {
+      result.success = false;
+      result.message = 'Safety block: set allowWrite:true untuk tulis ke staging Payments.';
+      return result;
+    }
+
+    if (!rowsToAppend.length) {
+      result.success = true;
+      result.message = 'Tiada row baharu untuk append; semua SOURCE_ROW_HASH sudah wujud atau draft kosong.';
+      return result;
+    }
+
+    sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, headers.length).setValues(rowsToAppend);
+    result.appendedRows = rowsToAppend.length;
+    result.message = 'Small batch import ke staging Payments selesai.';
+    return result;
+  } catch (err) {
+    Logger.log('importEbayarPaymentsToMasterV2 error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+function testImportEbayarPayments2026SmallBatchV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 5,
+    allowWrite: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2026SmallBatchPreviewV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 5,
+    dryRun: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function testDryRunImportEbayar2025V2() {
