@@ -2571,6 +2571,38 @@ function makePaymentGroupIdDryRunV2_(sourceYear, sourceSheet, sourceRow) {
   return ['DRYRUN', sourceYear, sheetKey, sourceRow].join('-');
 }
 
+function makeSourceRowHashDryRunV2_(sourceYear, sourceSheet, sourceRow, row) {
+  row = row || {};
+  var parts = [
+    sourceYear,
+    sourceSheet,
+    sourceRow,
+    row.timestamp,
+    row.rawName,
+    row.bulan,
+    row.tahun,
+    row.jumlah,
+    row.status
+  ].map(function(v) {
+    return (v === null || v === undefined) ? '' : v.toString().replace(/\s+/g, ' ').trim();
+  });
+  var raw = parts.join('|');
+
+  try {
+    if (typeof Utilities !== 'undefined' && Utilities.computeDigest) {
+      var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+      return bytes.map(function(b) {
+        var v = b < 0 ? b + 256 : b;
+        return ('0' + v.toString(16)).slice(-2);
+      }).join('');
+    }
+  } catch (err) {
+    Logger.log('makeSourceRowHashDryRunV2_ fallback: ' + err.message);
+  }
+
+  return raw.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 function makeBulanKeyDryRunV2_(tahun, bulan, sourceSheet) {
   var bulanKey = makeBulanKeyV2_(tahun, bulan);
   if (bulanKey) return bulanKey;
@@ -2592,6 +2624,18 @@ function splitEbayarNamesDryRunV2_(rawName) {
     .filter(function(name) { return !!name; });
 }
 
+function findDuplicateKeysV2_(rows, key) {
+  var counts = {};
+  rows.forEach(function(row) {
+    var value = (row[key] || '').toString();
+    if (!value) return;
+    counts[value] = (counts[value] || 0) + 1;
+  });
+  return Object.keys(counts).filter(function(k) { return counts[k] > 1; }).sort().map(function(k) {
+    return { value: k, count: counts[k] };
+  });
+}
+
 function buildEbayarImportRowsDryRunV2_(options) {
   options = options || {};
   var requestedYear = options.sourceYear ? parseInt(options.sourceYear, 10) : null;
@@ -2601,6 +2645,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
   if (!audit || !audit.success) return { success: false, message: audit ? audit.message : 'Audit gagal.' };
 
   var draftRows = [];
+  var sourceGroups = [];
   var sourceTabs = [];
   var sourceRowCount = 0;
   var multiNameRows = 0;
@@ -2654,9 +2699,25 @@ function buildEbayarImportRowsDryRunV2_(options) {
         var status = (getDetectedCellV2_(row, tab.detectedColumns, 'status') || '').toString().trim().toUpperCase();
         var resitUrl = (getDetectedCellV2_(row, tab.detectedColumns, 'resit') || '').toString().trim();
         var paymentGroupId = makePaymentGroupIdDryRunV2_(sourceYear, tab.name, sourceRow);
+        var sourceRowHash = makeSourceRowHashDryRunV2_(sourceYear, tab.name, sourceRow, {
+          timestamp: timestamp,
+          rawName: rawName,
+          bulan: bulan,
+          tahun: tahun,
+          jumlah: jumlahRaw,
+          status: status
+        });
         var note = splitNames.length > 1
           ? 'Dry-run split from one source row; AMOUNT_ALLOCATED left blank.'
           : 'Dry-run only; no import/write performed.';
+
+        sourceGroups.push({
+          PAYMENT_GROUP_ID: paymentGroupId,
+          SOURCE_ROW_HASH: sourceRowHash,
+          SOURCE_YEAR: sourceYear,
+          SOURCE_SHEET: tab.name,
+          SOURCE_ROW: sourceRow
+        });
 
         statusCounts[status || '(blank)'] = (statusCounts[status || '(blank)'] || 0) + 1;
         yearCounts[tahun || '(blank)'] = (yearCounts[tahun || '(blank)'] || 0) + splitNames.length;
@@ -2669,6 +2730,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
             SOURCE_YEAR: sourceYear,
             SOURCE_SHEET: tab.name,
             SOURCE_ROW: sourceRow,
+            SOURCE_ROW_HASH: sourceRowHash,
             TIMESTAMP: timestamp,
             TAHUN: tahun,
             BULAN: bulan,
@@ -2688,6 +2750,10 @@ function buildEbayarImportRowsDryRunV2_(options) {
     });
   });
 
+  var duplicateSourceRowHashes = findDuplicateKeysV2_(sourceGroups, 'SOURCE_ROW_HASH');
+  var duplicatePaymentGroupIds = findDuplicateKeysV2_(sourceGroups, 'PAYMENT_GROUP_ID');
+  var duplicatePaymentIds = findDuplicateKeysV2_(draftRows, 'PAYMENT_ID');
+
   return {
     success: true,
     mode: 'V2_IMPORT_DRY_RUN_READ_ONLY',
@@ -2695,6 +2761,21 @@ function buildEbayarImportRowsDryRunV2_(options) {
     sourceTabs: sourceTabs,
     sourceRowCount: sourceRowCount,
     generatedPaymentRows: draftRows.length,
+    sourceRowHashCount: Object.keys(sourceGroups.reduce(function(acc, row) {
+      if (row.SOURCE_ROW_HASH) acc[row.SOURCE_ROW_HASH] = true;
+      return acc;
+    }, {})).length,
+    duplicateSourceRowHashes: duplicateSourceRowHashes,
+    paymentGroupCount: Object.keys(sourceGroups.reduce(function(acc, row) {
+      if (row.PAYMENT_GROUP_ID) acc[row.PAYMENT_GROUP_ID] = true;
+      return acc;
+    }, {})).length,
+    duplicatePaymentGroupIds: duplicatePaymentGroupIds,
+    generatedPaymentIdsCount: Object.keys(draftRows.reduce(function(acc, row) {
+      if (row.PAYMENT_ID) acc[row.PAYMENT_ID] = true;
+      return acc;
+    }, {})).length,
+    duplicatePaymentIds: duplicatePaymentIds,
     multiNameRows: multiNameRows,
     skippedRows: skippedRows,
     statusCounts: statusCounts,
