@@ -2939,14 +2939,18 @@ function mapDraftPaymentToMasterRowV2_(draftRow, headerIndex, headers, timestamp
   return output;
 }
 
-function filterDraftRowsByFirstPaymentGroupsV2_(draftRows, limitSourceRows) {
+function filterDraftRowsByFirstPaymentGroupsV2_(draftRows, limitSourceRows, options) {
   draftRows = draftRows || [];
+  options = options || {};
+  var existingHashes = options.existingHashes || {};
+  var skipExistingGroupsFirst = options.skipExistingGroupsFirst === true;
   var allowedGroups = {};
   var groupOrder = [];
 
   draftRows.forEach(function(row) {
     var groupId = (row.PAYMENT_GROUP_ID || '').toString();
     if (!groupId || allowedGroups[groupId]) return;
+    if (skipExistingGroupsFirst && existingHashes[row.SOURCE_ROW_HASH]) return;
     if (groupOrder.length >= limitSourceRows) return;
     allowedGroups[groupId] = true;
     groupOrder.push(groupId);
@@ -2977,13 +2981,12 @@ function importEbayarPaymentsToMasterV2(params) {
     }
 
     var dryRun = params.dryRun === true;
+    var skipExistingGroupsFirst = params.skipExistingGroupsFirst === true;
     var draft = buildEbayarImportRowsDryRunV2_({
       sourceYear: sourceYear,
       includeDraftRows: true
     });
     if (!draft || !draft.success) return draft;
-    var selected = filterDraftRowsByFirstPaymentGroupsV2_(draft.draftRows || [], limitSourceRows);
-    var selectedDraftRows = selected.draftRows;
 
     var ss = getEbayarMasterSpreadsheetForImportV2_();
     var sheet = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2);
@@ -2998,6 +3001,11 @@ function importEbayarPaymentsToMasterV2(params) {
     }
 
     var existingHashes = getExistingPaymentSourceHashesV2_(sheet, headerIndex);
+    var selected = filterDraftRowsByFirstPaymentGroupsV2_(draft.draftRows || [], limitSourceRows, {
+      existingHashes: existingHashes,
+      skipExistingGroupsFirst: skipExistingGroupsFirst
+    });
+    var selectedDraftRows = selected.draftRows;
     var rowsToAppend = [];
     var sampleRows = [];
     var skippedDuplicateRows = 0;
@@ -3020,6 +3028,7 @@ function importEbayarPaymentsToMasterV2(params) {
       mode: dryRun ? 'V2_IMPORT_PREVIEW_READ_ONLY' : 'V2_IMPORT_STAGING_SMALL_BATCH',
       sourceYear: sourceYear,
       limitSourceRows: limitSourceRows,
+      skipExistingGroupsFirst: skipExistingGroupsFirst,
       sourceGroupsSelected: selected.sourceGroupsSelected,
       draftRows: selectedDraftRows.length,
       existingHashCount: Object.keys(existingHashes).length,
@@ -3072,6 +3081,28 @@ function testImportEbayarPayments2026SmallBatchPreviewV2() {
     sourceYear: 2026,
     limitSourceRows: 5,
     dryRun: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2026NextBatchPreviewV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 10,
+    skipExistingGroupsFirst: true,
+    dryRun: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2026NextBatchV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2026,
+    limitSourceRows: 10,
+    skipExistingGroupsFirst: true,
+    allowWrite: true
   });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
