@@ -59,6 +59,14 @@ Semua perubahan utama sistem direkodkan di sini.
 - No duplicate rows were appended on the second run.
 - Live SPKM remains legacy; no GAS web app deployment, no `pages` push, and no frontend switch.
 
+### Staging next-batch import — 1 Jul 2026
+- Added next-batch staging import support with `skipExistingGroupsFirst:true`, so repeated imports select the next unimported source groups instead of repeatedly selecting the first groups.
+- Preview for next 2026 batch: `sourceYear=2026`, `limitSourceRows=10`, `skipExistingGroupsFirst=true`, `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=0`.
+- Actual next batch import: `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=21`.
+- Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, `existingHashCount=28` row entries.
+- Total staging imported so far: Batch 1 = 5 source groups -> 7 child rows; Batch 2 = 10 source groups -> 21 child rows; total = 15 source groups -> 28 child payment rows.
+- Live SPKM remains legacy; no GAS web app deployment, no `pages` push, and no frontend switch.
+
 ### Git / Deploy
 - Commit pushed to `origin`: `298768c` — `feat: add ebayar master v2 shadow helpers`.
 - Earlier hygiene commit: `88d8b26` — `chore: ignore local workspace files`.

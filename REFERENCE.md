@@ -130,6 +130,10 @@ Tanpa langkah ni, perubahan Code.js TIDAK akan nampak kesan di portal walaupun p
   - `Payments` now has 7 imported child rows below the header.
   - Diagnostic: `lastRow=8`, `sourceRowHashColumn=21`, 7 row entries in `SOURCE_ROW_HASH`.
   - Idempotency confirmed on second run: 5 unique existing source hashes, 0 rows to append, 7 duplicate child rows skipped, 0 appended.
+  - Next-batch import support uses `skipExistingGroupsFirst:true` to select unimported source groups first.
+  - Second batch imported 10 additional source payment groups from 2026, producing 21 more child payment rows.
+  - Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, 28 row entries in `SOURCE_ROW_HASH`.
+  - Total staging imported so far: 15 source groups -> 28 child payment rows.
 - Next steps:
   1. Continue staging-only imports in controlled batches.
   2. Keep import idempotent with `SOURCE_ROW_HASH`.

@@ -166,6 +166,12 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
   - Diagnostic confirmed `lastRow=8`, `sourceRowHashColumn=21`, and 7 row-level hash entries.
   - Second run was idempotent: 5 unique existing source hashes, `rowsToAppend=0`, `skippedDuplicateRows=7`, `appendedRows=0`.
   - No duplicate rows were appended on the second run.
+- Next-batch staging import support:
+  - `skipExistingGroupsFirst:true` makes the importer skip already-imported `SOURCE_ROW_HASH` groups before selecting the next batch.
+  - Preview for next 2026 batch: `existingHashCount=5`, `sourceGroupsSelected=10`, `draftRows=21`, `rowsToAppend=21`, `appendedRows=0`.
+  - Actual next batch appended 21 child rows from 10 additional source groups.
+  - Diagnostic after second batch: `lastRow=29`, `sourceRowHashColumn=21`, `existingHashCount=28` row entries.
+  - Total staging imported so far: 15 source groups -> 28 child payment rows.
 - Continue imports only in staging batches; keep idempotency via `SOURCE_ROW_HASH`.
 - Do not modify existing live functions during shadow work: `getYuranStats`, `getYuranParent`, `getEbayarStats`, `recordCash`, sync functions, and `onEbayarSubmit`.
 - `clasp push` may update GAS editor source, but no GAS production deployment and no `git push pages main` has been done for Queue #9 staging work.
