@@ -378,3 +378,16 @@ Pattern yang digunakan:
 - Important: `sourceYear=2025` is the source grouping label, but imported payment year values are 2024 according to the source rows.
 - Staging import safety limit remains `limitSourceRows <= 25`.
 - This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
+## Queue #9 eBayar V2 Legacy 2024 Staging Import Checkpoint — 2 Jul 2026
+
+- 2026 staging import remains completed at 457 source groups -> 779 child payment rows.
+- Legacy 2024 payment data from the 2025 source grouping has progressed to 200 source groups -> 380 child payment rows.
+- Grand total in staging `Payments`: 657 source groups -> 1159 child payment rows.
+- Latest diagnostic: `lastRow=1160`, `sourceRowHashColumn=21`, `existingHashCount=1159` row entries.
+- Recent legacy import progress after the previous docs checkpoint:
+  - 582 -> 607 source groups: +50 child rows, diagnostic `lastRow=1065`, `existingHashCount=1064`
+  - 607 -> 632 source groups: +50 child rows, diagnostic `lastRow=1115`, `existingHashCount=1114`
+  - 632 -> 657 source groups: +45 child rows, diagnostic `lastRow=1160`, `existingHashCount=1159`
+- Important: `sourceYear=2025` is the source grouping label, but imported payment year values are 2024 according to the source rows.
+- Staging import safety limit remains `limitSourceRows <= 25`.
+- This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
