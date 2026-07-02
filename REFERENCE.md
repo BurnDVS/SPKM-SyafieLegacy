@@ -358,3 +358,13 @@ Pattern yang digunakan:
   - 420 -> 445 source groups: +40 child rows, diagnostic `lastRow=762`, `existingHashCount=761`
 - Staging import safety limit remains `limitSourceRows <= 25`.
 - This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
+## Queue #9 eBayar V2 2026 Staging Import Completed — 2 Jul 2026
+
+- 2026 staging import is completed for all currently importable source groups.
+- Final imported total: 457 source groups -> 779 child payment rows.
+- Latest diagnostic: `lastRow=780`, `sourceRowHashColumn=21`, `existingHashCount=779` row entries.
+- Final empty-check preview confirmed no remaining importable 2026 source groups: `existingHashCount=457`, `sourceGroupsSelected=0`, `draftRows=0`, `rowsToAppend=0`, `appendedRows=0`.
+- Final movement after the previous checkpoint:
+  - 445 -> 457 source groups: +18 child rows, diagnostic `lastRow=780`, `existingHashCount=779`
+- Staging import safety limit remains `limitSourceRows <= 25`.
+- This remains staging-only. Live SPKM continues to use the legacy yuran/eBayar flow.
