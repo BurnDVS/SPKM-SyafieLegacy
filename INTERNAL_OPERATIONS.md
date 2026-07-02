@@ -359,3 +359,12 @@ Fail ini diwujudkan selepas `README.md` dibersihkan supaya muka depan GitHub tid
   - 320 -> 345 source groups: +42 child rows, diagnostic `lastRow=606`, `existingHashCount=605`
 - Staging import safety limit remains `limitSourceRows <= 25`.
 - Do not deploy, switch frontend calls, or use V2 as live flow until the staged import has been fully compared and approved.
+## Queue #9 eBayar V2 2026 Staging Import Checkpoint — 2 Jul 2026
+
+- 2026 staging import has progressed to 395 source groups -> 678 child payment rows.
+- Latest diagnostic: `lastRow=679`, `sourceRowHashColumn=21`, `existingHashCount=678` row entries.
+- Recent accelerated import continued after the previous checkpoint:
+  - 345 -> 370 source groups: +37 child rows, diagnostic `lastRow=643`, `existingHashCount=642`
+  - 370 -> 395 source groups: +36 child rows, diagnostic `lastRow=679`, `existingHashCount=678`
+- Staging import safety limit remains `limitSourceRows <= 25`.
+- Do not deploy, switch frontend calls, or use V2 as live flow until the staged import has been fully compared and approved.
