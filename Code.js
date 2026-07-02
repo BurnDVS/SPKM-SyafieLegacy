@@ -3130,6 +3130,28 @@ function testImportEbayarPayments2026NextBatch25V2() {
   return result;
 }
 
+function testImportEbayarPayments2025NextBatch25PreviewV2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2025,
+    limitSourceRows: 25,
+    skipExistingGroupsFirst: true,
+    dryRun: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function testImportEbayarPayments2025NextBatch25V2() {
+  var result = importEbayarPaymentsToMasterV2({
+    sourceYear: 2025,
+    limitSourceRows: 25,
+    skipExistingGroupsFirst: true,
+    allowWrite: true
+  });
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 function testDryRunImportEbayar2025V2() {
   var result = dryRunImportEbayarSourceV2({ sourceYear: 2025 });
   Logger.log(JSON.stringify(result, null, 2));
