@@ -2366,6 +2366,17 @@
           <span class="alert-icon">✓</span>
           <span id="loginSuccessMsg">Log masuk berjaya! Selamat datang.</span>
         </div>
+        <div class="alert" id="sessionChecking" style="background:#EAF4FB; border:1px solid #B3D9F0; color:#0A1F44;">
+          <span class="btn-loader" style="display:block; margin-top:1px; border-color:rgba(10,31,68,0.25); border-top-color:#0A1F44;"></span>
+          <span>Menyemak sesi anda...</span>
+        </div>
+        <div class="alert alert-error" id="sessionRetry">
+          <span class="alert-icon">⚠</span>
+          <span>
+            Tidak dapat menyambung ke server. Sila semak sambungan internet anda.<br>
+            <button type="button" class="btn btn-ghost btn-sm" style="width:auto; margin-top:8px; padding:4px 14px;" onclick="tryAutoLogin()">🔄 Cuba Semula</button>
+          </span>
+        </div>
       </div>
       <!-- Dashboard (post-login) -->
       <div class="card-body" id="dashboardPreview" style="display:none;">
@@ -2963,11 +2974,57 @@
 <!-- ============================================================ -->
 <section class="panel" id="panel-guru">
   <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
+
+  <!-- SUBSEKSYEN ADMIN: PERTUKARAN GURU -->
+  <div id="seksyenPertukaranGuru" style="display:none; margin-top:28px;">
+    <div class="section-heading" style="margin-bottom:16px;">
+      <h3 style="font-size:17px;">🔄 Pertukaran Guru</h3>
+      <p style="font-size:13px; color:var(--text-muted);">Pindah murid secara kekal dari satu guru ke guru lain</p>
+      <div class="divider-ornament"><span>✦</span></div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div>
+            <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Guru Asal</label>
+            <select id="ptGuruAsal" class="form-control" onchange="onPtGuruAsalChange()">
+              <option value="">— Pilih Guru Asal —</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Guru Baharu</label>
+            <select id="ptGuruBaru" class="form-control" onchange="onPtGuruBaruChange()">
+              <option value="">— Pilih Guru Baharu —</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="ptMuridSection" style="display:none; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="ptMuridCount" style="font-size:13px; color:var(--text-mid);"></span>
+            <span>
+              <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="ptPilihSemua(true)">Pilih Semua</button>
+              <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="ptPilihSemua(false)">Nyahpilih Semua</button>
+            </span>
+          </div>
+          <div id="ptMuridList" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:4px 0;"></div>
+        </div>
+
+        <div id="ptLoadingMsg" style="display:none; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Memuatkan senarai murid...</div>
+        <div id="ptRalatDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
+        <div id="ptSuccessDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
+
+        <button id="ptPindahBtn" class="btn btn-primary" onclick="bukaPtConfirmModal()" disabled style="width:100%;">🔄 Pindah Murid</button>
+      </div>
+    </div>
+  </div>
+
   <div class="section-heading">
     <h2>Senarai Guru</h2>
     <p>Semua guru berdaftar dalam sistem</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
+
   <div class="card">
     <div class="card-body" style="padding:0; overflow-x:auto;">
       <table class="data-table" id="guruTable">
@@ -2989,50 +3046,6 @@
     </div>
   </div>
 </section>
-
-<!-- SUBSEKSYEN ADMIN: PERTUKARAN GURU -->
-<div id="seksyenPertukaranGuru" style="display:none; margin-top:28px;">
-  <div class="section-heading" style="margin-bottom:16px;">
-    <h3 style="font-size:17px;">🔄 Pertukaran Guru</h3>
-    <p style="font-size:13px; color:var(--text-muted);">Pindah murid secara kekal dari satu guru ke guru lain</p>
-    <div class="divider-ornament"><span>✦</span></div>
-  </div>
-  <div class="card">
-    <div class="card-body">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
-        <div>
-          <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Guru Asal</label>
-          <select id="ptGuruAsal" class="form-control" onchange="onPtGuruAsalChange()">
-            <option value="">— Pilih Guru Asal —</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Guru Baharu</label>
-          <select id="ptGuruBaru" class="form-control" onchange="onPtGuruBaruChange()">
-            <option value="">— Pilih Guru Baharu —</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="ptMuridSection" style="display:none; margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span id="ptMuridCount" style="font-size:13px; color:var(--text-mid);"></span>
-          <span>
-            <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="ptPilihSemua(true)">Pilih Semua</button>
-            <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="ptPilihSemua(false)">Nyahpilih Semua</button>
-          </span>
-        </div>
-        <div id="ptMuridList" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:4px 0;"></div>
-      </div>
-
-      <div id="ptLoadingMsg" style="display:none; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Memuatkan senarai murid...</div>
-      <div id="ptRalatDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
-      <div id="ptSuccessDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
-
-      <button id="ptPindahBtn" class="btn btn-primary" onclick="bukaPtConfirmModal()" disabled style="width:100%;">🔄 Pindah Murid</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL CONFIRM PERTUKARAN -->
 <div id="modalPertukaranConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
@@ -3525,7 +3538,7 @@
 
   // FCM + persistent storage config
   var _isMobile  = window.innerWidth <= 1024;
-  var _spkm_st   = _isMobile ? localStorage : sessionStorage;
+  var _spkm_st   = localStorage;
   var _fcmDone   = false;
   var _pollTimer = null;
   var SPKM_LS_USER = 'spkm_ls_user';
@@ -3865,12 +3878,10 @@
           currentRole  = data.role || 'GURU';
           if (data.token) {
             _spkm_st.setItem('spkm_token', data.token);
-            if (_isMobile) {
-              localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-                token: data.token, user: data.user,
-                role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-              }));
-            }
+            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+              token: data.token, user: data.user,
+              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+            }));
           }
           document.getElementById('guruName').textContent = data.user;
           document.getElementById('loginFormWrapper').style.display = 'none';
@@ -3907,7 +3918,8 @@
 
   function handleLogout() {
     _spkm_st.removeItem('spkm_token');
-    if (_isMobile) { localStorage.removeItem(SPKM_LS_USER); localStorage.removeItem(SPKM_LAST_ID); }
+    localStorage.removeItem(SPKM_LS_USER);
+    localStorage.removeItem(SPKM_LAST_ID);
     stopNotifPolling();
     loggedInGuru          = null;
     loggedInTabKehadiran  = null;
@@ -6094,12 +6106,10 @@
         currentRole          = data.role || 'GURU';
         if (data.token) {
           _spkm_st.setItem('spkm_token', data.token);
-          if (_isMobile) {
-            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-              token: data.token, user: data.user,
-              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-            }));
-          }
+          localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+            token: data.token, user: data.user,
+            role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
+          }));
         }
         document.getElementById('guruName').textContent = data.user;
         document.getElementById('loginFormWrapper').style.display = 'none';
@@ -6601,36 +6611,69 @@
   }
 
   function tryAutoLogin() {
-    if (!_isMobile) return;
     var saved = localStorage.getItem(SPKM_LS_USER);
     if (!saved) return;
+    var u;
     try {
-      var u = JSON.parse(saved);
-      if (!u || !u.token || !u.user) { localStorage.removeItem(SPKM_LS_USER); return; }
-      _spkm_st.setItem('spkm_token', u.token);
-      loggedInGuru         = u.user;
-      loggedInTabKehadiran = u.tabKehadiran || null;
-      currentRole          = u.role || 'GURU';
-      document.getElementById('guruName').textContent = u.user;
-      document.getElementById('loginFormWrapper').style.display = 'none';
-      document.getElementById('dashboardPreview').style.display = 'block';
-      var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
-      var avEl = document.getElementById('mobLoggedAv');
-      var nmEl = document.getElementById('mobLoggedName');
-      if (avEl) avEl.textContent = initials;
-      if (nmEl) nmEl.textContent = u.user;
-      var guestEl = document.getElementById('guestMenu');
-      var guruEl  = document.getElementById('guruMenu');
-      if (guestEl) guestEl.style.display = 'none';
-      if (guruEl)  guruEl.style.display  = 'block';
-      setLoginState(true);
-      updateNav(true);
-      loadOrgChart();
-      var gEl = document.getElementById('hadirGuru');
-      if (gEl) gEl.value = u.user;
-      initFCM();
-      startNotifPolling();
-    } catch(e) { localStorage.removeItem(SPKM_LS_USER); }
+      u = JSON.parse(saved);
+    } catch(e) {
+      localStorage.removeItem(SPKM_LS_USER);
+      return;
+    }
+    if (!u || !u.token || !u.user) { localStorage.removeItem(SPKM_LS_USER); return; }
+
+    hideAlert('loginError'); hideAlert('loginSuccess');
+    document.getElementById('sessionRetry').classList.remove('show');
+    document.getElementById('sessionChecking').classList.add('show');
+
+    _spkm_st.setItem('spkm_token', u.token);
+
+    callGAS('renewSession', { token: u.token },
+      function(data) {
+        document.getElementById('sessionChecking').classList.remove('show');
+        if (data && data.success) {
+          loggedInGuru         = u.user;
+          loggedInTabKehadiran = u.tabKehadiran || null;
+          currentRole          = u.role || 'GURU';
+          document.getElementById('guruName').textContent = u.user;
+          document.getElementById('loginFormWrapper').style.display = 'none';
+          document.getElementById('dashboardPreview').style.display = 'block';
+          if (window.innerWidth <= 1024) {
+            var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+            var avEl = document.getElementById('mobLoggedAv');
+            var nmEl = document.getElementById('mobLoggedName');
+            if (avEl) avEl.textContent = initials;
+            if (nmEl) nmEl.textContent = u.user;
+            var guestEl = document.getElementById('guestMenu');
+            var guruEl  = document.getElementById('guruMenu');
+            if (guestEl) guestEl.style.display = 'none';
+            if (guruEl)  guruEl.style.display  = 'block';
+          }
+          document.getElementById('headerUserName').textContent = u.user;
+          document.getElementById('headerUserNameDropdown').textContent = u.user;
+          document.getElementById('headerPreLogin').style.display = 'none';
+          document.getElementById('headerPostLogin').style.display = '';
+          document.getElementById('headerLoginDropdown').classList.remove('open');
+          setLoginState(true);
+          updateNav(true);
+          loadDashboardStats();
+          loadOrgChart();
+          resetIdleTimer();
+          var gEl = document.getElementById('hadirGuru');
+          if (gEl) gEl.value = u.user;
+          initFCM();
+          startNotifPolling();
+        } else {
+          localStorage.removeItem(SPKM_LS_USER);
+          _spkm_st.removeItem('spkm_token');
+          showErr('loginError', 'Sesi anda telah tamat. Sila log masuk semula.');
+        }
+      },
+      function(err) {
+        document.getElementById('sessionChecking').classList.remove('show');
+        document.getElementById('sessionRetry').classList.add('show');
+      }
+    );
   }
 
   document.addEventListener('DOMContentLoaded', function() {
