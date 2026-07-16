@@ -2751,6 +2751,43 @@
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
+  <!-- SUBSEKSYEN ADMIN: MURID TANPA GURU -->
+  <div id="seksyenMuridTanpaGuru" style="display:none; margin-bottom:28px;">
+    <div class="section-heading" style="margin-bottom:16px;">
+      <h3 style="font-size:17px;">👤 Murid Tanpa Guru</h3>
+      <p style="font-size:13px; color:var(--text-muted);">Tetapkan guru untuk murid yang belum ada guru tetap</p>
+      <div class="divider-ornament"><span>✦</span></div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div id="mtgMuridSection" style="display:none; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="mtgMuridCount" style="font-size:13px; color:var(--text-mid);"></span>
+            <span>
+              <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="mtgPilihSemua(true)">Pilih Semua</button>
+              <button class="btn btn-ghost btn-sm" style="margin:0;" onclick="mtgPilihSemua(false)">Nyahpilih Semua</button>
+            </span>
+          </div>
+          <div id="mtgMuridList" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:4px 0;"></div>
+        </div>
+
+        <div id="mtgLoadingMsg" style="display:none; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Memuatkan senarai murid...</div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:4px;">Guru</label>
+          <select id="mtgGuruBaharu" class="form-control" onchange="mtgSemakEnableBtn()">
+            <option value="">— Pilih Guru —</option>
+          </select>
+        </div>
+
+        <div id="mtgRalatDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
+        <div id="mtgSuccessDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
+
+        <button id="mtgTetapkanBtn" class="btn btn-primary" onclick="bukaAssignConfirmModal()" disabled style="width:100%;">👤 Tetapkan Guru</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tab switcher -->
   <div class="tab-switcher" style="max-width:560px; margin:0 auto 28px;">
     <button class="tab-btn active" id="tabKehadiranStats"    onclick="switchKehadiranTab('stats')">📊 Statistik</button>
@@ -3056,6 +3093,19 @@
     <div style="display:flex; gap:10px;">
       <button id="ptConfirmBtn" class="btn btn-primary" style="flex:1;" onclick="sahkanPertukaran()">✅ Teruskan</button>
       <button class="btn btn-ghost" style="flex:1;" onclick="tutupPtConfirmModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRM ASSIGN GURU (Murid Tanpa Guru) -->
+<div id="modalAssignConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:var(--radius); padding:28px 24px; width:92%; max-width:440px; box-shadow:var(--shadow);">
+    <h3 style="font-family:'Lora',serif; color:var(--green); margin-bottom:12px; font-size:17px;">Sahkan Penetapan Guru</h3>
+    <p id="mtgConfirmMsg" style="font-size:14px; color:var(--text-mid); margin-bottom:8px; line-height:1.6;"></p>
+    <p style="font-size:12px; color:var(--error); margin-bottom:20px;">⚠️ Tindakan ini tidak boleh diundur secara automatik.</p>
+    <div style="display:flex; gap:10px;">
+      <button id="mtgConfirmBtn" class="btn btn-primary" style="flex:1;" onclick="sahkanAssignGuru()">✅ Teruskan</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="tutupAssignConfirmModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -3570,6 +3620,7 @@
   let guruMuridList       = [];
   let pertukaranGuruList  = []; // cache guru list untuk dropdown Pertukaran Guru
   let ptMuridList         = []; // [{bil, nama, jenis}] murid guru asal yang dipapar
+  let mtgMuridListData    = []; // [{bil, nama, jenis}] murid tanpa guru yang dipapar
 
   // eSemak state
   let esemakLoaded    = false;
@@ -3700,6 +3751,8 @@
     if (bellWrap) bellWrap.style.display = loggedIn ? 'flex' : 'none';
     const seksyenPertukaran = document.getElementById('seksyenPertukaranGuru');
     if (seksyenPertukaran) seksyenPertukaran.style.display = isAdmin ? '' : 'none';
+    const seksyenMtg = document.getElementById('seksyenMuridTanpaGuru');
+    if (seksyenMtg) seksyenMtg.style.display = isAdmin ? '' : 'none';
   }
 
   // =====================
@@ -4436,6 +4489,12 @@
         if (e.target === this) tutupPtConfirmModal();
       });
     }
+    const modalMtg = document.getElementById('modalAssignConfirm');
+    if (modalMtg) {
+      modalMtg.addEventListener('click', function(e) {
+        if (e.target === this) tutupAssignConfirmModal();
+      });
+    }
   });
 
   // =====================
@@ -4598,6 +4657,146 @@
       btn.disabled = false;
       document.getElementById('ptRalatDiv').textContent = 'Ralat sambungan. Sila cuba semula.';
       document.getElementById('ptRalatDiv').style.display = 'block';
+    });
+  }
+
+  // =====================
+  // MURID TANPA GURU
+  // =====================
+  function mtgPopulasiDropdown() {
+    const sel = document.getElementById('mtgGuruBaharu');
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">— Pilih Guru —</option>' +
+      pertukaranGuruList.map(function(r) {
+        return `<option value="${escHtml(r.nama)}">${escHtml(r.nama)}</option>`;
+      }).join('');
+    sel.value = val;
+    mtgSemakEnableBtn();
+  }
+
+  function loadMuridTanpaGuruPanel() {
+    document.getElementById('mtgMuridSection').style.display = 'none';
+    document.getElementById('mtgRalatDiv').style.display = 'none';
+    document.getElementById('mtgSuccessDiv').style.display = 'none';
+    document.getElementById('mtgLoadingMsg').style.display = 'block';
+    mtgMuridListData = [];
+
+    if (pertukaranGuruList.length === 0) {
+      callGAS('getGuru', {}, function(data) {
+        if (data.success && data.rows) pertukaranGuruList = data.rows.filter(function(r) { return r.nama; });
+        mtgPopulasiDropdown();
+      });
+    } else {
+      mtgPopulasiDropdown();
+    }
+
+    callGAS('getMuridTanpaGuru', {},
+      function(data) {
+        document.getElementById('mtgLoadingMsg').style.display = 'none';
+        if (!data.success) {
+          document.getElementById('mtgRalatDiv').textContent = data.message || 'Ralat memuatkan murid.';
+          document.getElementById('mtgRalatDiv').style.display = 'block';
+          return;
+        }
+        mtgMuridListData = data.murid || [];
+        if (mtgMuridListData.length === 0) {
+          document.getElementById('mtgMuridList').innerHTML = '<p style="padding:16px; text-align:center; color:var(--text-muted); font-size:13px;">Tiada murid tanpa guru.</p>';
+        } else {
+          mtgRenderMuridChecklist();
+        }
+        document.getElementById('mtgMuridSection').style.display = 'block';
+        mtgSemakEnableBtn();
+      },
+      function() {
+        document.getElementById('mtgLoadingMsg').style.display = 'none';
+        document.getElementById('mtgRalatDiv').textContent = 'Ralat sambungan. Sila cuba semula.';
+        document.getElementById('mtgRalatDiv').style.display = 'block';
+      }
+    );
+  }
+
+  function mtgRenderMuridChecklist() {
+    const countEl = document.getElementById('mtgMuridCount');
+    if (countEl) countEl.textContent = mtgMuridListData.length + ' murid';
+    document.getElementById('mtgMuridList').innerHTML = mtgMuridListData.map(function(item) {
+      const jenisLabel = item.jenis === 'KANAK' ? '(Kanak-kanak)' : '(Dewasa)';
+      const val = escHtml(JSON.stringify({ bil: item.bil, jenis: item.jenis, namaMuridExpected: item.nama }));
+      return `<div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid var(--border);">
+        <input type="checkbox" class="mtg-murid-chk" value='${val}' onchange="mtgSemakEnableBtn()">
+        <span style="font-size:14px;">${escHtml(item.nama)} <span style="font-size:12px; color:var(--text-muted);">${jenisLabel}</span></span>
+      </div>`;
+    }).join('');
+  }
+
+  function mtgPilihSemua(check) {
+    document.querySelectorAll('.mtg-murid-chk').forEach(function(cb) { cb.checked = check; });
+    mtgSemakEnableBtn();
+  }
+
+  function mtgSemakEnableBtn() {
+    const guru   = (document.getElementById('mtgGuruBaharu') || {}).value || '';
+    const ticked = document.querySelectorAll('.mtg-murid-chk:checked').length;
+    const btn    = document.getElementById('mtgTetapkanBtn');
+    if (btn) btn.disabled = !(guru && ticked > 0);
+  }
+
+  function bukaAssignConfirmModal() {
+    const guru   = document.getElementById('mtgGuruBaharu').value;
+    const ticked = document.querySelectorAll('.mtg-murid-chk:checked').length;
+    if (!guru || ticked === 0) return;
+    document.getElementById('mtgConfirmMsg').innerHTML =
+      `<strong>${ticked} murid</strong> akan ditetapkan kepada guru <strong>${escHtml(guru)}</strong>.`;
+    document.getElementById('modalAssignConfirm').style.display = 'flex';
+  }
+
+  function tutupAssignConfirmModal() {
+    document.getElementById('modalAssignConfirm').style.display = 'none';
+  }
+
+  function sahkanAssignGuru() {
+    const guru    = document.getElementById('mtgGuruBaharu').value;
+    const checked = Array.from(document.querySelectorAll('.mtg-murid-chk:checked'))
+                          .map(function(cb) { try { return JSON.parse(cb.value); } catch(e) { return null; } })
+                          .filter(Boolean);
+    if (!guru || checked.length === 0) return;
+
+    tutupAssignConfirmModal();
+    const btn = document.getElementById('mtgTetapkanBtn');
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
+    document.getElementById('mtgRalatDiv').style.display = 'none';
+    document.getElementById('mtgSuccessDiv').style.display = 'none';
+
+    callGAS('assignGuruMurid', {
+      token:      _spkm_st.getItem('spkm_token'),
+      adminEmail: _spkm_st.getItem('spkm_email') || '',
+      namaGuru:   guru,
+      senarai:    checked
+    },
+    function(data) {
+      btn.textContent = '👤 Tetapkan Guru';
+      if (data.success) {
+        let msg = `✅ ${data.jumlahDitetapkan} murid berjaya ditetapkan kepada ${guru}.`;
+        if (data.ralat && data.ralat.length > 0) {
+          msg += ` ⚠️ ${data.ralat.length} item gagal: ${data.ralat.join('; ')}`;
+        }
+        document.getElementById('mtgSuccessDiv').textContent = msg;
+        document.getElementById('mtgSuccessDiv').style.display = 'block';
+        notifAdd('pertukaran', '👤', 'Guru Ditetapkan', `${guru} (${data.jumlahDitetapkan} murid)`);
+        document.getElementById('mtgGuruBaharu').value = '';
+        loadMuridTanpaGuruPanel();
+      } else {
+        document.getElementById('mtgRalatDiv').textContent = data.message || 'Ralat semasa menetapkan guru.';
+        document.getElementById('mtgRalatDiv').style.display = 'block';
+        btn.disabled = false;
+      }
+    },
+    function() {
+      btn.textContent = '👤 Tetapkan Guru';
+      btn.disabled = false;
+      document.getElementById('mtgRalatDiv').textContent = 'Ralat sambungan. Sila cuba semula.';
+      document.getElementById('mtgRalatDiv').style.display = 'block';
     });
   }
 
@@ -5316,6 +5515,7 @@
     if (bulanEl) bulanEl.value = bulan;
     if (tahunEl) tahunEl.value = tahun;
     loadKehadiranStats();
+    loadMuridTanpaGuruPanel();
   }
 
   function loadKehadiranStats() {

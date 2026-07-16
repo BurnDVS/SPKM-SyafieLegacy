@@ -185,7 +185,8 @@ var ALLOWED_ACTIONS = [
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'auditEbayarSourceTabsV2',
-  'getMuridByGuruUntukTukar', 'tukarGuruMurid'
+  'getMuridByGuruUntukTukar', 'tukarGuruMurid',
+  'getMuridTanpaGuru', 'assignGuruMurid'
 ];
 
 var AUTH_REQUIRED_ACTIONS = [
@@ -198,7 +199,8 @@ var AUTH_REQUIRED_ACTIONS = [
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'auditEbayarSourceTabsV2',
-  'getMuridByGuruUntukTukar', 'tukarGuruMurid'
+  'getMuridByGuruUntukTukar', 'tukarGuruMurid',
+  'getMuridTanpaGuru', 'assignGuruMurid'
 ];
 
 function doPost(e) {
@@ -281,6 +283,8 @@ function doPost(e) {
     else if (action === 'auditEbayarSourceTabsV2')     result = auditEbayarSourceTabsV2(body);
     else if (action === 'getMuridByGuruUntukTukar')    result = getMuridByGuruUntukTukar(body);
     else if (action === 'tukarGuruMurid')              result = tukarGuruMurid(body);
+    else if (action === 'getMuridTanpaGuru')           result = getMuridTanpaGuru();
+    else if (action === 'assignGuruMurid')             result = assignGuruMurid(body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -422,6 +426,8 @@ function doAction(action, payload) {
   else if (action === 'auditEbayarSourceTabsV2')      return auditEbayarSourceTabsV2(payload);
   else if (action === 'getMuridByGuruUntukTukar')     return getMuridByGuruUntukTukar(payload);
   else if (action === 'tukarGuruMurid')               return tukarGuruMurid(payload);
+  else if (action === 'getMuridTanpaGuru')            return getMuridTanpaGuru();
+  else if (action === 'assignGuruMurid')              return assignGuruMurid(payload);
 }
 
 // ============================================================
@@ -4203,6 +4209,165 @@ function tukarGuruMurid(params) {
 
   } catch (err) {
     Logger.log('tukarGuruMurid error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 35. getMuridTanpaGuru
+// Ambil senarai murid AKTIF yang kolum GURU masih kosong/blank.
+// Input:  {}
+// Output: { success, murid: [{bil, nama, jenis}, ...] }
+// ============================================================
+function getMuridTanpaGuru() {
+  try {
+    var ss   = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var list = [];
+
+    // PendaftaranBaru — COL_KANAK.GURU
+    var kanakSheet = ss.getSheetByName(TAB.KANAK);
+    if (kanakSheet && kanakSheet.getLastRow() > 1) {
+      var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, kanakSheet.getLastColumn()).getValues();
+      kData.forEach(function(r) {
+        var guru   = (r[COL_KANAK.GURU]   || '').toString().trim();
+        var status = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
+        if (status && status !== 'AKTIF') return;
+        if (guru) return;
+        var nama = (r[COL_KANAK.NAMA] || '').toString().trim();
+        if (!nama) return;
+        list.push({ bil: r[COL_KANAK.BIL], nama: nama.toUpperCase(), jenis: 'KANAK' });
+      });
+    }
+
+    // KelasDewasa — COL_DEWASA.GURU
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+    if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
+      var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues();
+      dData.forEach(function(r) {
+        var guru   = (r[COL_DEWASA.GURU]   || '').toString().trim();
+        var status = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
+        if (status && status !== 'AKTIF') return;
+        if (guru) return;
+        var nama = (r[COL_DEWASA.NAMA] || '').toString().trim();
+        if (!nama) return;
+        list.push({ bil: r[COL_DEWASA.BIL], nama: nama.toUpperCase(), jenis: 'DEWASA' });
+      });
+    }
+
+    list.sort(function(a, b) { return a.nama < b.nama ? -1 : a.nama > b.nama ? 1 : 0; });
+
+    Logger.log('getMuridTanpaGuru: ' + list.length + ' murid AKTIF tanpa guru');
+    return { success: true, murid: list };
+
+  } catch (err) {
+    Logger.log('getMuridTanpaGuru error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// ============================================================
+// 36. assignGuruMurid
+// Tetapkan guru untuk murid yang kolum GURU masih kosong.
+// Input:  { token, adminEmail, namaGuru, senarai:[{bil,jenis,namaMuridExpected}] }
+// Output: { success, jumlahDitetapkan, ralat:[...] }
+// ============================================================
+function assignGuruMurid(params) {
+  params = params || {};
+  try {
+    var adminEmail = (params.adminEmail || '').toString().trim();
+    var namaGuru   = (params.namaGuru   || '').toString().trim();
+    var senarai    = params.senarai || [];
+
+    if (!namaGuru) {
+      return { success: false, message: 'namaGuru diperlukan.' };
+    }
+    if (!senarai.length) {
+      return { success: false, message: 'Senarai murid kosong.' };
+    }
+
+    var ss          = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var kanakSheet  = ss.getSheetByName(TAB.KANAK);
+    var dewasaSheet = ss.getSheetByName(TAB.DEWASA);
+
+    // Pre-load data sekali untuk carian row
+    var kanakData  = (kanakSheet  && kanakSheet.getLastRow()  > 1)
+      ? kanakSheet.getRange(2,  1, kanakSheet.getLastRow()  - 1, kanakSheet.getLastColumn()).getValues()
+      : [];
+    var dewasaData = (dewasaSheet && dewasaSheet.getLastRow() > 1)
+      ? dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, dewasaSheet.getLastColumn()).getValues()
+      : [];
+
+    var timestamp        = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    var jumlahDitetapkan  = 0;
+    var ralat             = [];
+    var logRows           = [];
+
+    senarai.forEach(function(item) {
+      var bil               = item.bil;
+      var jenis              = (item.jenis || '').toString().trim().toUpperCase();
+      var namaMuridExpected  = (item.namaMuridExpected || '').toString().trim().toUpperCase();
+
+      var data      = (jenis === 'KANAK') ? kanakData  : dewasaData;
+      var sheet     = (jenis === 'KANAK') ? kanakSheet : dewasaSheet;
+      var colBil    = (jenis === 'KANAK') ? COL_KANAK.BIL    : COL_DEWASA.BIL;
+      var colGuru   = (jenis === 'KANAK') ? COL_KANAK.GURU   : COL_DEWASA.GURU;
+      var colNama   = (jenis === 'KANAK') ? COL_KANAK.NAMA   : COL_DEWASA.NAMA;
+
+      var rowFound  = -1;
+      var namaMurid = '';
+
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i][colBil]).trim() === String(bil).trim()) {
+          rowFound  = i + 2; // +2: baris pertama = header, data mula dari baris 2
+          namaMurid = (data[i][colNama] || '').toString().trim();
+
+          // Safety check: kolum GURU mesti masih kosong
+          var guruSedia = (data[i][colGuru] || '').toString().trim();
+          if (guruSedia) {
+            ralat.push('Bil ' + bil + ' (' + jenis + '): sudah ada guru: ' + guruSedia);
+            return;
+          }
+
+          // Safety check: nama murid mesti match jangkaan (jika diberi)
+          if (namaMuridExpected && namaMurid.toUpperCase() !== namaMuridExpected) {
+            ralat.push('Bil ' + bil + ' (' + jenis + '): nama tidak match — jangkaan ' + namaMuridExpected + ', sebenar ' + namaMurid);
+            return;
+          }
+
+          break;
+        }
+      }
+
+      if (rowFound === -1) {
+        ralat.push('Bil ' + bil + ' (' + jenis + '): row tidak dijumpai dalam sheet.');
+        return;
+      }
+
+      sheet.getRange(rowFound, colGuru + 1).setValue(namaGuru);
+      jumlahDitetapkan++;
+      logRows.push([timestamp, adminEmail, '(Tiada)', namaGuru, namaMurid, jenis, bil]);
+    });
+
+    SpreadsheetApp.flush();
+
+    // Log ke LogPertukaranGuru
+    if (logRows.length > 0) {
+      var logSheet = ensureLogPertukaranGuruSheet(ss);
+      logSheet.getRange(logSheet.getLastRow() + 1, 1, logRows.length, 7).setValues(logRows);
+    }
+
+    Logger.log('assignGuruMurid: ' + namaGuru + ', ' + jumlahDitetapkan + ' ditetapkan, ' + ralat.length + ' ralat');
+
+    try {
+      simpanNotifikasi('pertukaran', '👤 Guru Ditetapkan',
+        namaGuru + ' (' + jumlahDitetapkan + ' murid)',
+        { jumlah: String(jumlahDitetapkan) });
+    } catch(e) {}
+
+    return { success: true, jumlahDitetapkan: jumlahDitetapkan, ralat: ralat };
+
+  } catch (err) {
+    Logger.log('assignGuruMurid error: ' + err.message);
     return { success: false, message: err.message };
   }
 }
