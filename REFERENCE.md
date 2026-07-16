@@ -7,8 +7,10 @@ Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Siste
 ## 📁 Local Project
 
 ```
-Path: C:\Users\burnk\OneDrive\Documents-assets\SPKM
+Path: D:\OneDrive\Documents-assets\SPKM
 ```
+
+⚠️ **Path berubah 16 Jul 2026** (sebelum ni `C:\Users\burnk\OneDrive\Documents-assets\SPKM`). Folder lama dengan nama sama pernah jadi **corrupt di peringkat `.git`** (satu blob hilang dalam sejarah, lihat "Git Repo Corruption" di bawah) — direname `SPKM_OLD_CORRUPT` (backup, jangan padam dulu). Folder aktif sekarang ialah bekas clone fresh yang direname semula jadi `SPKM`.
 
 ---
 
@@ -61,6 +63,54 @@ Lepas tu push semula, login sebagai `BurnDVS` bila diminta.
 git add . && git commit -m "message" && git push && git push pages main
 ```
 ⚠️ Kena push **DUA-DUA remote** setiap kali — kalau hanya `origin`, website live TAK update.
+
+⚠️ **Sebelum push ke `pages`, semak dulu fail apa yang akan terpush** (kalau ada kerja WIP yang belum siap dalam commit lain):
+```powershell
+git fetch pages
+git diff --stat pages/main main
+```
+`Code.js` dan `portal.html` boleh push ke `pages` dengan selamat walaupun tak berkaitan PWA — dua-dua fail ni diserve dari GAS (`doGet`), BUKAN dari GitHub Pages, jadi duduk je dalam repo Pages tanpa kesan runtime. Hanya `index.html`/`sw.js`/`config.json`/`manifest.json` yang benar-benar live di Pages.
+
+### 🚨 Git Repo Corruption ("geometric-repack failed")
+
+Kalau `git fetch`/`push`/`commit`/`repack` tiba-tiba gagal dengan:
+```
+fatal: unable to read <hash>
+error: failed to perform geometric repack
+error: task 'geometric-repack' failed
+```
+Ni tanda ada **satu atau lebih blob git corrupt/hilang** dalam sejarah repo (bukan fail kerja semasa — `git status`/`git diff --stat` akan confirm fail kerja masih OK). Biasanya berpunca dari insiden delete/recovery OneDrive/PC yang tak lengkap.
+
+**JANGAN cuba repair repo yang sama** (`git repack`, `git fsck` tak selesaikan masalah tanpa restore blob asal yang hilang). Cara paling cepat & selamat:
+1. **Backup** fail kerja SEMASA (copy manual ke folder lain) — jangan skip.
+2. Clone repo fresh dari `origin` ke folder baru:
+   ```powershell
+   git clone https://github.com/BurnDVS/SPKM-SyafieLegacy.git SPKM_fresh
+   ```
+3. Copy fail kerja terkini (dari backup) masuk `SPKM_fresh`, overwrite.
+4. `git add`, `git commit`, `git push origin main` dari `SPKM_fresh`.
+5. Tambah semula remote `pages` (clone fresh cuma bawa satu remote):
+   ```powershell
+   git remote add pages https://github.com/shafielegacy/SPKM.git
+   git fetch pages
+   ```
+6. Rename folder lama → `SPKM_OLD_CORRUPT` (backup), rename `SPKM_fresh` → `SPKM`.
+
+⚠️ Kalau `git push` bagi 403 selepas ni, kemungkinan Windows Credential Manager / browser session tersangkut akaun GitHub lain — rujuk fix credential di atas, atau guna Personal Access Token terus:
+```powershell
+git remote set-url origin https://<TOKEN>@github.com/BurnDVS/SPKM-SyafieLegacy.git
+```
+
+### ⚠️ Guna OneDrive di 2 mesin (desktop + laptop) — punca corrupt yang mungkin berulang
+
+Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di desktop, `C:\Users\burnk\OneDrive\...` di laptop) supaya senang kerja di mana-mana tanpa external drive. TAPI OneDrive sync fail `.git` internals secara file-level, BUKAN guna protokol git — ini risiko sebenar punca insiden corrupt blob (16 Jul 2026).
+
+**Peraturan wajib untuk elak corrupt berulang:**
+1. **Confirm OneDrive "Up to date" (☁️ hijau, bukan berputar)** SEBELUM tutup satu mesin dan pindah ke mesin lain.
+2. **Tunggu OneDrive habis sync** di mesin baru SEBELUM buka terminal/run git command.
+3. **Jangan buka projek serentak** (editor/terminal) di dua mesin pada masa sama.
+4. **`git push` di hujung sesi kerja, `git pull` di permulaan sesi kerja** — WAJIB, jangan harap OneDrive punya sync cukup untuk git internals. Kalau `git pull` bagi "local changes would be overwritten" sedangkan Burn tak edit apa-apa sengaja, ni tanda OneDrive dah "raw-sync" kandungan fail tanpa git tahu — check `git diff --stat <fail>` dulu, kalau padan dengan commit yang nak di-pull, selamat `git restore <fail>` baru `git pull`.
+5. **Health-check berkala**: `git fsck --full` di kedua-dua mesin sekali-sekala, terutama lepas insiden pelik — tangkap corrupt awal sebelum jadi masalah besar.
 
 ---
 
@@ -197,6 +247,18 @@ Pattern yang digunakan:
 - Compare sebagai `String(data[i][colBil]).trim() === String(bil).trim()` — handle kes di mana Bil tersimpan sebagai number (formula spreadsheet) atau string (manual entry).
 - **Safety check sebelum update:** verify `GURU semasa === guruLama` sebelum tulis `guruBaru`. Elak overwrite jika data sudah berubah sejak checklist dimuatkan (race condition antara `getMuridByGuruUntukTukar` dan `tukarGuruMurid`).
 - Item yang gagal safety check masuk `ralat[]` — partial transfer diteruskan untuk item lain yang OK.
+- Pattern sama dipakai `assignGuruMurid` (16 Jul 2026) — safety check TAMBAHAN: kolum GURU row tu MESTI kosong dulu (tolak kalau dah ada guru — anti-overwrite), bukan check "GURU semasa === guruLama" macam tukarGuruMurid.
+
+### Session Persistence (localStorage + renewSession) — PENTING, pernah regress sekali
+
+**Prinsip:** `localStorage` (BUKAN `sessionStorage`) dipakai untuk SEMUA device (desktop + mobile) untuk simpan token+user+role. Bila page refresh, `tryAutoLogin()` MESTI:
+1. Baca token dari localStorage. Takde token → terus papar login, jangan call API.
+2. Ada token → panggil `renewSession()` (backend) untuk **validate dengan server dulu** sebelum restore UI.
+3. `success:true` → restore penuh (guru/role dari localStorage yang dah tersimpan, backend tak perlu hantar balik).
+4. `success:false` (token invalid/expired) → clear localStorage, papar login + mesej sesi tamat.
+5. **Network/exception error** (BUKAN success:false) → **JANGAN clear localStorage**, papar retry state ("Cuba Semula"). Ni yang paling kerap disalah — treat network failure sama macam invalid token punca "asyik logout" bila internet naik-turun.
+
+⚠️ Fix ni PERNAH settle 23 Jun 2026, tapi **regress balik** (portal.html balik guna `_isMobile ? localStorage : sessionStorage` + `tryAutoLogin()` ada early-return untuk desktop) — diperbaiki semula 16 Jul 2026. Kalau isu "refresh = logout" muncul balik lagi-lagi, semak DUA fail (`portal.html` DAN `index.html`) — index.html ada versi bug yang berasingan (lebih teruk, clear storage untuk SEMUA jenis error termasuk network).
 
 ---
 
@@ -215,6 +277,10 @@ Pattern yang digunakan:
 | 9 | Satukan eBayar 2025+2026 → tab per tahun | QUEUE |
 | 10 | Dashboard Analisa Yuran | QUEUE (depends on #9) |
 | 11 | eSemak upgrade utk spreadsheet baru | QUEUE (depends on #9) |
+| 12 | Murid Tanpa Guru — assign guru pukal (page Kehadiran) | ✅ Selesai (16 Jul 2026) |
+| 13 | Statistik Kehadiran admin view — guru lookup gap (`getKehadiranStats` hardcode `guru:''` untuk admin branch) | QUEUE — prompt dah dihantar, belum verify/deploy |
+| 14 | Normalize double-whitespace nama murid (`KEHADIRAN_SS_ID`) | QUEUE |
+| 15 | Update Available Popup (PWA) — `version.json`+`APP_VERSION`+`sw.js` | IN PROGRESS — uncommitted, rujuk pattern SPDK |
 | — | FCM Push Notification | KIV |
 
 ---
