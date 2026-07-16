@@ -2471,6 +2471,17 @@
           <span class="alert-icon">✓</span>
           <span id="loginSuccessMsg">Log masuk berjaya! Selamat datang.</span>
         </div>
+        <div class="alert alert-success" id="sessionChecking" style="background:#EAF4FB; border-color:#B3D9F0; color:#1A5C3A;">
+          <span class="alert-icon">⏳</span>
+          <span>Menyemak sesi...</span>
+        </div>
+        <div class="alert alert-error" id="sessionRetry">
+          <span class="alert-icon">⚠</span>
+          <div>
+            <div>Tidak dapat menyambung ke server. Sila semak sambungan internet anda.</div>
+            <button type="button" class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="tryAutoLogin()">🔄 Cuba Semula</button>
+          </div>
+        </div>
       </div>
       <!-- Dashboard (post-login) -->
       <div class="card-body" id="dashboardPreview" style="display:none;">
@@ -3068,11 +3079,56 @@
 <!-- ============================================================ -->
 <section class="panel" id="panel-guru">
   <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
+
+  <!-- Pertukaran Guru — admin only -->
+  <div id="seksyenPertukaranGuru" style="display:none;">
+    <section style="padding:20px 16px 0;">
+      <div style="background:var(--white); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); margin-bottom:16px;">
+        <h3 style="font-family:'Lora',serif; color:var(--green); font-size:16px; margin-bottom:4px;">🔄 Pertukaran Guru</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Pindah murid dari satu guru tetap ke guru lain secara kekal.</p>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:6px;">Guru Asal</label>
+          <select id="ptGuruAsal" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--white); color:var(--text-mid);" onchange="onPtGuruAsalChange()">
+            <option value="">— Pilih Guru Asal —</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:6px;">Guru Baharu</label>
+          <select id="ptGuruBaru" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--white); color:var(--text-mid);" onchange="onPtGuruBaruChange()">
+            <option value="">— Pilih Guru Baharu —</option>
+          </select>
+        </div>
+
+        <div id="ptLoadingMsg" style="display:none; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Memuatkan senarai murid...</div>
+
+        <div id="ptMuridSection" style="display:none; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span id="ptMuridCount" style="font-size:13px; color:var(--text-mid); font-weight:500;"></span>
+            <div style="display:flex; gap:8px;">
+              <button onclick="ptPilihSemua(true)" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--green-light); color:var(--green); cursor:pointer;">Pilih Semua</button>
+              <button onclick="ptPilihSemua(false)" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:#f5f5f5; color:var(--text-muted); cursor:pointer;">Kosongkan</button>
+            </div>
+          </div>
+          <div id="ptMuridList" style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:4px 0;"></div>
+        </div>
+
+        <div id="ptRalatDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
+        <div id="ptSuccessDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
+
+        <button id="ptPindahBtn" onclick="bukaPtConfirmModal()" disabled
+          style="width:100%; padding:12px; background:var(--green); color:var(--gold); border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">🔄 Pindah Murid</button>
+      </div>
+    </section>
+  </div>
+
   <div class="section-heading">
     <h2>Senarai Guru</h2>
     <p>Semua guru berdaftar dalam sistem</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
+
   <div class="card">
     <div class="card-body" style="padding:0; overflow-x:auto;">
       <table class="data-table" id="guruTable">
@@ -3094,49 +3150,6 @@
     </div>
   </div>
 </section>
-
-<!-- Pertukaran Guru — admin only -->
-<div id="seksyenPertukaranGuru" style="display:none;">
-  <section style="padding:20px 16px 0;">
-    <div style="background:var(--white); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); margin-bottom:16px;">
-      <h3 style="font-family:'Lora',serif; color:var(--green); font-size:16px; margin-bottom:4px;">🔄 Pertukaran Guru</h3>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Pindah murid dari satu guru tetap ke guru lain secara kekal.</p>
-
-      <div style="margin-bottom:12px;">
-        <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:6px;">Guru Asal</label>
-        <select id="ptGuruAsal" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--white); color:var(--text-mid);" onchange="onPtGuruAsalChange()">
-          <option value="">— Pilih Guru Asal —</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom:16px;">
-        <label style="font-size:13px; font-weight:500; color:var(--text-mid); display:block; margin-bottom:6px;">Guru Baharu</label>
-        <select id="ptGuruBaru" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--white); color:var(--text-mid);" onchange="onPtGuruBaruChange()">
-          <option value="">— Pilih Guru Baharu —</option>
-        </select>
-      </div>
-
-      <div id="ptLoadingMsg" style="display:none; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Memuatkan senarai murid...</div>
-
-      <div id="ptMuridSection" style="display:none; margin-bottom:16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-          <span id="ptMuridCount" style="font-size:13px; color:var(--text-mid); font-weight:500;"></span>
-          <div style="display:flex; gap:8px;">
-            <button onclick="ptPilihSemua(true)" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--green-light); color:var(--green); cursor:pointer;">Pilih Semua</button>
-            <button onclick="ptPilihSemua(false)" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:#f5f5f5; color:var(--text-muted); cursor:pointer;">Kosongkan</button>
-          </div>
-        </div>
-        <div id="ptMuridList" style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:4px 0;"></div>
-      </div>
-
-      <div id="ptRalatDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:#FEE; border-radius:8px; color:var(--error); font-size:13px;"></div>
-      <div id="ptSuccessDiv" style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--green-light); border-radius:8px; color:var(--green); font-size:13px;"></div>
-
-      <button id="ptPindahBtn" onclick="bukaPtConfirmModal()" disabled
-        style="width:100%; padding:12px; background:var(--green); color:var(--gold); border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">🔄 Pindah Murid</button>
-    </div>
-  </section>
-</div>
 
 <!-- Modal konfirmasi Pertukaran Guru -->
 <div id="modalPertukaranConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
@@ -3616,7 +3629,7 @@
 </main>
 
 <footer>
-  <p>© 2026 Sistem Pengurusan Kelas Mengaji</p>
+  <p>© 2026 Sistem Pengurusan Kelas Mengaji · <span id="appVersionTag" style="opacity:.6;font-size:11px;">v1.0.0</span></p>
 </footer>
 
 <!-- ============================================================ -->
@@ -3624,6 +3637,7 @@
 <!-- ============================================================ -->
 <script>
   const _isGAS  = window.location.hostname.endsWith('google.com');
+  const APP_VERSION = "1.0.0";
 
   // Load GAS_URL dynamically so URL changes only need a config.json update
   var _gasUrlReady = new Promise(function(resolve) {
@@ -6857,9 +6871,14 @@
       // Set token sementara supaya callGASPromise boleh hantar dalam request
       _spkm_st.setItem('spkm_token', u.token);
 
+      hideAlert('sessionRetry');
+      var sessionCheckingEl = document.getElementById('sessionChecking');
+      if (sessionCheckingEl) sessionCheckingEl.classList.add('show');
+
       // Validate & renew token dengan server DULU — jangan tunjuk menu guru lagi
       callGASPromise('renewSession', {})
         .then(function(data) {
+          if (sessionCheckingEl) sessionCheckingEl.classList.remove('show');
           if (!data || !data.success) {
             // Token tidak sah / tamat tempoh — clear semua, kekal state logout
             _spkm_st.removeItem('spkm_token');
@@ -6898,9 +6917,11 @@
           }, 20 * 60 * 1000);
         })
         .catch(function() {
-          // Ralat sambungan — clear token, kekal logout
-          _spkm_st.removeItem('spkm_token');
-          localStorage.removeItem(SPKM_LS_USER);
+          // Ralat sambungan/network (offline, timeout, fetch gagal) — BUKAN token tak sah.
+          // Jangan clear localStorage/token di sini supaya PWA tak logout bila internet naik-turun.
+          if (sessionCheckingEl) sessionCheckingEl.classList.remove('show');
+          var sessionRetryEl = document.getElementById('sessionRetry');
+          if (sessionRetryEl) sessionRetryEl.classList.add('show');
         });
     } catch(e) { localStorage.removeItem(SPKM_LS_USER); }
   }
