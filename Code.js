@@ -2094,6 +2094,8 @@ var EBAYAR_MONTHS_V2 = [
 var NATIVE_EBAYAR_MVP_MAX_FILE_SIZE_V2 = 3 * 1024 * 1024;
 var NATIVE_EBAYAR_SLIP_FOLDER_PROPERTY_V2_ = 'NATIVE_EBAYAR_SLIP_FOLDER_ID';
 var NATIVE_EBAYAR_RECEIPT_FOLDER_PROPERTY_V2_ = 'NATIVE_EBAYAR_RECEIPT_FOLDER_ID';
+var NATIVE_EBAYAR_RECEIPT_TEMPLATE_PROPERTY_V2_ = 'NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID';
+var NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_PROPERTY_V2_ = 'NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID';
 var EBAYAR_PORTAL_MODE_PROPERTY_ = 'EBAYAR_PORTAL_MODE';
 var EBAYAR_PORTAL_MODE_UPDATED_AT_PROPERTY_ = 'EBAYAR_PORTAL_MODE_UPDATED_AT';
 var EBAYAR_PORTAL_MODE_UPDATED_BY_PROPERTY_ = 'EBAYAR_PORTAL_MODE_UPDATED_BY';
@@ -2753,46 +2755,144 @@ function sameNativeEbayarReceiptSnapshotV2_(before, after) {
     before.sourceHash === after.sourceHash;
 }
 
-function populateNativeEbayarReceiptDocumentV2_(doc, group) {
-  var body = doc.getBody();
-  body.clear();
-  var title = body.appendParagraph('SISTEM PENGURUSAN KELAS MENGAJI');
-  title.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  title.editAsText().setBold(true).setFontSize(16);
-  var subtitle = body.appendParagraph('RESIT BAYARAN YURAN');
-  subtitle.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  subtitle.editAsText().setBold(true).setFontSize(14);
-  body.appendParagraph('');
+function balanceNativeEbayarReceiptNamesV2_(names) {
+  if (names.length <= 2) return names.join('\n');
+  var bestIndex = 1;
+  var bestDifference = Infinity;
+  for (var i = 1; i < names.length; i++) {
+    var firstLength = names.slice(0, i).join(', ').length;
+    var secondLength = names.slice(i).join(', ').length;
+    var difference = Math.abs(firstLength - secondLength);
+    if (difference < bestDifference) {
+      bestDifference = difference;
+      bestIndex = i;
+    }
+  }
+  return names.slice(0, bestIndex).join(', ') + '\n' + names.slice(bestIndex).join(', ');
+}
+
+function getNativeEbayarReceiptDisplayReferenceV2_(paymentGroupId, overrideReference) {
+  var override = (overrideReference || '').toString().trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
+  if (override) return override;
+  var match = /^NATIVE-\d{6}-(\d{14})-[A-F0-9]{10}$/.exec((paymentGroupId || '').toString().trim());
+  if (!match) throw new Error('Identiti kumpulan bayaran Native tidak sah untuk rujukan resit.');
+  return match[1].slice(6); // DDHHMMSS; template already supplies SL/month/year.
+}
+
+function formatNativeEbayarReceiptDateV2_(paymentDate) {
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((paymentDate || '').toString().trim());
+  if (!match) throw new Error('Tarikh bayaran Native tidak sah untuk resit.');
+  var monthMeta = getMonthMetaV2_(match[1] + '-' + match[2]);
+  if (!monthMeta) throw new Error('Bulan bayaran Native tidak sah untuk resit.');
+  return parseInt(match[3], 10) + ' ' + monthMeta.label + ' ' + match[1];
+}
+
+function buildNativeEbayarReceiptTemplateDataV2_(group, options) {
+  options = options || {};
+  var students = (group && group.students) || [];
+  if (students.length < 1 || students.length > 5) {
+    throw new Error('Kumpulan resit mesti mengandungi 1 hingga 5 murid.');
+  }
+  var names = students.map(function(student) {
+    return (student.nama || '').toString().trim();
+  });
+  if (names.some(function(name) { return !name; })) throw new Error('Nama murid resit tidak lengkap.');
 
   var monthMeta = getMonthMetaV2_(group.bulanKey);
-  var monthLabel = monthMeta ? monthMeta.label + ' ' + group.bulanKey.slice(0, 4) : group.bulanKey;
-  var issuedAt = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-  var details = [
-    ['ID Resit / Rujukan', group.paymentGroupId],
-    ['Tarikh Resit Dijana', issuedAt],
-    ['Bulan Bayaran', monthLabel],
-    ['Tarikh Bayaran', group.paymentDate],
-    ['Jumlah Keseluruhan', 'RM ' + Number(group.amountTotal).toFixed(2)],
-    ['No. Rujukan Transaksi', group.transactionReference || '-'],
-    ['Kaedah Bayaran', 'Native eBayar / Online']
-  ];
-  body.appendTable(details);
-  body.appendParagraph('');
-  var studentHeading = body.appendParagraph('Murid');
-  studentHeading.editAsText().setBold(true);
-  group.students.forEach(function(student, index) {
-    var typeSuffix = student.studentType ? ' (' + student.studentType + ')' : '';
-    body.appendListItem((index + 1) + '. ' + student.nama + typeSuffix);
+  if (!monthMeta) throw new Error('Bulan bayaran Native tidak sah untuk template resit.');
+  var amount = Number(group.amountTotal);
+  if (!isFinite(amount) || amount <= 0) throw new Error('Jumlah bayaran Native tidak sah untuk resit.');
+  var nameFontSize = names.length === 1 ? 9 : (names.length === 2 ? 8 : 7);
+  var nameText = balanceNativeEbayarReceiptNamesV2_(names);
+
+  return {
+    placeholders: {
+      '<<NAMA PENUH ANAK>>': nameText,
+      '<<BULAN>>': monthMeta.label.toUpperCase(),
+      '<<NO RESIT>>': getNativeEbayarReceiptDisplayReferenceV2_(group.paymentGroupId, options.receiptReference),
+      '<<TARIKH>>': formatNativeEbayarReceiptDateV2_(group.paymentDate),
+      '<<BAYARAN>>': amount.toFixed(2)
+    },
+    studentNames: names,
+    nameText: nameText,
+    nameFontSize: nameFontSize,
+    preview: options.preview === true
+  };
+}
+
+function populateNativeEbayarReceiptPresentationV2_(presentation, group, options) {
+  options = options || {};
+  var templateData = buildNativeEbayarReceiptTemplateDataV2_(group, options);
+  var nameShapes = [];
+  presentation.getSlides().forEach(function(slide) {
+    slide.getShapes().forEach(function(shape) {
+      var text = shape.getText().asString();
+      if (text.indexOf('<<NAMA PENUH ANAK>>') !== -1) nameShapes.push(shape);
+    });
   });
-  body.appendParagraph('');
-  var statement = body.appendParagraph('Resit ini dijana secara automatik oleh sistem.');
-  statement.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  statement.editAsText().setItalic(true).setFontSize(9);
+  if (!nameShapes.length) throw new Error('Placeholder <<NAMA PENUH ANAK>> tidak dijumpai dalam template resit.');
+
+  Object.keys(templateData.placeholders).forEach(function(placeholder) {
+    var replaced = presentation.replaceAllText(placeholder, templateData.placeholders[placeholder]);
+    if (replaced < 1) throw new Error('Placeholder template resit tidak dijumpai: ' + placeholder);
+  });
+  nameShapes.forEach(function(shape) {
+    shape.getText().getTextStyle().setFontSize(templateData.nameFontSize);
+    shape.getText().getParagraphStyle().setLineSpacing(90);
+  });
+
+  if (templateData.preview) {
+    presentation.replaceAllText('SALINAN', 'CONTOH / TIDAK SAH');
+    var previewSlide = presentation.getSlides()[0];
+    var watermark = previewSlide.insertTextBox('CONTOH / TIDAK SAH', 168, 118, 240, 36);
+    watermark.setRotation(-12);
+    watermark.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
+    watermark.getText().getTextStyle().setFontSize(18).setBold(true).setForegroundColor('#C62828');
+    watermark.getText().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+  }
+
+  var unresolved = [];
+  presentation.getSlides().forEach(function(slide) {
+    slide.getShapes().forEach(function(shape) {
+      var matches = shape.getText().asString().match(/<<[^<>]+>>/g) || [];
+      matches.forEach(function(value) { unresolved.push(value); });
+    });
+  });
+  if (unresolved.length) throw new Error('Placeholder template resit belum diganti: ' + unresolved.join(', '));
+  return templateData;
+}
+
+function createNativeEbayarReceiptPdfBlobV2_(templateId, group, options) {
+  var tempPresentationFile = null;
+  try {
+    var templateFile = DriveApp.getFileById((templateId || '').toString().trim());
+    tempPresentationFile = templateFile.makeCopy('TEMP_NATIVE_EBAYAR_RECEIPT_' + group.paymentGroupId);
+    var presentation = SlidesApp.openById(tempPresentationFile.getId());
+    populateNativeEbayarReceiptPresentationV2_(presentation, group, options || {});
+    presentation.saveAndClose();
+    return tempPresentationFile.getAs(MimeType.PDF);
+  } finally {
+    if (tempPresentationFile) {
+      try {
+        tempPresentationFile.setTrashed(true);
+      } catch (cleanupErr) {
+        Logger.log('Temporary Native receipt Slides cleanup failed: ' + cleanupErr.message);
+      }
+    }
+  }
+}
+
+function applyNativeEbayarReceiptUrlToValuesV2_(receiptValues, minRow, rowNumbers, receiptUrl) {
+  var targetRows = {};
+  (rowNumbers || []).forEach(function(rowNumber) { targetRows[rowNumber] = true; });
+  for (var offset = 0; offset < receiptValues.length; offset++) {
+    if (targetRows[minRow + offset]) receiptValues[offset][0] = receiptUrl;
+  }
+  return receiptValues;
 }
 
 function generateNativeEbayarReceipt_(paymentGroupId) {
   var lock = LockService.getScriptLock();
-  var tempDocFile = null;
   var pdfFile = null;
   var receiptWriteAttempted = false;
 
@@ -2819,9 +2919,14 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
       };
     }
 
-    var receiptFolderId = (PropertiesService.getScriptProperties().getProperty(NATIVE_EBAYAR_RECEIPT_FOLDER_PROPERTY_V2_) || '').toString().trim();
+    var scriptProperties = PropertiesService.getScriptProperties();
+    var receiptFolderId = (scriptProperties.getProperty(NATIVE_EBAYAR_RECEIPT_FOLDER_PROPERTY_V2_) || '').toString().trim();
     if (!receiptFolderId) {
       return fail('NATIVE_EBAYAR_RECEIPT_CONFIGURATION_BLOCKED', 'Script Property NATIVE_EBAYAR_RECEIPT_FOLDER_ID belum dikonfigurasi.');
+    }
+    var receiptTemplateId = (scriptProperties.getProperty(NATIVE_EBAYAR_RECEIPT_TEMPLATE_PROPERTY_V2_) || '').toString().trim();
+    if (!receiptTemplateId) {
+      return fail('NATIVE_EBAYAR_RECEIPT_CONFIGURATION_BLOCKED', 'Script Property NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID belum dikonfigurasi.');
     }
 
     var receiptFolder;
@@ -2832,21 +2937,10 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
     }
 
     var safeFileName = sanitizeNativeEbayarFileNameV2_('SPKM_RESIT_' + group.paymentGroupId + '.pdf');
-    var tempDoc = DocumentApp.create('TEMP_' + group.paymentGroupId);
-    tempDocFile = DriveApp.getFileById(tempDoc.getId());
-    populateNativeEbayarReceiptDocumentV2_(tempDoc, group);
-    tempDoc.saveAndClose();
-
-    var pdfBlob = tempDocFile.getAs(MimeType.PDF).setName(safeFileName);
+    var pdfBlob = createNativeEbayarReceiptPdfBlobV2_(receiptTemplateId, group, {}).setName(safeFileName);
     pdfFile = receiptFolder.createFile(pdfBlob);
     pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     var receiptUrl = pdfFile.getUrl();
-    try {
-      tempDocFile.setTrashed(true);
-      tempDocFile = null;
-    } catch (tempTrashErr) {
-      Logger.log('Temporary Native receipt Doc cleanup failed; will retry in finally: ' + tempTrashErr.message);
-    }
 
     var freshGroup = validateNativeEbayarReceiptGroupV2_(paymentGroupId);
     if (!freshGroup.success) {
@@ -2884,11 +2978,7 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
     var maxRow = freshGroup.rowNumbers[freshGroup.rowNumbers.length - 1];
     var receiptRange = sheet.getRange(minRow, headerIndex.RESIT_URL + 1, maxRow - minRow + 1, 1);
     var receiptValues = receiptRange.getValues();
-    var targetRows = {};
-    freshGroup.rowNumbers.forEach(function(rowNumber) { targetRows[rowNumber] = true; });
-    for (var offset = 0; offset < receiptValues.length; offset++) {
-      if (targetRows[minRow + offset]) receiptValues[offset][0] = receiptUrl;
-    }
+    applyNativeEbayarReceiptUrlToValuesV2_(receiptValues, minRow, freshGroup.rowNumbers, receiptUrl);
     receiptWriteAttempted = true;
     receiptRange.setValues(receiptValues);
     SpreadsheetApp.flush();
@@ -2924,10 +3014,55 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
     }
     return fail('NATIVE_EBAYAR_RECEIPT_GENERATION_FAILED', 'Bayaran telah direkod tetapi resit rasmi belum dapat dijana.');
   } finally {
-    if (tempDocFile) {
-      try { tempDocFile.setTrashed(true); } catch (tempCleanupErr) { Logger.log('Temporary Native receipt Doc cleanup failed: ' + tempCleanupErr.message); }
-    }
     try { lock.releaseLock(); } catch (releaseErr) {}
+  }
+}
+
+function testCreateNativeEbayarReceiptSlidesPreviewV2() {
+  var props = PropertiesService.getScriptProperties();
+  var templateId = (props.getProperty(NATIVE_EBAYAR_RECEIPT_TEMPLATE_PROPERTY_V2_) || '').toString().trim();
+  var previewFolderId = (props.getProperty(NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_PROPERTY_V2_) || '').toString().trim();
+  var productionFolderId = (props.getProperty(NATIVE_EBAYAR_RECEIPT_FOLDER_PROPERTY_V2_) || '').toString().trim();
+  if (!templateId) {
+    return { success: false, mode: 'NATIVE_EBAYAR_RECEIPT_PREVIEW_CONFIGURATION_BLOCKED', message: 'Script Property NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID belum dikonfigurasi.' };
+  }
+  if (!previewFolderId) {
+    return { success: false, mode: 'NATIVE_EBAYAR_RECEIPT_PREVIEW_CONFIGURATION_BLOCKED', message: 'Script Property NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID belum dikonfigurasi.' };
+  }
+  if (productionFolderId && previewFolderId === productionFolderId) {
+    return { success: false, mode: 'NATIVE_EBAYAR_RECEIPT_PREVIEW_CONFIGURATION_BLOCKED', message: 'Folder preview mesti berbeza daripada folder resit production.' };
+  }
+
+  var sampleGroup = {
+    paymentGroupId: 'NATIVE-202609-20260901100000-AAAAAAAAAA',
+    bulanKey: '2026-09',
+    paymentDate: '2026-09-01',
+    amountTotal: 100,
+    students: [
+      { nama: 'MUHAMMAD ADAM BIN AHMAD', studentType: 'KANAK' },
+      { nama: 'NUR AISYAH BINTI AHMAD', studentType: 'KANAK' }
+    ]
+  };
+  try {
+    var previewFolder = DriveApp.getFolderById(previewFolderId);
+    var previewBlob = createNativeEbayarReceiptPdfBlobV2_(templateId, sampleGroup, {
+      preview: true,
+      receiptReference: 'CONTOH'
+    }).setName('SPKM_RESIT_CONTOH_SEPTEMBER_2026_TIDAK_SAH.pdf');
+    var previewFile = previewFolder.createFile(previewBlob);
+    return {
+      success: true,
+      mode: 'NATIVE_EBAYAR_RECEIPT_PREVIEW_CREATED',
+      previewFileUrl: previewFile.getUrl(),
+      message: 'Preview sintetik CONTOH / TIDAK SAH berjaya dijana. Tiada rekod bayaran atau RESIT_URL diubah.'
+    };
+  } catch (err) {
+    Logger.log('testCreateNativeEbayarReceiptSlidesPreviewV2 error: ' + err.message);
+    return {
+      success: false,
+      mode: 'NATIVE_EBAYAR_RECEIPT_PREVIEW_FAILED',
+      message: 'Preview sintetik tidak dapat dijana: ' + err.message
+    };
   }
 }
 
