@@ -2838,11 +2838,9 @@ function populateNativeEbayarReceiptPresentationV2_(presentation, group, options
   });
   nameShapes.forEach(function(shape) {
     shape.getText().getTextStyle().setFontSize(templateData.nameFontSize);
-    shape.getText().getParagraphStyle().setLineSpacing(90);
   });
 
   if (templateData.preview) {
-    presentation.replaceAllText('SALINAN', 'CONTOH / TIDAK SAH');
     var previewSlide = presentation.getSlides()[0];
     var watermark = previewSlide.insertTextBox('CONTOH / TIDAK SAH', 168, 118, 240, 36);
     watermark.setRotation(-12);
