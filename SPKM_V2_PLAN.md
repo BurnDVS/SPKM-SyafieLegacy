@@ -1,8 +1,8 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 16 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta reconciliation eBayar V2 Januari–Ogos 2026, maintenance sync, Portal Mode dan kod Native eBayar Phase 2A/2B telah siap. Ini **bukan** full production cutover: transaksi Native sebenar dan penerimaan `/dev` masih belum dilakukan, dan existing active Web App production belum ditetapkan kepada versi yang mengandungi Phase 2A/2B. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+> **Status 29 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; guarded Auto Sync telah dikeraskan dan production Web App existing telah dikemas kini in place kepada Version 176. Ogos berakhir `Synced` dan Legacy vs V2 `Match`. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
-> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar bermula September 2026 dan hanya boleh dipromosi ke production selepas ujian terkawal diluluskan.
+> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; source Native eBayar telah dipromosi dalam Version 176 untuk cutoff September, tetapi ia tidak boleh ditandakan fully proven sebelum transaksi sebenar terkawal dan pemeriksaan data/Drive/idempotency selesai.
 
 ---
 
@@ -395,6 +395,13 @@ Final Legacy vs V2 Ogos 2026:
 - `totalKutipan`: RM2,520.
 - Semua diffs ialah zero; `onlyLegacy: []` dan `onlyV2: []`.
 
+Snapshot di atas ialah checkpoint 16 Ogos dan kini superseded oleh final reconciliation 29 Ogos 2026:
+
+- Sebelum final sync: 66 source groups, 46 existing, 20 new, 0 review, 34 projected child rows dan RM1,060.
+- Guarded Auto Sync yang telah dikeraskan dijalankan sekali. Browser memberi outcome uncertain, tetapi fresh authoritative status mengesahkan write selesai; tiada retry dibuat.
+- Final: 66 existing, 0 new/review, status `Synced`.
+- Legacy vs V2: `Match`; 102 paid, 84 unpaid, 186 total dan RM3,580.
+
 ### September 2026
 
 - Source tab `SEPT2026` telah wujud tetapi masih mengandungi header sahaja.
@@ -440,13 +447,17 @@ Verified August 2026 preview pada 15 Ogos 2026:
 
 Admin panel `Auto Sync` kini disambungkan kepada aliran preview-first dan explicit confirmation. Sync kekal admin-initiated sahaja; tiada scheduler, time trigger, auto-retry, atau automatic second batch diwujudkan.
 
-Production frontend cutover kepada V2 masih **BELUM COMPLETE**. Legacy kekal authoritative sehingga formal cutover diluluskan dan dilaksanakan.
+Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Regression `tests/ebayar-v2-auto-sync.test.js`: 7 passed, 0 failed.
+
+Production Version 176 telah diverify pada 29 Ogos 2026 menggunakan existing deployment URL. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
+
+Production deployment hardening/Native source telah selesai pada Version 176. Walau bagaimanapun, Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Doc cleanup dan idempotency tanpa retry atau duplicate.
 
 ### Nota operasi
 
 - Satu anomaly sejarah June, `GROUP_ID_MULTIPLE_STAGED_HASHES`, masih wujud. Ia telah disiasat dan disahkan tidak berkaitan dengan July catch-up.
-- Production frontend/web app belum cut over kepada V2.
-- Tiada production deployment dilakukan sebagai sebahagian daripada kerja migration ini.
+- Catatan “belum production deployment” dalam snapshot migration terdahulu ialah sejarah. Existing production Web App kini Version 176 pada URL yang sama.
+- Portal Mode mesti kekal `AUTO`; sebelum 1 September ia resolve `LEGACY`, dan milestone seterusnya perlu mengesahkan resolve `NATIVE` pada atau selepas tarikh cutoff.
 
 ---
 

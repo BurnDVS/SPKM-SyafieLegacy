@@ -18,11 +18,12 @@ Maklumat sensitif seperti credential sebenar dan token tidak boleh dimasukkan ke
 | Deploy mobile | Push ke `origin` dan `pages` |
 
 Nota penting:
-- Current checkpoint ialah `612128e`; `origin` dan `pages` telah aligned pada checkpoint itu pada 16 Ogos 2026.
+- Current source checkpoint ialah `01e8634`; `origin/main` aligned pada commit itu. `pages/main` sengaja kekal pada `db87448` kerana tiada public PWA source change.
 - Push ke `origin` tidak update production Pages. Fetch kedua-dua remote, semak divergence dan hanya kemudian gunakan explicit `git push pages main:main`.
 - Jangan stage semua fail secara membuta tuli; semak dirty worktree dan stage fail yang diluluskan sahaja.
 - Bila deploy GAS, pastikan deployment type ialah **Web App**, bukan Library.
 - `clasp push` hanya update source code dalam editor Apps Script.
+- `.claspignore` wajib mengecualikan `tests/**`. Selepas setiap perubahan exclusion atau kejadian push hygiene, clone semula dan sahkan hanya `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js` wujud serta sepadan dengan local.
 - Untuk apply ke production, mesti buat:
   `Deploy -> Manage deployments -> Edit -> New version -> Deploy`
 - Ini mengemas kini existing active Web App deployment dan mengekalkan URL production yang sama. Jangan cipta deployment baharu kecuali memang dimaksudkan.
@@ -145,12 +146,12 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 
 #### eBayar V2 — Current Operational State
 
-Checkpoint 16 Ogos 2026:
+Checkpoint production 29 Ogos 2026 (snapshot 16 Ogos di bawah kekal sebagai sejarah):
 
 - Januari–Ogos 2026 ialah legacy-only. Native eBayar bermula September 2026.
-- Migration/reconciliation V2 Januari–Ogos telah selesai. Januari–Julai sepadan tepat; Ogos ialah 68 paid, 117 unpaid, 185 total dan RM2,520 dengan semua diffs sifar.
+- Migration/reconciliation V2 Januari–Ogos telah selesai. Final Ogos ialah 102 paid, 84 unpaid, 186 total dan RM3,580 dengan Legacy vs V2 `Match`.
 - Julai catch-up: 39 source groups, 60 child rows, RM1,870. Final July: 71/71 groups unchanged, 0 changed, 0 new.
-- Ogos catch-up melalui source row 47: 46 groups, 69 child rows, RM2,520. Final August: 46 unchanged, 0 changed, 0 new.
+- Snapshot 16 Ogos melalui source row 47 ialah 46 groups, 69 child rows dan RM2,520. Pada 29 Ogos, 20 genuinely-new groups menghasilkan 34 child rows dan RM1,060; sync dijalankan sekali dan final status ialah 66 existing, 0 new/review, `Synced`.
 - September legacy ialah header-only; tiada legacy import September diperlukan.
 - Historical anomaly `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112` kekal untuk audit dan tidak berkaitan catch-up Julai/Ogos.
 
@@ -169,7 +170,10 @@ Maintenance berada dalam panel Yuran yang authenticated, kelihatan kepada admin 
 - Write path menggunakan ScriptLock, fresh post-lock source reread/TOCTOU validation, final staging recheck dan satu bulk `setValues()`.
 - Semua conflict dikumpul sebelum write; tiada partial-write loop.
 - Selepas write, staging diverifikasi. Jika hasil write tidak pasti, jangan jalankan sync kali kedua sebelum rekod disemak.
-- Last August state: 46 existing, 0 new/review, projected RM0, status `Synced`.
+- Last August state: 66 source groups, 66 existing, 0 new/review, projected RM0, status `Synced`.
+- Confirmed write mesti membawa immutable exact `selectedPaymentGroupIds` daripada preview. Backend memerlukan 1–25 ID non-empty/unique dan menolak ID yang tidak lagi genuinely new.
+- Frontend mempunyai settlement timeout 120 saat, sentiasa membersihkan loading state dan menghalang duplicate click.
+- Jika browser melaporkan outcome tidak pasti, jangan retry. Refresh authoritative maintenance status dan periksa staging dahulu. Final August sync membuktikan prosedur ini: browser uncertain, backend write disahkan complete melalui fresh status, dan tiada retry dibuat.
 
 #### Portal Mode Operations
 
@@ -214,17 +218,20 @@ Drive controls:
 
 #### September First-Transaction Checklist
 
-1. Confirm repository and both remote tips, dirty worktree and checkpoint `612128e`.
-2. Confirm Portal Mode `AUTO` and both Drive folder IDs/sharing.
-3. Use `/dev`; verify Native UI and server actions without adding a pre-September bypass.
-4. On or after September, choose one genuinely unpaid official student and a small valid slip.
-5. Submit once. If the result is uncertain, stop and inspect; do not retry.
-6. Verify one payment group, expected child count, stable IDs, amount semantics, status/source fields and no duplicates.
-7. Verify slip privacy and absence of public sharing.
-8. Verify one final receipt PDF, one common `RESIT_URL`, safe content and the temporary Doc trashed.
-9. Exercise the receipt read/generation path again to confirm idempotency and no second PDF/payment.
-10. Only after approval, edit the existing active GAS Web App deployment and assign `New version`, preserving the same production URL. Do not create a separate deployment unless explicitly intended.
-11. Reverify the public PWA and keep Portal Mode `AUTO`.
+1. Confirm repository, dirty worktree, `origin/main` at `01e8634` and intentional `pages/main` at `db87448`.
+2. Confirm production Version 176 remains active on the existing deployment URL.
+3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE` on or after 1 September.
+4. Verify both configured Drive folder IDs and confirm the slip and receipt folders remain Restricted.
+5. Choose one genuinely unpaid official student.
+6. Use a small valid bank slip and submit exactly once.
+7. If the browser outcome is uncertain, stop; inspect `Payments` and Drive artifacts before considering any retry.
+8. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable IDs, amount semantics, status/source fields and no duplicates.
+9. Verify the bank slip and its folder remain private/restricted.
+10. Verify exactly one final receipt PDF is created.
+11. Verify all child rows share the same `RESIT_URL`.
+12. Verify the temporary Google Doc is trashed.
+13. Exercise the receipt read/generation path again to confirm idempotency without a second payment or receipt.
+14. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 #### Failure and Rollback Rules
 

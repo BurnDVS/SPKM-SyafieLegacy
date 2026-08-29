@@ -2,7 +2,7 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 16 Ogos 2026.** HEAD, kedua-dua remote dan GitHub Pages berada pada `612128e`. Apps Script editor/source Phase 2B telah dipush, tetapi existing active production Web App belum ditetapkan kepada versi yang mengandungi Phase 2A/2B dan tiada transaksi Native sebenar pernah dijalankan. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota import bertarikh 1–2 Julai di bahagian bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
+> **Checkpoint berkuat kuasa: 29 Ogos 2026.** `origin/main` berada pada `01e8634`; `pages/main` sengaja kekal pada `db87448`. Apps Script source telah disahkan sepadan dengan local dan existing active Web App production telah dikemas kini in place kepada Version 176. August V2 telah `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
 
 ---
 
@@ -129,7 +129,7 @@ Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di de
 | Owner akaun | `shafielegacykelasmengaji@gmail.com` |
 | Buka editor | `clasp open` atau `https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit` |
 
-`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`. Phase 2B source berjaya dipush pada 16 Ogos 2026 sekitar 00:26:45, tetapi production web-app deployment belum dikemas kini.
+`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Selepas insiden test regression terikut dalam push pertama diselesaikan, clone Apps Script mengesahkan hanya empat fail ini kekal dan semuanya content-identical dengan local. Existing production Web App kini Version 176 pada URL yang sama.
 
 ### 🚨 LANGKAH WAJIB lepas `clasp push`
 `clasp push` HANYA update editor/source Apps Script — ia **TIDAK** mengubah production behavior dan **TIDAK** menukar URL Web App production.
@@ -151,15 +151,15 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 |---|---|---|
 | SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni. Tab `LogPertukaranGuru` (ditambah 30 Jun 2026) — log audit Pertukaran Guru, 7 kolum: `Timestamp \| Admin \| Guru Lama \| Guru Baru \| Nama Murid \| Jenis Murid \| Bil` |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
-| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Migrasi/reconciliation Januari–Ogos 2026 selesai; Native production cutover masih belum selesai. |
+| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Migrasi/reconciliation Januari–Ogos 2026 selesai dan Version 176 deployed; real Native first-transaction verification masih pending. |
 | Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
 
 ### eBayar Master / Native eBayar — Current Checkpoint
 
 - Januari–Ogos 2026 kekal legacy-only. Native eBayar bermula September 2026.
-- Migrasi/reconciliation V2 Januari–Ogos selesai. Ogos: 68 paid, 117 unpaid, 185 total dan RM2,520; semua diffs legacy/V2 sifar.
-- Julai catch-up: 39 groups, 60 child rows, RM1,870. Ogos: 46 groups, 69 child rows, RM2,520 melalui source row 47.
+- Migrasi/reconciliation V2 Januari–Ogos selesai. Final Ogos: 66 source groups, 66 existing, 0 new/review, status `Synced`; Legacy vs V2 `Match`, 102 paid, 84 unpaid, 186 total dan RM3,580.
+- Snapshot 16 Ogos (46 groups, 69 child rows, RM2,520 melalui source row 47) telah digantikan oleh final sync 29 Ogos: 20 groups, 34 child rows dan RM1,060 ditambah sekali sahaja.
 - Satu anomali sejarah kekal: `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112`; tidak berkaitan catch-up Julai/Ogos.
 - Portal Mode: `AUTO`, `LEGACY`, `NATIVE`, `BOTH`; property `EBAYAR_PORTAL_MODE`, fallback `AUTO`, cutoff `2026-09-01` MYT. Audit menggunakan `EBAYAR_PORTAL_MODE_UPDATED_AT` dan `EBAYAR_PORTAL_MODE_UPDATED_BY`.
 - Native identity: `KANAK:<BIL>` / `DEWASA:<BIL>`. MyKid/MyKad tidak digunakan sebagai public selector. Native duplicate check menggunakan `STUDENT_ID`; historical blank IDs menggunakan conservative normalized-name fallback.
@@ -167,7 +167,9 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 - Phase 2B (`612128e`) menghasilkan maksimum satu receipt PDF per group secara idempotent, dengan lock berasingan dan satu `RESIT_URL` dikongsi semua child rows.
 - `NATIVE_EBAYAR_SLIP_FOLDER_ID`: semak configured value dalam Apps Script Script Properties. Folder `SPKM - Native eBayar Slips` wajib private/restricted dan tidak boleh link-share.
 - `NATIVE_EBAYAR_RECEIPT_FOLDER_ID`: semak configured value dalam Apps Script Script Properties. Folder `SPKM - Native eBayar Receipts` sebaiknya Restricted; hanya final PDF boleh anyone-with-link/view.
-- Apps Script editor/source telah dipush tetapi existing active production Web App belum ditetapkan kepada versi Phase 2A/2B. Tiada real Native write, upload atau receipt test.
+- Auto Sync hardening `391f164` binds exact confirmed preview IDs, validates 1–25 unique IDs, rejects stale IDs, adds a 120-second settlement timeout and preserves no-retry handling. Regression: 7 passed, 0 failed.
+- Production Version 176 (`SPKM Native eBayar Sep 2026 + Auto Sync hardening`) was verified on 29 August 2026 at approximately 22:05 MYT. Existing deployment identity and URL were preserved.
+- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September.
 
 Schema `Payments`:
 
@@ -304,8 +306,8 @@ Pattern yang digunakan:
 | 7 | Sijil Khatam panel | ✅ Selesai |
 | 8 | Laporan Tahunan | QUEUE |
 | 9 | Canonical eBayar Master + migrasi sejarah Januari–Ogos 2026 | ✅ Selesai dan reconcile |
-| 10 | Dashboard Analisa Yuran | V2 readers/maintenance tersedia; production Native cutover belum selesai |
-| 11 | eSemak upgrade utk spreadsheet baru | V2 read path tersedia; production Native cutover belum selesai |
+| 10 | Dashboard Analisa Yuran | V2 readers/maintenance production tersedia; first Native transaction masih pending |
+| 11 | eSemak upgrade utk spreadsheet baru | V2 read path production tersedia; first Native transaction masih pending |
 | 12 | Murid Tanpa Guru — assign guru pukal (page Kehadiran) | ✅ Selesai (16 Jul 2026) |
 | 13 | Statistik Kehadiran admin view — guru lookup gap (`getKehadiranStats` hardcode `guru:''` untuk admin branch) | QUEUE — prompt dah dihantar, belum verify/deploy |
 | 14 | Normalize double-whitespace nama murid (`KEHADIRAN_SS_ID`) | QUEUE |
@@ -366,7 +368,7 @@ Pattern yang digunakan:
 
 ---
 
-*Last updated: 16 Ogos 2026 (current deployment, eBayar V2, Portal Mode, Native Phase 2A/2B; older queue logs below are historical)*
+*Last updated: 29 Ogos 2026 (production Version 176, final August reconciliation, Auto Sync hardening and pending first Native transaction; older queue logs below are historical)*
 ## Historical Archive — Queue #9 Staging Logs
 
 Semua seksyen di bawah ialah log progres 1–2 Julai 2026. Ia dikekalkan untuk audit tetapi telah digantikan oleh status migrasi/reconciliation Januari–Ogos dalam `CURRENT_STATUS.md`.

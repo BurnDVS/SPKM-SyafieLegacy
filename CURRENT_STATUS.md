@@ -1,6 +1,6 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 16 August 2026, approximately 00:33 Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 29 August 2026, approximately 22:05 Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
@@ -10,33 +10,34 @@ This file is the primary continuity handoff. Historical plans and staging logs r
 
 - Workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
 - Branch: `main`
-- HEAD: `612128ebdd935a54baa764a3553b99c995e72f66` (`612128e`)
-- Commit message: `feat: add native ebayar receipt generation`
+- HEAD: `01e8634` (`chore: exclude tests from clasp push`)
+- Auto Sync hardening: `391f164` (`fix: harden ebayar v2 auto sync`)
 - Development/source remote: `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`
 - Production Pages remote: `pages` → `https://github.com/shafielegacy/SPKM.git`
 - Public PWA: `https://shafielegacy.github.io/SPKM`
-- Both remotes were aligned at `612128e`. The production Pages remote was fast-forwarded from `9b5469b` to `612128e`.
+- `origin/main` is aligned at `01e8634`.
+- `pages/main` intentionally remains at the documentation checkpoint `db87448`; no public PWA source change required a Pages update.
 
 Pushing `origin` does not update GitHub Pages. Before any future Pages push, fetch both remotes and inspect the commits on each side. Use an explicit `git push pages main:main` only after confirming a safe fast-forward.
 
 ## 2. Google Apps Script State
 
 - Apps Script owner: `shafielegacykelasmengaji@gmail.com`.
-- `.clasp` tracks exactly: `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js`.
-- Native eBayar Phase 2B source was pushed with clasp on 16 August 2026 at approximately 00:26:45; four files were pushed.
-- This updated the Apps Script editor/source only; it did not change production behavior.
-- The existing active production Web App deployment has **not** been edited and assigned a new version containing Phase 2A/2B.
-- Only after the `/dev` deployment passes the controlled approval sequence below, edit that existing active Web App deployment and select `New version`. Keep its existing production URL. Do not create a separate deployment unless explicitly intended.
+- `.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js`; `.claspignore` must continue to exclude `tests/**`.
+- Apps Script `@HEAD` was cloned after the final source correction. Those four files were content-identical to the local repository.
+- During the first hardening source push, `tests/ebayar-v2-auto-sync.test.js` was accidentally included because `tests/**` was missing from `.claspignore`. The exclusion was added, the test file was removed manually from Apps Script, and a fresh clone confirmed that only the four intended source files remained. This deployment-hygiene incident is resolved.
+- The existing production Web App deployment was updated in place from Version 175 to **Version 176** on 29 August 2026 at approximately 22:05 MYT.
+- Deployment description: `SPKM Native eBayar Sep 2026 + Auto Sync hardening`.
+- The existing deployment ID and `/exec` URL were preserved; no new deployment URL was created.
 
 ## 3. Public Safety State
 
-- Production GitHub Pages frontend is at `612128e`.
-- Apps Script editor/source is at the Phase 2B code checkpoint.
-- The existing active production Web App deployment is still assigned to the earlier code version, at the same production URL.
+- Production GitHub Pages frontend remains intentionally at `db87448`.
+- Apps Script editor/source is aligned with local `01e8634`, and the active production Web App is verified on Version 176.
 - Portal Mode is `AUTO`.
 - `AUTO` resolves to `LEGACY` before 1 September 2026 and to `NATIVE` from 1 September 2026 onward in Malaysia time.
-- The public PWA was visually verified on 16 August 2026: legacy eBayar visible, August current, September–December marked `Akan Datang`, Native eBayar hidden under `AUTO`, and production remained operational.
-- August dashboard snapshot: 68 paid, 117 unpaid, RM2,520.
+- Production Version 176 was verified: Admin portal and eBayar V2 Maintenance loaded, configured mode was `AUTO`, and resolved mode before 1 September remained `LEGACY`.
+- August production status was `Synced`: 66 source groups, 66 existing, 0 new, 0 manual review, Legacy vs V2 `Match`, 102 paid, 84 unpaid, 186 total students and RM3,580 collection.
 
 ## 4. eBayar V2 Migration and Reconciliation
 
@@ -44,8 +45,11 @@ January–August 2026 legacy history remains authoritative. The corresponding V2
 
 - January–July: legacy and V2 matched exactly with zero differences, including paid-name sets.
 - July catch-up: 39 source groups, 60 child payment rows, RM1,870 appended. Final July preview: 71 scanned, 71 unchanged existing, 0 changed existing and 0 genuinely new.
-- August catch-up through source row 47 / 15 August: 46 source groups, 69 child rows, RM2,520. Final August preview: all 46 existing and unchanged, 0 changed and 0 genuinely new.
-- August reconciliation: 68 paid, 117 unpaid, 185 total students and RM2,520; all legacy/V2 differences zero.
+- The 16 August checkpoint covered 46 source groups, 69 child rows and RM2,520 through source row 47. This is retained as a superseded intermediate snapshot.
+- Before the final 29 August sync, `OGOS2026` contained 66 source groups: 46 existing, 20 genuinely new, 0 manual review, 34 projected child rows and RM1,060 projected amount.
+- The guarded Auto Sync was authorized and executed once. The browser reported an uncertain connection outcome, but a fresh authoritative status confirmed that the backend write completed. No retry was performed.
+- Final August state: 66 source groups, 66 existing, 0 new, 0 manual review, 0 remaining child rows, RM0 remaining and status `Synced`.
+- Final Legacy vs V2 reconciliation: `Match`; 102 paid, 84 unpaid, 186 total students and RM3,580 collection.
 - September legacy source is header-only. No September legacy migration is required at this checkpoint.
 - Known historical anomaly: `GROUP_ID_MULTIPLE_STAGED_HASHES` for `PG-2026-JUN2026-112`. It was investigated and is unrelated to the July/August catch-ups.
 
@@ -67,8 +71,13 @@ The generic current-month sync engine:
 - performs one bulk `setValues()` append with no partial-write loop;
 - rechecks staging before write and verifies after write;
 - must not be retried automatically after an uncertain write outcome.
+- binds a confirmed write to an immutable copy of the exact preview `paymentGroupIds`;
+- requires 1–25 non-empty, unique IDs and rejects IDs that are no longer genuinely new;
+- uses a 120-second frontend settlement timeout, always clears loading state and blocks duplicate confirmation clicks.
 
-Last August state: 46 existing groups, 0 new, 0 review, RM0 projected and status `Synced`.
+The original `/dev` defect combined a lost preview-ID handoff with an unbounded Promise wait. Action naming and backend routing were already correct. Commit `391f164` corrected the request contract and loading cleanup; `tests/ebayar-v2-auto-sync.test.js` passed 7 tests with 0 failures.
+
+The 29 August uncertain browser response demonstrated the intended no-retry procedure: inspect fresh authoritative staging/status first, and never repeat a potentially completed write merely because the browser response was uncertain.
 
 ## 6. Portal Mode
 
@@ -173,19 +182,23 @@ Receipt folder:
 - `da0b6df` — added guarded current-month Auto Sync.
 - `d171e8c` — Native eBayar Phase 2A payment persistence.
 - `612128e` — Native eBayar Phase 2B receipt generation.
+- `db87448` — initial current-status documentation checkpoint.
+- `391f164` — hardened eBayar V2 Auto Sync confirmation and timeout handling.
+- `01e8634` — excluded `tests/**` from clasp source pushes.
 
-All were present on `origin`; `pages` was aligned to `612128e` at the checkpoint.
+All are present on `origin`. `pages/main` intentionally remains at `db87448` because the later changes do not affect public PWA source.
 
 ## 13. Preserved Dirty Worktree
 
-Last recorded status before this documentation task:
+Recorded dirty/untracked state before this documentation task:
 
 ```text
- M CHANGELOG.md
  M TestWA.js
  M appsscript.json
  M sw.js
+?? .claude/
 ?? MASTER PROMPT SPDK — POST COURSE SECURITY HARDENING.txt
+?? documentation-checkpoint.diff.txt
 ?? native-ebayar-phase1.diff.txt
 ?? native-ebayar-phase2a.diff.txt
 ?? native-ebayar-phase2b.diff.txt
@@ -195,24 +208,22 @@ The three `native-ebayar-*.diff.txt` files are local audit artifacts and must no
 
 ## 14. Next Session Checklist
 
-Follow this order; do not skip directly to production:
+The production deployment is already Version 176. The remaining controlled milestone is the first real Native transaction on or after 1 September 2026:
 
 1. Read this file, `REFERENCE.md` and `INTERNAL_OPERATIONS.md`.
-2. Verify `git status --short`, current branch, commit and both remote tips.
-3. Confirm `EBAYAR_PORTAL_MODE` is still `AUTO`.
+2. Verify `git status --short`, current branch, `origin/main` at `01e8634`, and the intentional `pages/main` position at `db87448`.
+3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE` on or after 1 September 2026.
 4. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` in Apps Script Script Properties, then verify the resolved folder names and sharing: both folders Restricted; slip files private; only final receipt PDFs link-view.
-5. Open the Apps Script `/dev` deployment and verify the Phase 2A/2B UI and backend source are the intended checkpoint.
-6. Do not add a month/date/testing bypass while August is still before the Native boundary.
-7. On or after September, perform one controlled first Native transaction using a genuinely unpaid official student and a small valid slip.
-8. Verify the group and every child row: stable `STUDENT_ID`, one group ID, correct child count, status, amount semantics, source metadata and no duplicate.
-9. Verify the slip exists in the private slip folder and is not publicly shared.
-10. Verify exactly one final receipt PDF, one common `RESIT_URL`, correct safe content and a trashed temporary Doc.
-11. Re-run receipt generation/read path to confirm idempotency; do not create a second payment or receipt.
-12. Only after `/dev` approval, edit the existing active GAS Web App deployment and assign `New version`, preserving its current production URL; then reverify the public PWA and backend behavior. Do not create a separate deployment unless explicitly intended.
-13. Keep Portal Mode `AUTO` unless a documented administrator decision explicitly changes it.
+5. Select one genuinely unpaid official student and use a small valid bank slip.
+6. Submit exactly once. If the browser outcome is uncertain, do not retry; inspect `Payments` and Drive artifacts first.
+7. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable `STUDENT_ID` values, correct amount/source metadata and no duplicates.
+8. Verify the bank slip and slip folder remain private/restricted.
+9. Verify exactly one final receipt PDF, one common `RESIT_URL` across all child rows, safe receipt content and a trashed temporary Doc.
+10. Exercise the receipt read/generation path again to confirm idempotency without creating a second payment or receipt.
+11. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 ## 15. Current Completion Boundary
 
-Implemented and code-audited: V2 migration/reconciliation, guarded maintenance sync, Portal Mode, Native Phase 2A and Phase 2B.
+Implemented, reconciled and production-deployed on Version 176: V2 historical migration, guarded maintenance Auto Sync with exact confirmed IDs, Portal Mode, Native Phase 2A and Phase 2B.
 
-Not yet complete: first real Native payment/upload/receipt test, `/dev` acceptance based on that real transaction, and assigning the existing active production Web App deployment a version containing the Native source. Parent Google login/dashboard work in the original V2 plan also remains future scope.
+Not yet complete: the first real Native payment/upload/receipt transaction and its privacy/idempotency verification on or after 1 September 2026. Do not mark Native eBayar fully proven until that controlled milestone succeeds. Parent Google login/dashboard work in the original V2 plan also remains future scope.

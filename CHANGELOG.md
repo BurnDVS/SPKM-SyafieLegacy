@@ -4,6 +4,44 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [29 Ogos 2026] — Production Version 176, Auto Sync hardening dan final August reconciliation
+
+### Fixed and verified
+
+- Auto Sync confirmation now submits an immutable copy of the exact preview `paymentGroupIds`; guarded writes require 1–25 non-empty, unique IDs and reject IDs that are no longer genuinely new.
+- The frontend request wrapper now has a 120-second settlement timeout, always clears loading state, blocks duplicate clicks and retains the no-retry warning for uncertain outcomes.
+- The original action name and backend routes were confirmed correct. Regression coverage in `tests/ebayar-v2-auto-sync.test.js` passed 7 tests with 0 failures.
+- Commit `391f164` records the hardening fix; `01e8634` adds the required `tests/**` clasp exclusion.
+
+### Deployment hygiene
+
+- The first source push accidentally included the regression test because `.claspignore` did not exclude `tests/**`.
+- `tests/**` was added to `.claspignore`, the accidental Apps Script test file was removed manually, and a fresh Apps Script clone confirmed that only `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js` remained and were content-identical to local source.
+- The incident is resolved and is not an open blocker.
+
+### August final sync and reconciliation
+
+- Pre-sync `OGOS2026`: 66 source groups, 46 existing, 20 new, 0 review, 34 projected child rows and RM1,060.
+- Guarded Auto Sync was authorized and executed once. Although the browser returned an uncertain connection outcome, fresh authoritative status confirmed completion; no retry was performed.
+- Final state: 66 source groups, 66 existing, 0 new, 0 review, 0 remaining child rows, RM0 remaining and `Synced`.
+- Final Legacy vs V2 result: `Match`; 102 paid, 84 unpaid, 186 total students and RM3,580 collection.
+- This confirmed the no-retry safeguard: an uncertain browser response must be investigated through fresh status and staging, never by repeating the write.
+
+### Production
+
+- The existing active Web App deployment was updated in place from Version 175 to **Version 176** at approximately 22:05 MYT.
+- Description: `SPKM Native eBayar Sep 2026 + Auto Sync hardening`.
+- The existing deployment ID and `/exec` URL were preserved; no new deployment URL was created.
+- Version 176 was verified with Portal Mode configured as `AUTO`, resolving to `LEGACY` before 1 September, and the final August maintenance/reconciliation figures above.
+- `origin/main` is at `01e8634`; `pages/main` intentionally remains at `db87448` because no public PWA source changed.
+
+### Remaining milestone
+
+- Native eBayar is not yet proven by a real Native transaction. The first controlled Native payment, private slip, payment rows, receipt PDF and receipt-idempotency checks remain pending on or after 1 September 2026.
+- Keep Portal Mode `AUTO`, submit exactly once and inspect data/artifacts before any retry if the browser outcome is uncertain.
+
+---
+
 ## [15–16 Ogos 2026] — Checkpoint: Native eBayar Phase 2A/2B dan kesinambungan operasi
 
 ### Completed
