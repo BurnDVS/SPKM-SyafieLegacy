@@ -6702,10 +6702,61 @@ function syncCurrentMonthEbayarV2(params) {
   if (!admin.valid) return { success: false, message: admin.message };
   var meta = getCurrentEbayarMonthMetaV2_();
   if (!meta.success) return meta;
-  return syncCurrentMonthEbayarV2Core_(meta, params.allowWrite === true);
+  var allowWrite = params.allowWrite === true;
+  var requestedPaymentGroupIds = null;
+  if (allowWrite) {
+    var requestedIdsValidation = validateCurrentMonthSyncRequestedIdsV2_(params.paymentGroupIds);
+    if (!requestedIdsValidation.success) return requestedIdsValidation;
+    requestedPaymentGroupIds = requestedIdsValidation.paymentGroupIds;
+  }
+  return syncCurrentMonthEbayarV2Core_(meta, allowWrite, requestedPaymentGroupIds);
 }
 
-function syncCurrentMonthEbayarV2Core_(meta, allowWrite) {
+function validateCurrentMonthSyncRequestedIdsV2_(paymentGroupIds) {
+  if (!Array.isArray(paymentGroupIds) || !paymentGroupIds.length) {
+    return {
+      success: false,
+      mode: 'V2_CURRENT_MONTH_SYNC_GUARDED_WRITE',
+      message: 'Sync dibatalkan: paymentGroupIds daripada preview diperlukan.'
+    };
+  }
+  if (paymentGroupIds.length > 25) {
+    return {
+      success: false,
+      mode: 'V2_CURRENT_MONTH_SYNC_GUARDED_WRITE',
+      message: 'Safety limit: maksimum 25 paymentGroupIds setiap batch.'
+    };
+  }
+
+  var normalizedIds = [];
+  var seen = {};
+  var duplicateIds = [];
+  paymentGroupIds.forEach(function(value) {
+    var groupId = (value === null || value === undefined) ? '' : value.toString().trim();
+    if (!groupId) return;
+    if (seen[groupId]) duplicateIds.push(groupId);
+    seen[groupId] = true;
+    normalizedIds.push(groupId);
+  });
+  if (normalizedIds.length !== paymentGroupIds.length) {
+    return {
+      success: false,
+      mode: 'V2_CURRENT_MONTH_SYNC_GUARDED_WRITE',
+      message: 'Sync dibatalkan: paymentGroupIds mengandungi ID kosong.'
+    };
+  }
+  if (duplicateIds.length) {
+    return {
+      success: false,
+      mode: 'V2_CURRENT_MONTH_SYNC_GUARDED_WRITE',
+      message: 'Sync dibatalkan: paymentGroupIds mengandungi ID pendua.',
+      conflicts: duplicateIds
+    };
+  }
+  return { success: true, paymentGroupIds: normalizedIds };
+}
+
+function syncCurrentMonthEbayarV2Core_(meta, allowWrite, requestedPaymentGroupIds) {
   allowWrite = allowWrite === true;
   var mode = allowWrite ? 'V2_CURRENT_MONTH_SYNC_GUARDED_WRITE' : 'V2_CURRENT_MONTH_SYNC_PREVIEW_READ_ONLY';
 
@@ -6793,11 +6844,25 @@ function syncCurrentMonthEbayarV2Core_(meta, allowWrite) {
       return { success: false, mode: mode, message: 'Sync dibatalkan: paymentGroupId calon pendua.', conflicts: duplicateCandidateIds };
     }
 
-    var preLockBuild = buildCurrentMonthSyncGroupsV2_(meta, candidateIds);
+    var selectedCandidateIds = candidateIds;
+    if (allowWrite) {
+      selectedCandidateIds = requestedPaymentGroupIds || [];
+      var missingRequestedIds = selectedCandidateIds.filter(function(groupId) { return !candidateById[groupId]; });
+      if (missingRequestedIds.length) {
+        return {
+          success: false,
+          mode: mode,
+          message: 'Sync dibatalkan: paymentGroupIds preview tidak lagi genuinely-new. Sila preview semula.',
+          conflicts: missingRequestedIds
+        };
+      }
+    }
+
+    var preLockBuild = buildCurrentMonthSyncGroupsV2_(meta, selectedCandidateIds);
     if (!preLockBuild.success) return { success: false, mode: mode, message: preLockBuild.message };
     var validationConflicts = [];
     var allSnapshots = [];
-    candidateIds.forEach(function(groupId) {
+    selectedCandidateIds.forEach(function(groupId) {
       var group = preLockBuild.groups[groupId];
       var errors = validateCurrentMonthSyncGroupV2_(meta, group, candidateById[groupId]);
       if (errors.length) {
@@ -6806,10 +6871,10 @@ function syncCurrentMonthEbayarV2Core_(meta, allowWrite) {
         allSnapshots.push(makeCurrentMonthSyncSnapshotV2_(group));
       }
     });
-    if (Object.keys(preLockBuild.groups).length !== candidateIds.length) {
+    if (Object.keys(preLockBuild.groups).length !== selectedCandidateIds.length) {
       validationConflicts.push({
         reason: 'PRE_LOCK_GROUP_COUNT_MISMATCH',
-        expectedGroups: candidateIds.length,
+        expectedGroups: selectedCandidateIds.length,
         actualGroups: Object.keys(preLockBuild.groups).length
       });
     }
@@ -6823,9 +6888,13 @@ function syncCurrentMonthEbayarV2Core_(meta, allowWrite) {
     }
 
     allSnapshots.sort(function(a, b) { return a.sourceRow - b.sourceRow; });
-    var selectedSnapshots = allSnapshots.slice(0, 25);
-    var selectedPaymentGroupIds = selectedSnapshots.map(function(snapshot) { return snapshot.paymentGroupId; });
-    var remainingNewGroups = allSnapshots.length - selectedSnapshots.length;
+    var snapshotById = {};
+    allSnapshots.forEach(function(snapshot) { snapshotById[snapshot.paymentGroupId] = snapshot; });
+    var selectedPaymentGroupIds = allowWrite
+      ? selectedCandidateIds.slice()
+      : allSnapshots.slice(0, 25).map(function(snapshot) { return snapshot.paymentGroupId; });
+    var selectedSnapshots = selectedPaymentGroupIds.map(function(groupId) { return snapshotById[groupId]; });
+    var remainingNewGroups = candidates.length - selectedSnapshots.length;
     var morePending = remainingNewGroups > 0;
     var projectedChildRows = selectedSnapshots.reduce(function(total, snapshot) { return total + snapshot.childRows; }, 0);
     var projectedTotalAmount = selectedSnapshots.reduce(function(total, snapshot) { return total + snapshot.amountTotal; }, 0);

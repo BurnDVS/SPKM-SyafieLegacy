@@ -4417,18 +4417,35 @@
     }
   }
 
-  function callGASPromise(action, payload) {
+  function callGASPromise(action, payload, timeoutMs) {
     return new Promise(function(resolve, reject) {
       const p = Object.assign({}, payload);
       const tok = _spkm_st.getItem('spkm_token');
       if (tok) p.token = tok;
+      var settled = false;
+      var timeoutId = null;
+      function settle(handler, value) {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== null) clearTimeout(timeoutId);
+        handler(value);
+      }
+      if (timeoutMs && timeoutMs > 0) {
+        timeoutId = setTimeout(function() {
+          var timeoutError = new Error('Permintaan tidak menerima respons dalam tempoh ditetapkan.');
+          timeoutError.code = 'GAS_REQUEST_TIMEOUT';
+          settle(reject, timeoutError);
+        }, timeoutMs);
+      }
       if (_isGAS) {
         google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
+          .withSuccessHandler(function(value) { settle(resolve, value); })
+          .withFailureHandler(function(error) { settle(reject, error); })
           .doAction(action, p);
       } else {
-        _fetchGAS(action, p).then(resolve).catch(reject);
+        _fetchGAS(action, p)
+          .then(function(value) { settle(resolve, value); })
+          .catch(function(error) { settle(reject, error); });
       }
     });
   }
@@ -5938,6 +5955,11 @@
         showEbayarV2MaintenanceResult('Tiada bayaran baru untuk diselaraskan.', false);
         return;
       }
+      if (!Array.isArray(preview.selectedPaymentGroupIds) ||
+          preview.selectedPaymentGroupIds.length !== preview.selectedGroups) {
+        showEbayarV2MaintenanceResult('Preview Auto Sync tidak lengkap. Tiada sync dijalankan; sila preview semula.', true);
+        return;
+      }
       openEbayarV2SyncModal(preview);
     } catch (err) {
       showEbayarV2MaintenanceResult('Ralat sambungan semasa menyediakan preview Auto Sync.', true);
@@ -5949,6 +5971,13 @@
 
   async function confirmEbayarV2AutoSync() {
     if (ebayarV2SyncBusy || !ebayarV2SyncPreview || (ebayarV2SyncPreview.selectedGroups || 0) < 1) return;
+    var confirmedPaymentGroupIds = Array.isArray(ebayarV2SyncPreview.selectedPaymentGroupIds)
+      ? ebayarV2SyncPreview.selectedPaymentGroupIds.slice()
+      : [];
+    if (confirmedPaymentGroupIds.length !== ebayarV2SyncPreview.selectedGroups) {
+      showEbayarV2MaintenanceResult('Preview Auto Sync tidak lengkap. Tiada sync dijalankan; sila preview semula.', true);
+      return;
+    }
     if (!loggedInGuru || currentRole !== 'ADMIN') {
       closeEbayarV2SyncModal();
       showEbayarV2MaintenanceResult('Sesi Admin tidak sah atau telah tamat. Sila log masuk semula.', true);
@@ -5966,7 +5995,10 @@
     setEbayarV2MaintenanceButtonLoading('ebayarV2AutoSyncBtn', true, 'Sedang Sync...');
 
     try {
-      var result = await callGASPromise('syncCurrentMonthEbayarV2', { allowWrite: true });
+      var result = await callGASPromise('syncCurrentMonthEbayarV2', {
+        allowWrite: true,
+        paymentGroupIds: confirmedPaymentGroupIds
+      }, 120000);
       if (result && result.mode === 'V2_CURRENT_MONTH_SYNC_POST_WRITE_VERIFICATION_FAILED') {
         showEbayarV2MaintenanceResult(
           'Write mungkin telah berlaku tetapi verifikasi selepas write gagal. Jangan jalankan sync semula sehingga rekod disemak.',
