@@ -7,3 +7,4 @@ Code.js.bak
 portal.html.bak
 *.bat
 *.pdf
+tests/**
