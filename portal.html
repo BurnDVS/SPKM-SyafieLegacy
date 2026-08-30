@@ -1114,6 +1114,12 @@
     text-transform: uppercase;
   }
   .native-ebayar-body { padding: 20px; }
+  .native-ebayar .native-ebayar-payment-info {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
   .native-ebayar-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
   .native-ebayar-field { min-width: 0; }
   .native-ebayar-field.full { grid-column: 1 / -1; }
@@ -1493,6 +1499,7 @@
   }
   @media (max-width: 600px) {
     .ebayar-info { flex-direction: column; padding: 20px; }
+    .native-ebayar .native-ebayar-payment-info { flex-direction: column; }
     .ebayar-info-right { width: 100%; }
     .ebayar-qr { width: 120px; height: 120px; }
   }
@@ -3764,6 +3771,25 @@
       <p>Hantar bukti bayaran terus melalui SPKM. Tidak memerlukan Google Form.</p>
     </div>
     <div class="native-ebayar-body">
+      <div class="ebayar-info native-ebayar-payment-info">
+        <div class="ebayar-info-left">
+          <h3>Cara Pembayaran</h3>
+          <p>Bayaran boleh dibuat secara <strong>ONLINE</strong> melalui:</p>
+          <div class="ebayar-bank">
+            <div class="ebayar-bank-icon">🏦</div>
+            <div>
+              <p class="ebayar-bank-name">Maybank — Syafie Legacy</p>
+              <p class="ebayar-bank-acc">5041 0644 1472</p>
+            </div>
+          </div>
+          <p class="ebayar-upload-note">&#x1F4CE; Selepas membuat bayaran, sila muat naik slip Online Banking melalui borang Native eBayar di bawah.<br><span>(JPEG, PNG atau PDF sahaja, maksimum 3 MB)</span></p>
+        </div>
+        <div class="ebayar-info-right">
+          <p class="ebayar-qr-label">Scan QR Maybank</p>
+          <img src="https://i.ibb.co/LD9xpkJ9/qr-sl.png" alt="QR Maybank Syafie Legacy" class="ebayar-qr">
+        </div>
+      </div>
+
       <form id="nativeEbayarForm" onsubmit="submitNativeEbayarPreflight(event)" novalidate>
         <div class="native-ebayar-grid">
           <div class="native-ebayar-field full">
