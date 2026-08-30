@@ -4,6 +4,30 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Ogos 2026] — Native Slides receipt preview and final August reconciliation update
+
+### Native receipt source
+
+- Native receipt rendering now uses the approved one-slide Google Slides template (`1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`) instead of the generic Google Docs/A4 layout.
+- The renderer copies the 576 × 288 pt landscape template, replaces `<<NAMA PENUH ANAK>>`, `<<BULAN>>`, `<<NO RESIT>>`, `<<TARIKH>>` and `<<BAYARAN>>`, exports PDF and trashes the temporary Slides copy without modifying the original.
+- Multiple children use balanced wrapping and local font reduction. Existing privacy, one-PDF-per-group, shared `RESIT_URL`, idempotency, payment-independent failure handling and final-PDF permissions remain unchanged.
+- `testCreateNativeEbayarReceiptSlidesPreviewV2` generated a successful synthetic September preview with two sample children, RM100.00 and `CONTOH / TIDAK SAH`. No payment row or production receipt record was created.
+- Script Properties used by this layer are `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`, `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID` and the existing `NATIVE_EBAYAR_RECEIPT_FOLDER_ID`.
+
+### Validation and August reconciliation
+
+- Full local regression suite: 14 passed, 0 failed. `Code.js` syntax, Slides preview generation, `/dev` smoke test and Auto Sync preview/cancel all passed.
+- One additional real August legacy payment group with 2 child rows and RM60.00 was synced once. The browser transport response was uncertain; the write was not retried.
+- Fresh status confirmed 67 source groups, 67 existing, 0 new, 0 new child rows, 104 paid, 82 unpaid, 186 total students and RM3,640 collection. Legacy vs V2 returned `Match`.
+
+### Source and deployment boundary
+
+- Latest source commit is `0b1d10b`; Slides implementation commit is `15d7991`, and the preceding documentation checkpoint is `fd3203c`. `origin/main` and Apps Script `@HEAD` are up to date.
+- Production was not changed and remains Version 176. The later Slides receipt source at Apps Script `@HEAD` is not production-active until a future explicitly approved deployment version is assigned.
+- The first real Native production transaction and receipt remain pending on or after 1 September 2026. No production Native receipt has been generated yet.
+
+---
+
 ## [29 Ogos 2026] — Production Version 176, Auto Sync hardening dan final August reconciliation
 
 ### Fixed and verified

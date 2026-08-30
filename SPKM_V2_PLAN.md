@@ -1,6 +1,6 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 29 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; guarded Auto Sync telah dikeraskan dan production Web App existing telah dikemas kini in place kepada Version 176. Ogos berakhir `Synced` dan Legacy vs V2 `Match`. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+> **Status 30 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; Ogos kini 67/67 groups `Synced` dan Legacy vs V2 `Match`. Apps Script `@HEAD` mengandungi Native Slides receipt dan synthetic preview yang berjaya, tetapi production Web App kekal Version 176 dan tidak berubah. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
 > **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; source Native eBayar telah dipromosi dalam Version 176 untuk cutoff September, tetapi ia tidak boleh ditandakan fully proven sebelum transaksi sebenar terkawal dan pemeriksaan data/Drive/idempotency selesai.
 
@@ -402,6 +402,13 @@ Snapshot di atas ialah checkpoint 16 Ogos dan kini superseded oleh final reconci
 - Final: 66 existing, 0 new/review, status `Synced`.
 - Legacy vs V2: `Match`; 102 paid, 84 unpaid, 186 total dan RM3,580.
 
+Checkpoint 29 Ogos di atas pula telah disusuli reconciliation 30 Ogos 2026:
+
+- Satu real August payment group dengan 2 child rows dan RM60.00 disync sekali.
+- Browser transport response uncertain; selaras dengan no-retry rule, sync tidak diulang. Refresh authoritative status mengesahkan write selesai.
+- Final: 67 source groups, 67 existing, 0 new, 0 new child rows dan status `Synced`.
+- Legacy vs V2: `Match`; 104 paid, 82 unpaid, 186 total dan RM3,640.
+
 ### September 2026
 
 - Source tab `SEPT2026` telah wujud tetapi masih mengandungi header sahaja.
@@ -447,11 +454,15 @@ Verified August 2026 preview pada 15 Ogos 2026:
 
 Admin panel `Auto Sync` kini disambungkan kepada aliran preview-first dan explicit confirmation. Sync kekal admin-initiated sahaja; tiada scheduler, time trigger, auto-retry, atau automatic second batch diwujudkan.
 
-Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Regression `tests/ebayar-v2-auto-sync.test.js`: 7 passed, 0 failed.
+Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Full local suite selepas Native Slides receipt: 14 passed, 0 failed.
 
 Production Version 176 telah diverify pada 29 Ogos 2026 menggunakan existing deployment URL. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
 
-Production deployment hardening/Native source telah selesai pada Version 176. Walau bagaimanapun, Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Doc cleanup dan idempotency tanpa retry atau duplicate.
+Native receipt rendering source kini menyalin existing Google Slides template `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`, mengganti lima placeholders, mengeksport PDF dan trash temporary Slides copy dalam `finally`. Layout satu slide landscape 576 × 288 pt dikekalkan; multiple children menggunakan balanced wrapping dan local font reduction. `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` menyimpan template config, manakala `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID` digunakan oleh helper `testCreateNativeEbayarReceiptSlidesPreviewV2`.
+
+Synthetic September preview dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya melalui real Slides-to-PDF path tanpa live payment row atau production receipt record. Privacy, idempotency, one-PDF-per-group, shared `RESIT_URL`, final-PDF permissions dan payment-independent receipt failure handling kekal.
+
+Apps Script `@HEAD` dan `origin/main` kini pada source terkini `0b1d10b` (`15d7991` ialah Slides implementation; `fd3203c` ialah previous docs checkpoint). Production tidak diubah dan kekal Version 176; later Slides source belum production-active. Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Slides cleanup dan idempotency tanpa retry atau duplicate.
 
 ### Nota operasi
 

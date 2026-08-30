@@ -1,6 +1,6 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 29 August 2026, approximately 22:05 Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 30 August 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
@@ -10,12 +10,14 @@ This file is the primary continuity handoff. Historical plans and staging logs r
 
 - Workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
 - Branch: `main`
-- HEAD: `01e8634` (`chore: exclude tests from clasp push`)
+- HEAD: `0b1d10b` (`fix: finalise native ebayar receipt preview`)
+- Native Slides receipt implementation: `15d7991` (`feat: generate native ebayar receipts from slides template`)
+- Previous documentation checkpoint: `fd3203c` (`docs: record native ebayar production readiness`)
 - Auto Sync hardening: `391f164` (`fix: harden ebayar v2 auto sync`)
 - Development/source remote: `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`
 - Production Pages remote: `pages` → `https://github.com/shafielegacy/SPKM.git`
 - Public PWA: `https://shafielegacy.github.io/SPKM`
-- `origin/main` is aligned at `01e8634`.
+- `origin/main` is aligned at `0b1d10b`.
 - `pages/main` intentionally remains at the documentation checkpoint `db87448`; no public PWA source change required a Pages update.
 
 Pushing `origin` does not update GitHub Pages. Before any future Pages push, fetch both remotes and inspect the commits on each side. Use an explicit `git push pages main:main` only after confirming a safe fast-forward.
@@ -24,20 +26,20 @@ Pushing `origin` does not update GitHub Pages. Before any future Pages push, fet
 
 - Apps Script owner: `shafielegacykelasmengaji@gmail.com`.
 - `.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js`; `.claspignore` must continue to exclude `tests/**`.
-- Apps Script `@HEAD` was cloned after the final source correction. Those four files were content-identical to the local repository.
+- Apps Script `@HEAD` is up to date with local source through the latest clasp push.
 - During the first hardening source push, `tests/ebayar-v2-auto-sync.test.js` was accidentally included because `tests/**` was missing from `.claspignore`. The exclusion was added, the test file was removed manually from Apps Script, and a fresh clone confirmed that only the four intended source files remained. This deployment-hygiene incident is resolved.
-- The existing production Web App deployment was updated in place from Version 175 to **Version 176** on 29 August 2026 at approximately 22:05 MYT.
+- The existing production Web App deployment remains **Version 176**, created on 29 August 2026 at approximately 22:05 MYT. The later Slides receipt source at Apps Script `@HEAD` has not been assigned to a new production version.
 - Deployment description: `SPKM Native eBayar Sep 2026 + Auto Sync hardening`.
 - The existing deployment ID and `/exec` URL were preserved; no new deployment URL was created.
 
 ## 3. Public Safety State
 
 - Production GitHub Pages frontend remains intentionally at `db87448`.
-- Apps Script editor/source is aligned with local `01e8634`, and the active production Web App is verified on Version 176.
+- Apps Script editor/source is aligned with local `0b1d10b`. The active production Web App remains Version 176 and was not changed by the later receipt-template work.
 - Portal Mode is `AUTO`.
 - `AUTO` resolves to `LEGACY` before 1 September 2026 and to `NATIVE` from 1 September 2026 onward in Malaysia time.
 - Production Version 176 was verified: Admin portal and eBayar V2 Maintenance loaded, configured mode was `AUTO`, and resolved mode before 1 September remained `LEGACY`.
-- August production status was `Synced`: 66 source groups, 66 existing, 0 new, 0 manual review, Legacy vs V2 `Match`, 102 paid, 84 unpaid, 186 total students and RM3,580 collection.
+- August production status is `Synced`: 67 source groups, 67 existing, 0 new, 0 new child rows, Legacy vs V2 `Match`, 104 paid, 82 unpaid, 186 total students and RM3,640 collection.
 
 ## 4. eBayar V2 Migration and Reconciliation
 
@@ -48,8 +50,9 @@ January–August 2026 legacy history remains authoritative. The corresponding V2
 - The 16 August checkpoint covered 46 source groups, 69 child rows and RM2,520 through source row 47. This is retained as a superseded intermediate snapshot.
 - Before the final 29 August sync, `OGOS2026` contained 66 source groups: 46 existing, 20 genuinely new, 0 manual review, 34 projected child rows and RM1,060 projected amount.
 - The guarded Auto Sync was authorized and executed once. The browser reported an uncertain connection outcome, but a fresh authoritative status confirmed that the backend write completed. No retry was performed.
-- Final August state: 66 source groups, 66 existing, 0 new, 0 manual review, 0 remaining child rows, RM0 remaining and status `Synced`.
-- Final Legacy vs V2 reconciliation: `Match`; 102 paid, 84 unpaid, 186 total students and RM3,580 collection.
+- The 29 August result above remains a historical checkpoint. On 30 August, one additional real August legacy payment group containing 2 child rows and RM60.00 was synced once. The browser transport response was uncertain, so no retry was made; refresh confirmed the write.
+- Final 30 August state: 67 source groups, 67 existing, 0 new, 0 new child rows and status `Synced`.
+- Final Legacy vs V2 reconciliation: `Match`; 104 paid, 82 unpaid, 186 total students and RM3,640 collection.
 - September legacy source is header-only. No September legacy migration is required at this checkpoint.
 - Known historical anomaly: `GROUP_ID_MULTIPLE_STAGED_HASHES` for `PG-2026-JUN2026-112`. It was investigated and is unrelated to the July/August catch-ups.
 
@@ -77,7 +80,7 @@ The generic current-month sync engine:
 
 The original `/dev` defect combined a lost preview-ID handoff with an unbounded Promise wait. Action naming and backend routing were already correct. Commit `391f164` corrected the request contract and loading cleanup; `tests/ebayar-v2-auto-sync.test.js` passed 7 tests with 0 failures.
 
-The 29 August uncertain browser response demonstrated the intended no-retry procedure: inspect fresh authoritative staging/status first, and never repeat a potentially completed write merely because the browser response was uncertain.
+The 29 and 30 August uncertain browser responses demonstrated the intended no-retry procedure: inspect fresh authoritative staging/status first, and never repeat a potentially completed write merely because the browser response was uncertain. The 30 August refresh confirmed 67 existing groups and 0 new groups.
 
 ## 6. Portal Mode
 
@@ -135,14 +138,15 @@ No real Native write or slip upload has been executed.
 
 ## 10. Native Phase 2B — Receipt Generation
 
-Checkpoint commit: `612128e`.
+Original receipt checkpoint: `612128e`. Slides-template implementation: `15d7991`; preview finalisation: `0b1d10b`.
 
 Implemented functions validate the payment group, create a canonical snapshot, populate receipt fields and generate the receipt. Operational guarantees:
 
 - Payment persistence finishes and releases its payment lock before receipt work begins.
 - Receipt generation uses its own lock.
 - Exactly one final PDF is created per payment group.
-- A temporary Google Doc is created privately, converted to PDF, then trashed.
+- Receipt rendering copies the approved one-slide Google Slides template (`1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`), replaces all five placeholders, exports the copy to PDF and trashes the temporary presentation in a `finally` cleanup path. The original template is never modified.
+- The template retains its 576 × 288 pt landscape design. Multiple child names use balanced wrapping with local font reduction.
 - The final PDF is stored in the receipt folder and only that file is changed to anyone-with-link/view.
 - Every child row in the group receives the same `RESIT_URL`.
 - Repeated generation is idempotent when the group already has one consistent URL.
@@ -150,6 +154,7 @@ Implemented functions validate the payment group, create a canonical snapshot, p
 - Payment success remains independent: receipt failure never causes payment re-submission.
 - Post-write uncertainty is reported explicitly and must not trigger an automatic second attempt.
 - Receipts exclude MyKid/MyKad, phone, email, address, slip URL and internal hashes.
+- Production receipts do not include the preview watermark.
 
 Frontend handling:
 
@@ -157,7 +162,7 @@ Frontend handling:
 - `receiptReady: false` reports that payment succeeded but the receipt is unavailable.
 - Neither path retries the payment.
 
-No real Native receipt has been generated.
+The synthetic September preview generated successfully through the real Slides-to-PDF path using two sample children and RM100.00, with an obvious `CONTOH / TIDAK SAH` indication. It created no payment row or production receipt record. Full local validation passed 14 tests with 0 failures; `Code.js` syntax, `/dev` smoke testing and Auto Sync preview/cancel also passed. No real Native production receipt has been generated.
 
 ## 11. Drive Folder Configuration
 
@@ -167,6 +172,13 @@ Slip folder:
 - Name: `SPKM - Native eBayar Slips`
 - Must remain private/restricted and must never be link-shared.
 - Verify the configured folder ID in Apps Script Script Properties; do not copy the value into tracked documentation.
+
+Receipt template and preview:
+
+- Script Property: `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`; configured template ID is `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`.
+- Synthetic preview helper: `testCreateNativeEbayarReceiptSlidesPreviewV2`.
+- Script Property: `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID`; its folder must differ from the production receipt folder.
+- The preview helper uses synthetic data only and must not write `Payments` or `RESIT_URL`.
 
 Receipt folder:
 
@@ -185,8 +197,11 @@ Receipt folder:
 - `db87448` — initial current-status documentation checkpoint.
 - `391f164` — hardened eBayar V2 Auto Sync confirmation and timeout handling.
 - `01e8634` — excluded `tests/**` from clasp source pushes.
+- `fd3203c` — previous production-readiness documentation checkpoint.
+- `15d7991` — replaced Native generic-Doc receipt rendering with the existing Slides template.
+- `0b1d10b` — finalised the safe synthetic Slides receipt preview.
 
-All are present on `origin`. `pages/main` intentionally remains at `db87448` because the later changes do not affect public PWA source.
+All are present on `origin`; `origin/main` is aligned at `0b1d10b`. `pages/main` intentionally remains at `db87448` because the later changes do not affect public PWA source.
 
 ## 13. Preserved Dirty Worktree
 
@@ -194,36 +209,37 @@ Recorded dirty/untracked state before this documentation task:
 
 ```text
  M TestWA.js
- M appsscript.json
  M sw.js
-?? .claude/
 ?? MASTER PROMPT SPDK — POST COURSE SECURITY HARDENING.txt
 ?? documentation-checkpoint.diff.txt
 ?? native-ebayar-phase1.diff.txt
 ?? native-ebayar-phase2a.diff.txt
 ?? native-ebayar-phase2b.diff.txt
+?? output/
+?? tmp/
 ```
 
-The three `native-ebayar-*.diff.txt` files are local audit artifacts and must not be committed. `TestWA.js` and `appsscript.json` previously matched HEAD by content despite their line-ending state; do not restore them casually. Preserve all unrelated changes.
+The three `native-ebayar-*.diff.txt` files are local audit artifacts and must not be committed. Preserve `TestWA.js`, `sw.js`, `appsscript.json`, `output/`, `tmp/` and all unrelated changes; do not restore or clean them casually.
 
 ## 14. Next Session Checklist
 
 The production deployment is already Version 176. The remaining controlled milestone is the first real Native transaction on or after 1 September 2026:
 
 1. Read this file, `REFERENCE.md` and `INTERNAL_OPERATIONS.md`.
-2. Verify `git status --short`, current branch, `origin/main` at `01e8634`, and the intentional `pages/main` position at `db87448`.
+2. Verify `git status --short`, current branch, `origin/main` at `0b1d10b`, and the intentional `pages/main` position at `db87448`.
 3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE` on or after 1 September 2026.
-4. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` in Apps Script Script Properties, then verify the resolved folder names and sharing: both folders Restricted; slip files private; only final receipt PDFs link-view.
-5. Select one genuinely unpaid official student and use a small valid bank slip.
-6. Submit exactly once. If the browser outcome is uncertain, do not retry; inspect `Payments` and Drive artifacts first.
-7. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable `STUDENT_ID` values, correct amount/source metadata and no duplicates.
-8. Verify the bank slip and slip folder remain private/restricted.
-9. Verify exactly one final receipt PDF, one common `RESIT_URL` across all child rows, safe receipt content and a trashed temporary Doc.
-10. Exercise the receipt read/generation path again to confirm idempotency without creating a second payment or receipt.
-11. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
+4. Confirm production is still Version 176. The later Slides receipt source is only at Apps Script `@HEAD`; do not claim it is production-active until an explicitly approved new version is deployed.
+5. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID`, `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` in Script Properties. Verify both folders remain Restricted, slip files private, only final receipt PDFs link-view, and the configured template is approved.
+6. Select one genuinely unpaid official student and use a small valid bank slip.
+7. Submit exactly once. If the browser outcome is uncertain, do not retry; refresh authoritative status and inspect `Payments` and Drive artifacts first.
+8. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable `STUDENT_ID` values, correct amount/source metadata and no duplicates.
+9. Verify the bank slip and slip folder remain private/restricted.
+10. Verify exactly one final receipt PDF, one common `RESIT_URL` across all child rows, safe receipt content and a trashed temporary Slides copy.
+11. Exercise the receipt read/generation path again to confirm idempotency without creating a second payment or receipt.
+12. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 ## 15. Current Completion Boundary
 
-Implemented, reconciled and production-deployed on Version 176: V2 historical migration, guarded maintenance Auto Sync with exact confirmed IDs, Portal Mode, Native Phase 2A and Phase 2B.
+Implemented and reconciled: V2 historical migration, guarded maintenance Auto Sync with exact confirmed IDs, Portal Mode, Native Phase 2A and Phase 2B. Apps Script `@HEAD` contains the Slides-template receipt renderer and tested synthetic preview. Production remains unchanged at Version 176; the later Slides source is not yet production-active.
 
 Not yet complete: the first real Native payment/upload/receipt transaction and its privacy/idempotency verification on or after 1 September 2026. Do not mark Native eBayar fully proven until that controlled milestone succeeds. Parent Google login/dashboard work in the original V2 plan also remains future scope.

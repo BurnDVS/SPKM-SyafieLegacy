@@ -2,7 +2,7 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 29 Ogos 2026.** `origin/main` berada pada `01e8634`; `pages/main` sengaja kekal pada `db87448`. Apps Script source telah disahkan sepadan dengan local dan existing active Web App production telah dikemas kini in place kepada Version 176. August V2 telah `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
+> **Checkpoint berkuat kuasa: 30 Ogos 2026.** `origin/main` berada pada `0b1d10b`; `pages/main` sengaja kekal pada `db87448`. Apps Script `@HEAD` sepadan dengan source terkini, termasuk Native Slides receipt, tetapi existing active Web App production kekal Version 176 dan tidak berubah. August V2 ialah 67/67 groups `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
 
 ---
 
@@ -129,7 +129,7 @@ Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di de
 | Owner akaun | `shafielegacykelasmengaji@gmail.com` |
 | Buka editor | `clasp open` atau `https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit` |
 
-`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Selepas insiden test regression terikut dalam push pertama diselesaikan, clone Apps Script mengesahkan hanya empat fail ini kekal dan semuanya content-identical dengan local. Existing production Web App kini Version 176 pada URL yang sama.
+`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App kekal Version 176 pada URL yang sama; clasp push tidak menjadikan Slides receipt source production-active.
 
 ### 🚨 LANGKAH WAJIB lepas `clasp push`
 `clasp push` HANYA update editor/source Apps Script — ia **TIDAK** mengubah production behavior dan **TIDAK** menukar URL Web App production.
@@ -158,18 +158,23 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 ### eBayar Master / Native eBayar — Current Checkpoint
 
 - Januari–Ogos 2026 kekal legacy-only. Native eBayar bermula September 2026.
-- Migrasi/reconciliation V2 Januari–Ogos selesai. Final Ogos: 66 source groups, 66 existing, 0 new/review, status `Synced`; Legacy vs V2 `Match`, 102 paid, 84 unpaid, 186 total dan RM3,580.
+- Migrasi/reconciliation V2 Januari–Ogos selesai. Final 30 Ogos: 67 source groups, 67 existing, 0 new dan 0 new child rows, status `Synced`; Legacy vs V2 `Match`, 104 paid, 82 unpaid, 186 total dan RM3,640.
 - Snapshot 16 Ogos (46 groups, 69 child rows, RM2,520 melalui source row 47) telah digantikan oleh final sync 29 Ogos: 20 groups, 34 child rows dan RM1,060 ditambah sekali sahaja.
 - Satu anomali sejarah kekal: `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112`; tidak berkaitan catch-up Julai/Ogos.
 - Portal Mode: `AUTO`, `LEGACY`, `NATIVE`, `BOTH`; property `EBAYAR_PORTAL_MODE`, fallback `AUTO`, cutoff `2026-09-01` MYT. Audit menggunakan `EBAYAR_PORTAL_MODE_UPDATED_AT` dan `EBAYAR_PORTAL_MODE_UPDATED_BY`.
 - Native identity: `KANAK:<BIL>` / `DEWASA:<BIL>`. MyKid/MyKad tidak digunakan sebagai public selector. Native duplicate check menggunakan `STUDENT_ID`; historical blank IDs menggunakan conservative normalized-name fallback.
 - Phase 2A (`d171e8c`) menggunakan duplicate recheck di bawah lock, satu bulk write, slip validation maksimum 3 MB, cleanup dan post-write verification.
-- Phase 2B (`612128e`) menghasilkan maksimum satu receipt PDF per group secara idempotent, dengan lock berasingan dan satu `RESIT_URL` dikongsi semua child rows.
+- Phase 2B asal (`612128e`) menghasilkan maksimum satu receipt PDF per group secara idempotent, dengan lock berasingan dan satu `RESIT_URL` dikongsi semua child rows. Commit `15d7991` menggantikan hanya rendering layer dengan existing Google Slides template; `0b1d10b` memuktamadkan preview sintetik.
 - `NATIVE_EBAYAR_SLIP_FOLDER_ID`: semak configured value dalam Apps Script Script Properties. Folder `SPKM - Native eBayar Slips` wajib private/restricted dan tidak boleh link-share.
 - `NATIVE_EBAYAR_RECEIPT_FOLDER_ID`: semak configured value dalam Apps Script Script Properties. Folder `SPKM - Native eBayar Receipts` sebaiknya Restricted; hanya final PDF boleh anyone-with-link/view.
-- Auto Sync hardening `391f164` binds exact confirmed preview IDs, validates 1–25 unique IDs, rejects stale IDs, adds a 120-second settlement timeout and preserves no-retry handling. Regression: 7 passed, 0 failed.
+- `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`: `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`; template satu slide landscape 576 × 288 pt dengan placeholders nama, bulan, nombor resit, tarikh dan bayaran.
+- `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID`: folder berasingan untuk output helper sintetik `testCreateNativeEbayarReceiptSlidesPreviewV2`; jangan gunakan production receipt folder.
+- Rendering flow: copy template, replace semua placeholders, export PDF, trash temporary Slides copy dalam cleanup. Multiple child names menggunakan balanced wrapping/font reduction. Production receipt tiada watermark.
+- Preview September sintetik dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya dan menggunakan real Slides-to-PDF path tanpa payment row atau production receipt record.
+- Auto Sync hardening `391f164` binds exact confirmed preview IDs, validates 1–25 unique IDs, rejects stale IDs, adds a 120-second settlement timeout and preserves no-retry handling. Full local suite selepas Slides work: 14 passed, 0 failed.
+- Tambahan 30 Ogos: satu August group, 2 child rows dan RM60.00, disync sekali walaupun browser transport uncertain. Tiada retry; refresh mengesahkan 67 existing, 0 new dan Legacy vs V2 `Match`.
 - Production Version 176 (`SPKM Native eBayar Sep 2026 + Auto Sync hardening`) was verified on 29 August 2026 at approximately 22:05 MYT. Existing deployment identity and URL were preserved.
-- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September.
+- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September. Production masih Version 176 dan belum mengandungi source Slides selepas version itu.
 
 Schema `Payments`:
 
@@ -368,7 +373,7 @@ Pattern yang digunakan:
 
 ---
 
-*Last updated: 29 Ogos 2026 (production Version 176, final August reconciliation, Auto Sync hardening and pending first Native transaction; older queue logs below are historical)*
+*Last updated: 30 Ogos 2026 (Slides receipt at Apps Script HEAD, production unchanged at Version 176, 67-group August reconciliation and pending first Native transaction; older queue logs below are historical)*
 ## Historical Archive — Queue #9 Staging Logs
 
 Semua seksyen di bawah ialah log progres 1–2 Julai 2026. Ia dikekalkan untuk audit tetapi telah digantikan oleh status migrasi/reconciliation Januari–Ogos dalam `CURRENT_STATUS.md`.

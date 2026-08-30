@@ -18,7 +18,7 @@ Maklumat sensitif seperti credential sebenar dan token tidak boleh dimasukkan ke
 | Deploy mobile | Push ke `origin` dan `pages` |
 
 Nota penting:
-- Current source checkpoint ialah `01e8634`; `origin/main` aligned pada commit itu. `pages/main` sengaja kekal pada `db87448` kerana tiada public PWA source change.
+- Current source checkpoint ialah `0b1d10b`; `origin/main` aligned pada commit itu. Native Slides receipt implementation ialah `15d7991` dan previous documentation checkpoint ialah `fd3203c`. `pages/main` sengaja kekal pada `db87448` kerana tiada public PWA source change.
 - Push ke `origin` tidak update production Pages. Fetch kedua-dua remote, semak divergence dan hanya kemudian gunakan explicit `git push pages main:main`.
 - Jangan stage semua fail secara membuta tuli; semak dirty worktree dan stage fail yang diluluskan sahaja.
 - Bila deploy GAS, pastikan deployment type ialah **Web App**, bukan Library.
@@ -146,12 +146,12 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 
 #### eBayar V2 — Current Operational State
 
-Checkpoint production 29 Ogos 2026 (snapshot 16 Ogos di bawah kekal sebagai sejarah):
+Checkpoint 30 Ogos 2026 (snapshot 16 dan 29 Ogos di bawah kekal sebagai sejarah):
 
 - Januari–Ogos 2026 ialah legacy-only. Native eBayar bermula September 2026.
-- Migration/reconciliation V2 Januari–Ogos telah selesai. Final Ogos ialah 102 paid, 84 unpaid, 186 total dan RM3,580 dengan Legacy vs V2 `Match`.
+- Migration/reconciliation V2 Januari–Ogos telah selesai. Final Ogos ialah 104 paid, 82 unpaid, 186 total dan RM3,640 dengan Legacy vs V2 `Match`.
 - Julai catch-up: 39 source groups, 60 child rows, RM1,870. Final July: 71/71 groups unchanged, 0 changed, 0 new.
-- Snapshot 16 Ogos melalui source row 47 ialah 46 groups, 69 child rows dan RM2,520. Pada 29 Ogos, 20 genuinely-new groups menghasilkan 34 child rows dan RM1,060; sync dijalankan sekali dan final status ialah 66 existing, 0 new/review, `Synced`.
+- Snapshot 16 Ogos melalui source row 47 ialah 46 groups, 69 child rows dan RM2,520. Pada 29 Ogos, 20 genuinely-new groups menghasilkan 34 child rows dan RM1,060; sync dijalankan sekali dan status menjadi 66 existing. Pada 30 Ogos, satu lagi real August group dengan 2 child rows dan RM60.00 disync sekali. Browser response uncertain, jadi tiada retry; refresh mengesahkan 67 source/67 existing, 0 new, 0 new child rows dan `Synced`.
 - September legacy ialah header-only; tiada legacy import September diperlukan.
 - Historical anomaly `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112` kekal untuk audit dan tidak berkaitan catch-up Julai/Ogos.
 
@@ -170,10 +170,10 @@ Maintenance berada dalam panel Yuran yang authenticated, kelihatan kepada admin 
 - Write path menggunakan ScriptLock, fresh post-lock source reread/TOCTOU validation, final staging recheck dan satu bulk `setValues()`.
 - Semua conflict dikumpul sebelum write; tiada partial-write loop.
 - Selepas write, staging diverifikasi. Jika hasil write tidak pasti, jangan jalankan sync kali kedua sebelum rekod disemak.
-- Last August state: 66 source groups, 66 existing, 0 new/review, projected RM0, status `Synced`.
+- Last August state: 67 source groups, 67 existing, 0 new, 0 new child rows, projected RM0, status `Synced`.
 - Confirmed write mesti membawa immutable exact `selectedPaymentGroupIds` daripada preview. Backend memerlukan 1–25 ID non-empty/unique dan menolak ID yang tidak lagi genuinely new.
 - Frontend mempunyai settlement timeout 120 saat, sentiasa membersihkan loading state dan menghalang duplicate click.
-- Jika browser melaporkan outcome tidak pasti, jangan retry. Refresh authoritative maintenance status dan periksa staging dahulu. Final August sync membuktikan prosedur ini: browser uncertain, backend write disahkan complete melalui fresh status, dan tiada retry dibuat.
+- Jika browser melaporkan outcome tidak pasti, jangan retry. Refresh authoritative maintenance status dan periksa staging dahulu. Sync 29 dan 30 Ogos membuktikan prosedur ini: browser uncertain, backend write disahkan complete melalui fresh status, dan tiada retry dibuat.
 
 #### Portal Mode Operations
 
@@ -203,25 +203,32 @@ Maintenance berada dalam panel Yuran yang authenticated, kelihatan kepada admin 
 
 - Payment lock is released before receipt generation; receipt uses its own lock.
 - Validate the complete payment group and build a canonical snapshot before generating anything.
-- One private temporary Google Doc is created, converted to PDF and trashed.
+- The renderer copies the approved Google Slides template (`1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`), replaces all placeholders, exports the copy as PDF and trashes the temporary presentation in `finally`; the original template is never modified.
+- The one-slide 576 × 288 pt landscape design is retained. Multiple child names use balanced line wrapping and local font reduction.
 - Exactly one final PDF per group is stored in the receipt folder. Only that file becomes anyone-with-link/view.
 - Every child row receives the same `RESIT_URL`.
 - Existing one consistent receipt URL returns idempotent success. Mixed URLs or partial state return review; do not create another receipt blindly.
 - Receipt failure does not reverse payment and must never cause a second payment write.
 - Receipt excludes MyKid/MyKad, phone, email, address, slip URL and internal hashes.
+- Production receipts do not include the synthetic preview watermark.
 - Frontend opens a ready receipt in a new window with `noopener`; if not ready, it clearly reports payment success with receipt unavailable.
 
 Drive controls:
 
 - `NATIVE_EBAYAR_SLIP_FOLDER_ID`: verify the configured value in Apps Script Script Properties. Folder `SPKM - Native eBayar Slips` and its files remain private/restricted; never link-share.
 - `NATIVE_EBAYAR_RECEIPT_FOLDER_ID`: verify the configured value in Apps Script Script Properties. Folder `SPKM - Native eBayar Receipts` preferably remains Restricted; only final PDFs are link-view.
+- `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`: approved template ID `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`.
+- `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID`: must point to a preview-only folder different from the production receipt folder.
+- Safe preview helper: `testCreateNativeEbayarReceiptSlidesPreviewV2`. It uses two synthetic September children and RM100.00, adds `CONTOH / TIDAK SAH`, exercises the real Slides-to-PDF path and does not write payment rows or `RESIT_URL`. The synthetic preview completed successfully.
+
+Validation checkpoint: full local suite 14 passed, 0 failed; `Code.js` syntax, Slides preview generation, `/dev` smoke test and Auto Sync preview/cancel passed. Apps Script `@HEAD` is current, but production remains unchanged at Version 176 and the later Slides source is not yet production-active.
 
 #### September First-Transaction Checklist
 
-1. Confirm repository, dirty worktree, `origin/main` at `01e8634` and intentional `pages/main` at `db87448`.
+1. Confirm repository, dirty worktree, `origin/main` at `0b1d10b` and intentional `pages/main` at `db87448`.
 2. Confirm production Version 176 remains active on the existing deployment URL.
 3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE` on or after 1 September.
-4. Verify both configured Drive folder IDs and confirm the slip and receipt folders remain Restricted.
+4. Verify both configured Drive folder IDs and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`; confirm the slip and receipt folders remain Restricted.
 5. Choose one genuinely unpaid official student.
 6. Use a small valid bank slip and submit exactly once.
 7. If the browser outcome is uncertain, stop; inspect `Payments` and Drive artifacts before considering any retry.
@@ -229,7 +236,7 @@ Drive controls:
 9. Verify the bank slip and its folder remain private/restricted.
 10. Verify exactly one final receipt PDF is created.
 11. Verify all child rows share the same `RESIT_URL`.
-12. Verify the temporary Google Doc is trashed.
+12. Verify the temporary Google Slides copy is trashed.
 13. Exercise the receipt read/generation path again to confirm idempotency without a second payment or receipt.
 14. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
