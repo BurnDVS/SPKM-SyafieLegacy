@@ -2,7 +2,7 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 30 Ogos 2026.** `origin/main` berada pada `0b1d10b`; `pages/main` sengaja kekal pada `db87448`. Apps Script `@HEAD` sepadan dengan source terkini, termasuk Native Slides receipt, tetapi existing active Web App production kekal Version 176 dan tidak berubah. August V2 ialah 67/67 groups `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
+> **Checkpoint berkuat kuasa: 30 Ogos 2026.** `origin/main` berada pada `076f68a`; production `pages/main` berada pada `7b5476e`. Apps Script production ialah Version 177 dan mengandungi Native Slides receipt. August V2 ialah 67/67 groups `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
 
 ---
 
@@ -60,6 +60,11 @@ Lepas tu push semula, login sebagai `BurnDVS` bila diminta.
 
 🌐 **Live URL:** `https://shafielegacy.github.io/SPKM`
 
+Current remote checkpoints:
+
+- `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `076f68a`.
+- `pages`: `https://github.com/shafielegacy/SPKM.git`, production `pages/main` at `7b5476e`.
+
 ### Aliran push yang selamat
 ```powershell
 git status --short
@@ -69,7 +74,9 @@ git log --oneline --left-right origin/main...main
 git log --oneline --left-right pages/main...main
 ```
 
-Stage hanya fail yang memang berada dalam skop; jangan guna `git add .` secara automatik. Push development dengan `git push origin main`. Push production Pages secara berasingan dengan `git push pages main:main` hanya selepas divergence disemak dan fast-forward disahkan selamat. Push ke `origin` sahaja tidak mengemas kini website live.
+Stage hanya fail yang memang berada dalam skop; jangan guna `git add .` secara automatik. Push development dengan `git push origin main`. Push ke `origin` sahaja tidak mengemas kini website live.
+
+Checkpoint Pages semasa diterbitkan melalui detached worktree berasingan di `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`. Kekalkan worktree itu dan semak divergence sebelum publication seterusnya. Kaedah `git push pages main:main` dari workspace utama hanya sesuai jika commit yang hendak diterbitkan memang sama dengan `main` dan telah disemak.
 
 ⚠️ **Sebelum push ke `pages`, semak dulu fail apa yang akan terpush** (kalau ada kerja WIP yang belum siap dalam commit lain):
 ```powershell
@@ -129,7 +136,7 @@ Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di de
 | Owner akaun | `shafielegacykelasmengaji@gmail.com` |
 | Buka editor | `clasp open` atau `https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit` |
 
-`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App kekal Version 176 pada URL yang sama; clasp push tidak menjadikan Slides receipt source production-active.
+`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App kini Version 177 pada deployment ID dan `/exec` URL yang sama; description ialah `SPKM Native eBayar production - September 2026`. Slides receipt source termasuk dalam Version 177.
 
 ### 🚨 LANGKAH WAJIB lepas `clasp push`
 `clasp push` HANYA update editor/source Apps Script — ia **TIDAK** mengubah production behavior dan **TIDAK** menukar URL Web App production.
@@ -151,7 +158,7 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 |---|---|---|
 | SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni. Tab `LogPertukaranGuru` (ditambah 30 Jun 2026) — log audit Pertukaran Guru, 7 kolum: `Timestamp \| Admin \| Guru Lama \| Guru Baru \| Nama Murid \| Jenis Murid \| Bil` |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
-| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Migrasi/reconciliation Januari–Ogos 2026 selesai dan Version 176 deployed; real Native first-transaction verification masih pending. |
+| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Migrasi/reconciliation Januari–Ogos 2026 selesai dan Version 177 deployed; real Native first-transaction verification masih pending. |
 | Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
 
@@ -162,6 +169,7 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 - Snapshot 16 Ogos (46 groups, 69 child rows, RM2,520 melalui source row 47) telah digantikan oleh final sync 29 Ogos: 20 groups, 34 child rows dan RM1,060 ditambah sekali sahaja.
 - Satu anomali sejarah kekal: `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112`; tidak berkaitan catch-up Julai/Ogos.
 - Portal Mode: `AUTO`, `LEGACY`, `NATIVE`, `BOTH`; property `EBAYAR_PORTAL_MODE`, fallback `AUTO`, cutoff `2026-09-01` MYT. Audit menggunakan `EBAYAR_PORTAL_MODE_UPDATED_AT` dan `EBAYAR_PORTAL_MODE_UPDATED_BY`.
+- Current configured mode telah dipulihkan kepada `AUTO`: sebelum 1 September resolve `LEGACY`; mulai 1 September resolve `NATIVE` mengikut Malaysia time.
 - Native identity: `KANAK:<BIL>` / `DEWASA:<BIL>`. MyKid/MyKad tidak digunakan sebagai public selector. Native duplicate check menggunakan `STUDENT_ID`; historical blank IDs menggunakan conservative normalized-name fallback.
 - Phase 2A (`d171e8c`) menggunakan duplicate recheck di bawah lock, satu bulk write, slip validation maksimum 3 MB, cleanup dan post-write verification.
 - Phase 2B asal (`612128e`) menghasilkan maksimum satu receipt PDF per group secara idempotent, dengan lock berasingan dan satu `RESIT_URL` dikongsi semua child rows. Commit `15d7991` menggantikan hanya rendering layer dengan existing Google Slides template; `0b1d10b` memuktamadkan preview sintetik.
@@ -173,8 +181,10 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 - Preview September sintetik dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya dan menggunakan real Slides-to-PDF path tanpa payment row atau production receipt record.
 - Auto Sync hardening `391f164` binds exact confirmed preview IDs, validates 1–25 unique IDs, rejects stale IDs, adds a 120-second settlement timeout and preserves no-retry handling. Full local suite selepas Slides work: 14 passed, 0 failed.
 - Tambahan 30 Ogos: satu August group, 2 child rows dan RM60.00, disync sekali walaupun browser transport uncertain. Tiada retry; refresh mengesahkan 67 existing, 0 new dan Legacy vs V2 `Match`.
-- Production Version 176 (`SPKM Native eBayar Sep 2026 + Auto Sync hardening`) was verified on 29 August 2026 at approximately 22:05 MYT. Existing deployment identity and URL were preserved.
-- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September. Production masih Version 176 dan belum mengandungi source Slides selepas version itu.
+- Production Version 177 (`SPKM Native eBayar production - September 2026`) menggunakan existing deployment identity dan `/exec` URL serta merangkumi Slides receipt implementation.
+- GitHub Pages routing: Januari–Ogos kekal pada original Legacy Google Forms. September–Disember membuka production `/exec` mengikut Malaysia time: September pada 1 September, Oktober pada 1 Oktober, November pada 1 November dan Disember pada 1 Disember 2026. Future months disabled dan tiada public `/dev` route.
+- PWA Dashboard Yuran memaparkan shortcut `eBayar V2 Maintenance` hanya kepada authenticated `ADMIN`, membuka production `/exec` dalam protected new tab. Backend Admin authorization kekal authoritative. Full maintenance UI kekal di Apps Script portal; exact duplicate dalam PWA ialah optional future scope.
+- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September.
 
 Schema `Payments`:
 
@@ -373,7 +383,7 @@ Pattern yang digunakan:
 
 ---
 
-*Last updated: 30 Ogos 2026 (Slides receipt at Apps Script HEAD, production unchanged at Version 176, 67-group August reconciliation and pending first Native transaction; older queue logs below are historical)*
+*Last updated: 30 Ogos 2026 (production Version 177, Pages Native routing/admin shortcut published, 67-group August reconciliation and pending first Native transaction; older queue logs below are historical)*
 ## Historical Archive — Queue #9 Staging Logs
 
 Semua seksyen di bawah ialah log progres 1–2 Julai 2026. Ia dikekalkan untuk audit tetapi telah digantikan oleh status migrasi/reconciliation Januari–Ogos dalam `CURRENT_STATUS.md`.

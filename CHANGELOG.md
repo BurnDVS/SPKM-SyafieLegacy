@@ -4,6 +4,36 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [30 Ogos 2026] — Production Version 177 and GitHub Pages Native launch routing
+
+### Apps Script production
+
+- The existing production Web App deployment was updated in place to **Version 177** with description `SPKM Native eBayar production - September 2026`.
+- The existing deployment ID and production `/exec` URL were preserved.
+- Portal Mode was restored to `AUTO`: it resolves to `LEGACY` before 1 September 2026 and `NATIVE` from 1 September in Malaysia time.
+- Version 177 includes the Slides-template Native receipt implementation. The earlier Version 176 state remains historical.
+
+### GitHub Pages publication
+
+- Development/source `origin/main` is at `076f68a` (`feat: prepare native ebayar routing and admin shortcut`).
+- Production `pages/main` is at `7b5476e` (`feat: route PWA eBayar to native portal`).
+- Pages was published from the separate detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` using `git push pages HEAD:main`.
+- Pushing `origin/main` does not automatically update the separate GitHub Pages repository.
+
+### Parent payment routing and Admin shortcut
+
+- January–August retain their original Legacy Google Form routes unchanged.
+- September–December use the approved production Apps Script `/exec` route. Each Native month opens on its first day in Malaysia time; future months remain disabled, and no public route uses `/dev`.
+- The PWA Dashboard Yuran shows `eBayar V2 Maintenance` only to authenticated `ADMIN` users and opens production `/exec` in a protected new tab.
+- Backend Admin authorization remains authoritative. The full maintenance interface remains in the Apps Script portal; duplicating it in the PWA is optional future scope.
+
+### Remaining controlled milestone
+
+- August remains reconciled at 67 source/existing groups, 0 new, 104 paid, 82 unpaid, 186 total students, RM3,640 and Legacy vs V2 `Match`.
+- The first real Native production payment, slip upload and receipt verification remain pending on or after 1 September. Native eBayar is not yet fully proven by a real transaction.
+
+---
+
 ## [30 Ogos 2026] — Native Slides receipt preview and final August reconciliation update
 
 ### Native receipt source
@@ -22,8 +52,8 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ### Source and deployment boundary
 
-- Latest source commit is `0b1d10b`; Slides implementation commit is `15d7991`, and the preceding documentation checkpoint is `fd3203c`. `origin/main` and Apps Script `@HEAD` are up to date.
-- Production was not changed and remains Version 176. The later Slides receipt source at Apps Script `@HEAD` is not production-active until a future explicitly approved deployment version is assigned.
+- At this earlier checkpoint, the latest source commit was `0b1d10b`; Slides implementation commit was `15d7991`, and the preceding documentation checkpoint was `fd3203c`. `origin/main` and Apps Script `@HEAD` were up to date.
+- At this earlier checkpoint, production remained Version 176 and the later Slides receipt source was not yet production-active. This state was subsequently superseded by Version 177 as recorded above.
 - The first real Native production transaction and receipt remain pending on or after 1 September 2026. No production Native receipt has been generated yet.
 
 ---

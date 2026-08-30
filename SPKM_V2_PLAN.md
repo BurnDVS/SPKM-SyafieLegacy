@@ -1,8 +1,8 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 30 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; Ogos kini 67/67 groups `Synced` dan Legacy vs V2 `Match`. Apps Script `@HEAD` mengandungi Native Slides receipt dan synthetic preview yang berjaya, tetapi production Web App kekal Version 176 dan tidak berubah. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+> **Status 30 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; Ogos kini 67/67 groups `Synced` dan Legacy vs V2 `Match`. Production Web App ialah Version 177 dengan Native Slides receipt, dan GitHub Pages Native monthly routing serta Admin maintenance shortcut telah diterbitkan. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
-> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; source Native eBayar telah dipromosi dalam Version 176 untuk cutoff September, tetapi ia tidak boleh ditandakan fully proven sebelum transaksi sebenar terkawal dan pemeriksaan data/Drive/idempotency selesai.
+> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar telah dipromosi dalam Version 177 untuk cutoff September, tetapi ia tidak boleh ditandakan fully proven sebelum transaksi sebenar terkawal dan pemeriksaan data/Drive/idempotency selesai.
 
 ---
 
@@ -456,18 +456,27 @@ Admin panel `Auto Sync` kini disambungkan kepada aliran preview-first dan explic
 
 Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Full local suite selepas Native Slides receipt: 14 passed, 0 failed.
 
-Production Version 176 telah diverify pada 29 Ogos 2026 menggunakan existing deployment URL. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
+Production Version 176 telah diverify pada 29 Ogos 2026 menggunakan existing deployment URL; ini ialah checkpoint sejarah yang kini digantikan oleh Version 177. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
 
 Native receipt rendering source kini menyalin existing Google Slides template `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`, mengganti lima placeholders, mengeksport PDF dan trash temporary Slides copy dalam `finally`. Layout satu slide landscape 576 × 288 pt dikekalkan; multiple children menggunakan balanced wrapping dan local font reduction. `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` menyimpan template config, manakala `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID` digunakan oleh helper `testCreateNativeEbayarReceiptSlidesPreviewV2`.
 
 Synthetic September preview dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya melalui real Slides-to-PDF path tanpa live payment row atau production receipt record. Privacy, idempotency, one-PDF-per-group, shared `RESIT_URL`, final-PDF permissions dan payment-independent receipt failure handling kekal.
 
-Apps Script `@HEAD` dan `origin/main` kini pada source terkini `0b1d10b` (`15d7991` ialah Slides implementation; `fd3203c` ialah previous docs checkpoint). Production tidak diubah dan kekal Version 176; later Slides source belum production-active. Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Slides cleanup dan idempotency tanpa retry atau duplicate.
+Apps Script production kini Version 177 (`SPKM Native eBayar production - September 2026`) pada existing deployment ID dan `/exec` URL, termasuk Slides receipt implementation. Portal Mode telah dipulihkan kepada `AUTO`: sebelum 1 September resolve `LEGACY`, mulai 1 September resolve `NATIVE` mengikut Malaysia time.
+
+PWA Native routing dan Admin shortcut publication ditandakan complete:
+
+- `origin/main` application checkpoint ialah `076f68a` (`feat: prepare native ebayar routing and admin shortcut`).
+- Production `pages/main` ialah `7b5476e` (`feat: route PWA eBayar to native portal`), diterbitkan dari detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`.
+- Januari–Ogos kekal menggunakan original Legacy Google Form routes. September–Disember menggunakan approved production `/exec` mengikut Malaysia time: September dibuka 1 September, Oktober 1 Oktober, November 1 November dan Disember 1 Disember 2026. Future months kekal disabled dan tiada public route menggunakan `/dev`.
+- PWA Dashboard Yuran menyediakan shortcut `eBayar V2 Maintenance` hanya kepada authenticated `ADMIN`, membuka production `/exec` dalam protected new tab. Backend Admin authorization kekal authoritative dan full maintenance UI kekal di Apps Script portal. Exact PWA duplicate ialah optional future scope.
+
+Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Slides cleanup dan idempotency tanpa retry atau duplicate.
 
 ### Nota operasi
 
 - Satu anomaly sejarah June, `GROUP_ID_MULTIPLE_STAGED_HASHES`, masih wujud. Ia telah disiasat dan disahkan tidak berkaitan dengan July catch-up.
-- Catatan “belum production deployment” dalam snapshot migration terdahulu ialah sejarah. Existing production Web App kini Version 176 pada URL yang sama.
+- Catatan “belum production deployment” dan Version 176 dalam snapshot terdahulu ialah sejarah. Existing production Web App kini Version 177 pada URL yang sama.
 - Portal Mode mesti kekal `AUTO`; sebelum 1 September ia resolve `LEGACY`, dan milestone seterusnya perlu mengesahkan resolve `NATIVE` pada atau selepas tarikh cutoff.
 
 ---
