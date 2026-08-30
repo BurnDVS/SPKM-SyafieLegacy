@@ -932,6 +932,14 @@
     transition: background 0.2s;
   }
   .ebayar-btn:hover { background: #B8960C; color: #FFFFFF; }
+  .ebayar-btn.native-route { background: #FFD700; }
+  .ebayar-btn[aria-disabled="true"] {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: rgba(255,255,255,0.16);
+    color: rgba(255,255,255,0.7);
+  }
 
   /* === EBAYAR STATS BADGE === */
   .ebayar-stats {
@@ -3288,6 +3296,9 @@
     <button class="btn btn-ghost btn-sm" id="btnSyncMinusBayar" onclick="syncFormMinusBayar()" style="display:none; margin-bottom:2px;">
       🧹 Kemas Form (Tolak Dah Bayar)
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnEbayarV2Maintenance" type="button" onclick="openEbayarV2Maintenance()" style="display:none; margin-bottom:2px;">
+      ⚙ eBayar V2 Maintenance
+    </button>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">✓</span>
@@ -3441,7 +3452,7 @@
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
     <h2>Portal Bayaran Yuran 2026</h2>
-    <p>Klik butang bulan untuk membuat bayaran yuran melalui Google Form</p>
+    <p>Klik butang bulan untuk membuat bayaran melalui saluran Legacy atau Native eBayar yang tersedia.</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
 
@@ -3517,25 +3528,25 @@
       <div class="ebayar-month">SEPTEMBER</div>
       <div class="ebayar-year">2026</div>
       <div class="ebayar-badge" id="ebadge-8"></div>
-      <a href="https://forms.gle/NdNdkaaQ752Uh8hi7" target="_blank" class="ebayar-btn" id="ebtn-8">&#x1F4B3; Bayar Yuran</a>
+      <a class="ebayar-btn native-route" id="ebtn-8" data-native-month="2026-09" aria-disabled="true" tabindex="-1">Akan Datang</a>
     </div>
     <div class="ebayar-card" id="ecard-9">
       <div class="ebayar-month">OKTOBER</div>
       <div class="ebayar-year">2026</div>
       <div class="ebayar-badge" id="ebadge-9"></div>
-      <a href="https://forms.gle/5MqvBgKTGcTV5f4D8" target="_blank" class="ebayar-btn" id="ebtn-9">&#x1F4B3; Bayar Yuran</a>
+      <a class="ebayar-btn native-route" id="ebtn-9" data-native-month="2026-10" aria-disabled="true" tabindex="-1">Akan Datang</a>
     </div>
     <div class="ebayar-card" id="ecard-10">
       <div class="ebayar-month">NOVEMBER</div>
       <div class="ebayar-year">2026</div>
       <div class="ebayar-badge" id="ebadge-10"></div>
-      <a href="https://forms.gle/A229QLjGbDEktucK6" target="_blank" class="ebayar-btn" id="ebtn-10">&#x1F4B3; Bayar Yuran</a>
+      <a class="ebayar-btn native-route" id="ebtn-10" data-native-month="2026-11" aria-disabled="true" tabindex="-1">Akan Datang</a>
     </div>
     <div class="ebayar-card" id="ecard-11">
       <div class="ebayar-month">DISEMBER</div>
       <div class="ebayar-year">2026</div>
       <div class="ebayar-badge" id="ebadge-11"></div>
-      <a href="https://forms.gle/Ux3YTabputDjFCEM8" target="_blank" class="ebayar-btn" id="ebtn-11">&#x1F4B3; Bayar Yuran</a>
+      <a class="ebayar-btn native-route" id="ebtn-11" data-native-month="2026-12" aria-disabled="true" tabindex="-1">Akan Datang</a>
     </div>
   </div>
 
@@ -3687,6 +3698,9 @@
 <script>
   const _isGAS  = window.location.hostname.endsWith('google.com');
   const APP_VERSION = "1.0.0";
+  // GitHub Pages Native eBayar launch route. Never use a /dev URL here.
+  // Update this single constant only when the approved production Web App URL changes.
+  const NATIVE_EBAYAR_PRODUCTION_URL = 'https://script.google.com/macros/s/AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1/exec';
 
   // Load GAS_URL dynamically so URL changes only need a config.json update
   var _gasUrlReady = new Promise(function(resolve) {
@@ -3896,6 +3910,8 @@
     if (btnSync)     btnSync.style.display     = isAdmin ? '' : 'none';
     const btnSyncMinus = document.getElementById('btnSyncMinusBayar');
     if (btnSyncMinus) btnSyncMinus.style.display = isAdmin ? '' : 'none';
+    const btnEbayarV2Maintenance = document.getElementById('btnEbayarV2Maintenance');
+    if (btnEbayarV2Maintenance) btnEbayarV2Maintenance.style.display = isAdmin ? '' : 'none';
     const seksyenPertukaran = document.getElementById('seksyenPertukaranGuru');
     if (seksyenPertukaran) seksyenPertukaran.style.display = isAdmin ? '' : 'none';
     const seksyenMtg = document.getElementById('seksyenMuridTanpaGuru');
@@ -5331,6 +5347,24 @@
     );
   }
 
+  function getEbayarV2MaintenanceUrl() {
+    var url = (window.GAS_URL || '').toString().trim();
+    return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/i.test(url) ? url : '';
+  }
+
+  async function openEbayarV2Maintenance() {
+    if (currentRole !== 'ADMIN') return false;
+    await _gasUrlReady;
+    var url = getEbayarV2MaintenanceUrl();
+    if (!url) {
+      alert('URL production eBayar V2 Maintenance belum tersedia.');
+      return false;
+    }
+    var maintenanceWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (maintenanceWindow) maintenanceWindow.opener = null;
+    return true;
+  }
+
   function syncMuridToForms() {
     const btn = document.getElementById('btnSyncGF');
     const ok  = document.getElementById('syncSuccess');
@@ -6101,10 +6135,72 @@
   // =====================
   // EBAYAR
   // =====================
+  function getEbayarMalaysiaDateParts() {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kuala_Lumpur',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    var values = {};
+    parts.forEach(function(part) {
+      if (part.type !== 'literal') values[part.type] = part.value;
+    });
+    return {
+      dateKey: values.year + '-' + values.month + '-' + values.day,
+      year: parseInt(values.year, 10),
+      monthIndex: parseInt(values.month, 10) - 1
+    };
+  }
+
+  function getEbayarMonthRouting(monthIndex, malaysiaDateKey) {
+    var monthNumber = monthIndex + 1;
+    var monthKey = '2026-' + String(monthNumber).padStart(2, '0');
+    var opensOn = monthKey + '-01';
+    var dateMonthKey = (malaysiaDateKey || '').slice(0, 7);
+    return {
+      monthKey: monthKey,
+      routeType: monthIndex < 8 ? 'LEGACY' : 'NATIVE',
+      isOpen: malaysiaDateKey >= opensOn,
+      isCurrent: dateMonthKey === monthKey,
+      isFuture: malaysiaDateKey < opensOn
+    };
+  }
+
+  function getNativeEbayarProductionUrl() {
+    var url = (NATIVE_EBAYAR_PRODUCTION_URL || '').trim();
+    return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/i.test(url) ? url : '';
+  }
+
+  function applyNativeEbayarMonthRoute(monthIndex, routing) {
+    if (!routing || routing.routeType !== 'NATIVE') return;
+    var button = document.getElementById('ebtn-' + monthIndex);
+    if (!button) return;
+    var productionUrl = getNativeEbayarProductionUrl();
+    var enabled = routing.isOpen && !!productionUrl;
+    button.classList.add('native-route');
+    button.setAttribute('data-native-month', routing.monthKey);
+    if (!enabled) {
+      button.removeAttribute('href');
+      button.removeAttribute('target');
+      button.removeAttribute('rel');
+      button.setAttribute('aria-disabled', 'true');
+      button.setAttribute('tabindex', '-1');
+      button.textContent = routing.isFuture ? 'Akan Datang' : 'Native eBayar Belum Tersedia';
+      return;
+    }
+    button.href = productionUrl;
+    button.target = '_blank';
+    button.rel = 'noopener noreferrer';
+    button.setAttribute('aria-disabled', 'false');
+    button.removeAttribute('tabindex');
+    button.textContent = 'Buka Native eBayar';
+  }
+
   async function initEbayar() {
-    var now          = new Date();
-    var currentMonth = now.getMonth();
-    var currentYear  = now.getFullYear();
+    var malaysia     = getEbayarMalaysiaDateParts();
+    var currentMonth = malaysia.monthIndex;
+    var currentYear  = malaysia.year;
 
     // First pass: set badges from date alone
     for (var i = 0; i < 12; i++) {
@@ -6112,16 +6208,19 @@
       var badge = document.getElementById('ebadge-' + i);
       if (!card || !badge) continue;
       card.classList.remove('past', 'current', 'future-locked');
+      var routing = getEbayarMonthRouting(i, malaysia.dateKey);
+      applyNativeEbayarMonthRoute(i, routing);
 
-      if (currentYear === 2026 && i === currentMonth) {
+      if (routing.isCurrent) {
         card.classList.add('current');
         badge.textContent = '● Bulan Ini';
         badge.className = 'ebayar-badge current-badge';
-      } else if (currentYear > 2026 || (currentYear === 2026 && i < currentMonth)) {
+      } else if (routing.isOpen) {
         card.classList.add('past');
         badge.innerHTML = '<span class="ebayar-loading">Memuatkan...</span>';
         badge.className = 'ebayar-badge past-badge';
       } else {
+        card.classList.add('future-locked');
         badge.textContent = 'Akan Datang';
         badge.className = 'ebayar-badge future-badge';
       }
