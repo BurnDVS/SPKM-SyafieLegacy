@@ -36,10 +36,18 @@ function extractFunction(source, name) {
 }
 
 function createContext() {
+  function makeClassList(initial) {
+    const values = new Set(initial || []);
+    return {
+      add: value => values.add(value),
+      remove: value => values.delete(value),
+      contains: value => values.has(value)
+    };
+  }
   const elements = {
     btnSyncMinusBayar: { disabled: false, textContent: '' },
-    syncMinusSuccess: { style: { display: '' } },
-    syncMinusError: { style: { display: 'none' } },
+    syncMinusSuccess: { classList: makeClassList(['show']) },
+    syncMinusError: { classList: makeClassList(['show']) },
     syncMinusErrorMsg: { textContent: '', innerHTML: 'unchanged' },
     syncMinusSuccessMsg: { textContent: '' },
     yuranBulan: { value: 'OGOS2026' }
@@ -89,7 +97,8 @@ test('backend failure displays its message safely and clears loading state', () 
 
   assert.equal(setup.elements.syncMinusErrorMsg.textContent, '<b>Token tamat tempoh</b>');
   assert.equal(setup.elements.syncMinusErrorMsg.innerHTML, 'unchanged');
-  assert.equal(setup.elements.syncMinusError.style.display, '');
+  assert.equal(setup.elements.syncMinusError.classList.contains('show'), true);
+  assert.equal(setup.elements.syncMinusSuccess.classList.contains('show'), false);
   assert.equal(setup.elements.btnSyncMinusBayar.disabled, false);
   assert.equal(setup.elements.btnSyncMinusBayar.textContent, '🧹 Kemas Form (Tolak Dah Bayar)');
 });
@@ -101,7 +110,8 @@ test('transport failure displays the actual error and clears loading state', () 
   setup.getRequest().onError(new Error('Failed to fetch'));
 
   assert.equal(setup.elements.syncMinusErrorMsg.textContent, 'Failed to fetch');
-  assert.equal(setup.elements.syncMinusError.style.display, '');
+  assert.equal(setup.elements.syncMinusError.classList.contains('show'), true);
+  assert.equal(setup.elements.syncMinusSuccess.classList.contains('show'), false);
   assert.equal(setup.elements.btnSyncMinusBayar.disabled, false);
   assert.equal(setup.elements.btnSyncMinusBayar.textContent, '🧹 Kemas Form (Tolak Dah Bayar)');
 });
@@ -135,8 +145,8 @@ test('successful sync keeps the existing success response', () => {
   });
 
   assert.match(setup.elements.syncMinusSuccessMsg.textContent, /Form OGOS2026 dikemaskini/);
-  assert.equal(setup.elements.syncMinusSuccess.style.display, '');
-  assert.equal(setup.elements.syncMinusError.style.display, 'none');
+  assert.equal(setup.elements.syncMinusSuccess.classList.contains('show'), true);
+  assert.equal(setup.elements.syncMinusError.classList.contains('show'), false);
   assert.equal(setup.elements.btnSyncMinusBayar.disabled, false);
 });
 

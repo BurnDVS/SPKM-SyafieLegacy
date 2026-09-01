@@ -5752,10 +5752,10 @@
     const errMsg = document.getElementById('syncMinusErrorMsg');
     const showError = function(error) {
       if (errMsg) errMsg.textContent = getSyncFormMinusBayarErrorMessage(error);
-      if (err) err.style.display = '';
+      if (err) err.classList.add('show');
     };
-    if (ok) ok.style.display = 'none';
-    if (err) err.style.display = 'none';
+    if (ok) ok.classList.remove('show');
+    if (err) err.classList.remove('show');
     const bulan = document.getElementById('yuranBulan').value;
     if (!bulan) { showError(); return; }
     btn.disabled = true;
@@ -5767,7 +5767,7 @@
         if (data && data.success) {
           document.getElementById('syncMinusSuccessMsg').textContent =
             '✅ Form ' + data.bulan + ' dikemaskini — ' + data.sudahBayar + ' nama disingkir, ' + data.namaInForm + ' nama tinggal dalam form.';
-          if (ok) ok.style.display = '';
+          if (ok) ok.classList.add('show');
         } else {
           showError(data);
         }
