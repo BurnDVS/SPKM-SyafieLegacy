@@ -5837,6 +5837,154 @@ function testPreviewAugust2026CatchupCompactV2() {
   return compact;
 }
 
+function backfillOgos2026Rows69To71GuardedV2() {
+  var mode = 'V2_OGOS_2026_ROWS_69_TO_71_GUARDED_BACKFILL';
+  var expectedOwner = 'shafielegacykelasmengaji@gmail.com';
+  var paymentGroupIds = [
+    'PG-2026-OGOS2026-69',
+    'PG-2026-OGOS2026-70',
+    'PG-2026-OGOS2026-71'
+  ];
+  var expectedPreview = {
+    existingUnchangedGroups: 67,
+    changedExistingGroups: 0,
+    genuinelyNewGroups: 3,
+    projectedChildRows: 5,
+    uniquePaidNamesCount: 5,
+    projectedTotalAmount: 120,
+    projectedPaidStatusAmount: 120,
+    highestExistingAugustSourceRow: 68
+  };
+  var allowedAnomaly = {
+    type: 'GROUP_ID_MULTIPLE_STAGED_HASHES',
+    key: 'PG-2026-JUN2026-112',
+    stagedLocations: ['2026|Jun2026|112'],
+    stagedHashes: [
+      'c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930',
+      'e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59'
+    ]
+  };
+  var meta = {
+    success: true,
+    tahun: 2026,
+    bulanNumber: '08',
+    bulanKey: '2026-08',
+    bulanLabel: 'Ogos 2026',
+    sourceSheet: 'OGOS2026'
+  };
+
+  function finish(result) {
+    Logger.log(JSON.stringify(result));
+    return result;
+  }
+
+  function abort(message, details) {
+    var result = {
+      success: false,
+      mode: mode,
+      message: message
+    };
+    Object.keys(details || {}).forEach(function(key) {
+      result[key] = details[key];
+    });
+    return finish(result);
+  }
+
+  function sortedStrings(values) {
+    return (Array.isArray(values) ? values : []).map(function(value) {
+      return (value || '').toString().trim();
+    }).sort();
+  }
+
+  function sameStrings(actual, expected) {
+    var actualSorted = sortedStrings(actual);
+    var expectedSorted = sortedStrings(expected);
+    return actualSorted.length === expectedSorted.length && actualSorted.every(function(value, index) {
+      return value === expectedSorted[index];
+    });
+  }
+
+  try {
+    var effectiveUser = (Session.getEffectiveUser().getEmail() || '').toString().trim().toLowerCase();
+    if (effectiveUser !== expectedOwner) {
+      return abort('Backfill dibatalkan: fungsi editor ini hanya boleh dijalankan oleh pemilik deployment yang dibenarkan.');
+    }
+
+    var preview = previewAugust2026CatchupV2();
+    if (!preview || preview.success !== true) {
+      return abort('Backfill dibatalkan: preview Ogos gagal.', { preview: preview || null });
+    }
+
+    var previewMismatches = [];
+    Object.keys(expectedPreview).forEach(function(key) {
+      if (Number(preview[key]) !== expectedPreview[key]) {
+        previewMismatches.push({
+          field: key,
+          expected: expectedPreview[key],
+          actual: preview[key]
+        });
+      }
+    });
+    var previewGroupIds = (preview.genuinelyNewCandidates || []).map(function(candidate) {
+      return candidate && candidate.paymentGroupId;
+    });
+    if (!sameStrings(previewGroupIds, paymentGroupIds)) {
+      previewMismatches.push({
+        field: 'genuinelyNewPaymentGroupIds',
+        expected: paymentGroupIds.slice(),
+        actual: sortedStrings(previewGroupIds)
+      });
+    }
+    if (previewMismatches.length) {
+      return abort('Backfill dibatalkan: preview tidak sepadan dengan snapshot yang diluluskan.', {
+        previewMismatches: previewMismatches,
+        preview: preview
+      });
+    }
+
+    var candidateLocations = {
+      '2026|OGOS2026|69': true,
+      '2026|OGOS2026|70': true,
+      '2026|OGOS2026|71': true
+    };
+    var candidateIdSet = {};
+    paymentGroupIds.forEach(function(paymentGroupId) { candidateIdSet[paymentGroupId] = true; });
+    var anomalies = Array.isArray(preview.anomalies) ? preview.anomalies : [];
+    var candidateAnomalies = anomalies.filter(function(anomaly) {
+      anomaly = anomaly || {};
+      var locations = sortedStrings(anomaly.stagedLocations || anomaly.sourceLocations);
+      return !!candidateIdSet[(anomaly.key || '').toString()] ||
+        !!candidateIdSet[(anomaly.paymentGroupId || '').toString()] ||
+        !!candidateLocations[(anomaly.key || '').toString()] ||
+        !!candidateLocations[(anomaly.sourceLocation || '').toString()] ||
+        locations.some(function(location) { return !!candidateLocations[location]; });
+    });
+    if (candidateAnomalies.length) {
+      return abort('Backfill dibatalkan: anomali melibatkan calon Ogos baris 69-71.', {
+        candidateAnomalies: candidateAnomalies,
+        anomalies: anomalies
+      });
+    }
+
+    var anomalyAllowed = anomalies.length === 1 &&
+      anomalies[0] &&
+      anomalies[0].type === allowedAnomaly.type &&
+      anomalies[0].key === allowedAnomaly.key &&
+      sameStrings(anomalies[0].stagedLocations, allowedAnomaly.stagedLocations) &&
+      sameStrings(anomalies[0].stagedHashes, allowedAnomaly.stagedHashes);
+    if (!anomalyAllowed) {
+      return abort('Backfill dibatalkan: set anomali tidak sepadan dengan allowlist yang diluluskan.', {
+        expectedAnomaly: allowedAnomaly,
+        anomalies: anomalies
+      });
+    }
+
+    return finish(syncCurrentMonthEbayarV2Core_(meta, true, paymentGroupIds));
+  } catch (err) {
+    return abort('Backfill gagal: ' + err.message);
+  }
+}
+
 function importAugust2026CatchupGuardedV2(params) {
   params = params || {};
   var allowWrite = params.allowWrite === true;
