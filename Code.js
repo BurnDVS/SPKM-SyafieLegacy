@@ -1835,6 +1835,28 @@ function syncNamaMuridToAllForms() {
   }
 }
 
+function normalizeLegacyEbayarName_(value) {
+  return (value || '').toString().trim().toUpperCase();
+}
+
+function getLegacyEbayarCalculationTabName_(bulan) {
+  var CALC_TAB_MAP = {
+    'JAN2026':   'CalculationJan2026',
+    'FEB2026':   'CalculationFeb2026',
+    'MAC2026':   'CalculationMac2026',
+    'APRIL2026': 'CalculationApril2026',
+    'MEI2026':   'CalculationMei2026',
+    'JUN2026':   'CalculationJun2026',
+    'JULAI2026': 'CalculationJulai2026',
+    'OGOS2026':  'CalculationOgos2026',
+    'SEPT2026':  'CalculationSept2026',
+    'OKT2026':   'CalculationOkt2026',
+    'NOV2026':   'CalculationNov2026',
+    'DIS2026':   'CalculationDis2026'
+  };
+  return CALC_TAB_MAP[normalizeLegacyEbayarName_(bulan)] || '';
+}
+
 function syncFormMinusBayar(params) {
   params = params || {};
   try {
@@ -1855,21 +1877,7 @@ function syncFormMinusBayar(params) {
       'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
     };
     if (!FORM_IDS[bulan]) return { success: false, message: 'Bulan tidak dikenali: ' + bulan };
-    var CALC_TAB_MAP = {
-      'JAN2026':   'CalculationJan2026',
-      'FEB2026':   'CalculationFeb2026',
-      'MAC2026':   'CalculationMac2026',
-      'APRIL2026': 'CalculationApril2026',
-      'MEI2026':   'CalculationMei2026',
-      'JUN2026':   'CalculationJun2026',
-      'JULAI2026': 'CalculationJulai2026',
-      'OGOS2026':  'CalculationOgos2026',
-      'SEPT2026':  'CalculationSept2026',
-      'OKT2026':   'CalculationOkt2026',
-      'NOV2026':   'CalculationNov2026',
-      'DIS2026':   'CalculationDis2026'
-    };
-    var calcTabNama = CALC_TAB_MAP[bulan];
+    var calcTabNama = getLegacyEbayarCalculationTabName_(bulan);
     if (!calcTabNama) return { success: false, message: 'Tab Calculation tidak dijumpai untuk: ' + bulan };
     var yuranSS   = SpreadsheetApp.openById(YURAN_SS_ID);
     var calcSheet = yuranSS.getSheetByName(calcTabNama);
@@ -1879,7 +1887,7 @@ function syncFormMinusBayar(params) {
     if (lastRow >= 2) {
       var calcData = calcSheet.getRange(2, 4, lastRow - 1, 1).getValues();
       calcData.forEach(function(r) {
-        var nama = (r[0] || '').toString().trim().toUpperCase();
+        var nama = normalizeLegacyEbayarName_(r[0]);
         if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
           dahBayarSet[nama] = true;
         }
@@ -1892,7 +1900,7 @@ function syncFormMinusBayar(params) {
     if (kanakSheet && kanakSheet.getLastRow() > 1) {
       var kData = kanakSheet.getRange(2, 1, kanakSheet.getLastRow() - 1, 19).getValues();
       kData.forEach(function(row) {
-        var n = (row[COL_KANAK.NAMA] || '').toString().trim().toUpperCase();
+        var n = normalizeLegacyEbayarName_(row[COL_KANAK.NAMA]);
         var s = (row[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
         if (n && (!s || s === 'AKTIF')) allNames.push(n);
       });
@@ -1901,7 +1909,7 @@ function syncFormMinusBayar(params) {
     if (dewasaSheet && dewasaSheet.getLastRow() > 1) {
       var dData = dewasaSheet.getRange(2, 1, dewasaSheet.getLastRow() - 1, 19).getValues();
       dData.forEach(function(row) {
-        var n = (row[COL_DEWASA.NAMA] || '').toString().trim().toUpperCase();
+        var n = normalizeLegacyEbayarName_(row[COL_DEWASA.NAMA]);
         var s = (row[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
         if (n && (!s || s === 'AKTIF')) allNames.push(n);
       });
@@ -1929,9 +1937,79 @@ function syncFormMinusBayar(params) {
   }
 }
 
+function getLegacyEbayarSubmittedNames_(e) {
+  var rawValues = [];
+  if (e && e.namedValues && e.namedValues['NAMA PENUH MURID']) {
+    rawValues = e.namedValues['NAMA PENUH MURID'];
+  }
+  if ((!rawValues || !rawValues.length) && e && e.values && e.values.length > 2) {
+    rawValues = [e.values[2]];
+  }
+  if ((!rawValues || !rawValues.length) && e && e.range) {
+    var row = e.range.getValues()[0] || [];
+    rawValues = [row[2]];
+  }
+  if (!Array.isArray(rawValues)) rawValues = [rawValues];
+
+  var names = [];
+  var seen = {};
+  (rawValues || []).forEach(function(value) {
+    (value || '').toString().split(',').forEach(function(part) {
+      var nama = normalizeLegacyEbayarName_(part);
+      if (nama && !seen[nama]) {
+        seen[nama] = true;
+        names.push(nama);
+      }
+    });
+  });
+  return names;
+}
+
+function waitForLegacyEbayarCalculationReady_(bulanKey, submittedNames) {
+  var calcTabNama = getLegacyEbayarCalculationTabName_(bulanKey);
+  if (!calcTabNama) {
+    return { ready: false, attempts: 0, missingNames: submittedNames || [], message: 'Tab Calculation tidak dikenali untuk ' + bulanKey + '.' };
+  }
+  if (!submittedNames || !submittedNames.length) {
+    return { ready: false, attempts: 0, missingNames: [], message: 'Nama murid tidak ditemui dalam event submission.' };
+  }
+
+  var maxAttempts = 6;
+  var intervalMs = 3000;
+  var missingNames = submittedNames.slice();
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
+    var calcSheet = yuranSS.getSheetByName(calcTabNama);
+    if (!calcSheet) {
+      return { ready: false, attempts: attempt, missingNames: missingNames, message: 'Tab ' + calcTabNama + ' tidak dijumpai.' };
+    }
+
+    var paidNames = {};
+    var lastRow = calcSheet.getLastRow();
+    if (lastRow >= 2) {
+      calcSheet.getRange(2, 4, lastRow - 1, 1).getValues().forEach(function(row) {
+        var nama = normalizeLegacyEbayarName_(row[0]);
+        if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') paidNames[nama] = true;
+      });
+    }
+    missingNames = submittedNames.filter(function(nama) { return !paidNames[nama]; });
+    if (!missingNames.length) return { ready: true, attempts: attempt, missingNames: [] };
+
+    Logger.log('onEbayarSubmit: Calculation belum sedia percubaan ' + attempt + '/' + maxAttempts +
+      ' untuk ' + bulanKey + '; belum kelihatan: ' + missingNames.join(', '));
+    if (attempt < maxAttempts) Utilities.sleep(intervalMs);
+  }
+
+  return {
+    ready: false,
+    attempts: maxAttempts,
+    missingNames: missingNames,
+    message: 'Calculation tidak sedia selepas ' + maxAttempts + ' percubaan; Form tidak dibina semula.'
+  };
+}
+
 function onEbayarSubmit(e) {
   try {
-    Utilities.sleep(3000);
     var bulanRaw = '';
     if (e && e.namedValues) {
       bulanRaw = (e.namedValues['BAYARAN YURAN BAGI BULAN'] || [''])[0];
@@ -1949,12 +2027,34 @@ function onEbayarSubmit(e) {
       'NOVEMBER': 'NOV2026', 'DISEMBER': 'DIS2026', 'DIS': 'DIS2026'
     };
     var bulanKey = BULAN_MAP[bulanRaw];
-    if (!bulanKey) { Logger.log('onEbayarSubmit: bulan tidak dikenali — ' + bulanRaw); return; }
+    if (!bulanKey) {
+      var monthFailure = { success: false, mode: 'LEGACY_EBAYAR_MONTH_UNKNOWN', message: 'Bulan tidak dikenali: ' + bulanRaw };
+      Logger.log('onEbayarSubmit: ' + monthFailure.message);
+      return monthFailure;
+    }
+
+    var submittedNames = getLegacyEbayarSubmittedNames_(e);
+    var readiness = waitForLegacyEbayarCalculationReady_(bulanKey, submittedNames);
+    if (!readiness.ready) {
+      var readinessFailure = {
+        success: false,
+        mode: 'LEGACY_EBAYAR_CALCULATION_NOT_READY',
+        bulan: bulanKey,
+        attempts: readiness.attempts,
+        missingNames: readiness.missingNames,
+        message: readiness.message
+      };
+      Logger.log('onEbayarSubmit readiness gagal: ' + JSON.stringify(readinessFailure));
+      return readinessFailure;
+    }
+
     Logger.log('onEbayarSubmit: syncFormMinusBayar untuk ' + bulanKey);
     var result = syncFormMinusBayar({ bulan: bulanKey });
     Logger.log('onEbayarSubmit result: ' + JSON.stringify(result));
+    return result;
   } catch (err) {
     Logger.log('onEbayarSubmit error: ' + err.message);
+    return { success: false, mode: 'LEGACY_EBAYAR_TRIGGER_ERROR', message: err.message };
   }
 }
 
