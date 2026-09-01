@@ -9619,11 +9619,7 @@ function getYuranParent(params) {
       { name: 'MEI2026',         label: 'Mei 2026' },
       { name: 'JUN2026',         label: 'Jun 2026' },
       { name: 'JULAI2026',       label: 'Julai 2026' },
-      { name: 'OGOS2026',        label: 'Ogos 2026' },
-      { name: 'SEPT2026',        label: 'September 2026' },
-      { name: 'OKT2026',         label: 'Oktober 2026' },
-      { name: 'NOV2026',         label: 'November 2026' },
-      { name: 'DIS2026',         label: 'Disember 2026' }
+      { name: 'OGOS2026',        label: 'Ogos 2026' }
     ];
 
     // BULAN_2026[b] maps to month index b (0=Jan … 11=Dis), all year 2026
@@ -9657,6 +9653,68 @@ function getYuranParent(params) {
         } catch (pe) { Logger.log('getYuranParent payment tab error ' + PAYMENT_TABS[p].name + ': ' + pe.message); }
       }
     }
+
+    // Native eBayar bermula September 2026. Hanya baca rekod selesai dari
+    // Payments; jangan gabungkan salinan migrasi Januari-Ogos.
+    var NATIVE_MONTHS_2026 = {
+      '2026-09': { label: 'September 2026' },
+      '2026-10': { label: 'Oktober 2026' },
+      '2026-11': { label: 'November 2026' },
+      '2026-12': { label: 'Disember 2026' }
+    };
+    var NATIVE_KEY_BY_LEGACY_2026 = {
+      'SEPT2026': '2026-09',
+      'OKT2026':  '2026-10',
+      'NOV2026':  '2026-11',
+      'DIS2026':  '2026-12'
+    };
+    var canonicalPaidByMonth = {};
+    var canonicalFound = [];
+    var canonicalFoundByKey = {};
+    var canonicalRows = getPaymentsRowsV2_().rows;
+    canonicalRows.forEach(function(r) {
+      var status = (r.STATUS || '').toString().trim().toUpperCase();
+      if (status !== 'SELESAI') return;
+      var bulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
+      var monthInfo = NATIVE_MONTHS_2026[bulanKey];
+      if (!monthInfo) return;
+      var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
+      if (!nama) return;
+
+      if (!canonicalPaidByMonth[bulanKey]) canonicalPaidByMonth[bulanKey] = {};
+      canonicalPaidByMonth[bulanKey][nama] = true;
+      if (keyword.length < 2 || nama.indexOf(keyword) === -1) return;
+
+      var resitUrl = (r.RESIT_URL || '').toString().trim();
+      var resultKey = nama + '|' + bulanKey;
+      var existing = canonicalFoundByKey[resultKey];
+      if (!existing) {
+        existing = { nama: nama, bulan: monthInfo.label, resitUrl: resitUrl };
+        canonicalFoundByKey[resultKey] = existing;
+        canonicalFound.push(existing);
+      } else if (!/^https:\/\//i.test(existing.resitUrl || '') && /^https:\/\//i.test(resitUrl)) {
+        existing.resitUrl = resitUrl;
+      }
+    });
+    found = found.concat(canonicalFound);
+
+    // Satu baris paparan bagi setiap murid + bulan. Jika terdapat lebih daripada
+    // satu rekod, utamakan URL resit HTTPS tanpa mendedahkan medan Payments lain.
+    var foundDeduped = [];
+    var foundByKey = {};
+    found.forEach(function(entry) {
+      var namaKey = normalizeYuranNameV2_(entry.nama);
+      var resultKey = namaKey + '|' + (entry.bulan || '').toString().trim().toUpperCase();
+      var existing = foundByKey[resultKey];
+      if (!existing) {
+        existing = { nama: entry.nama, bulan: entry.bulan, resitUrl: (entry.resitUrl || '').toString().trim() };
+        foundByKey[resultKey] = existing;
+        foundDeduped.push(existing);
+      } else if (!/^https:\/\//i.test(existing.resitUrl || '') && /^https:\/\//i.test(entry.resitUrl || '')) {
+        existing.resitUrl = (entry.resitUrl || '').toString().trim();
+      }
+    });
+    found = foundDeduped;
 
     // 2. SENARAI MURID AKTIF dari tab "NAMA MURID"
     //    Col B (index 0) = nama, Col F (index 4) = tarikh daftar
@@ -9714,6 +9772,15 @@ function getYuranParent(params) {
       var bulanKey      = BULAN_2026[b];
       var bulanMonthIdx = b; // 0=Jan, 1=Feb, ..., 11=Dis
       try {
+        var nativeBulanKey = NATIVE_KEY_BY_LEGACY_2026[bulanKey];
+        if (nativeBulanKey) {
+          var canonicalPaidSet = canonicalPaidByMonth[nativeBulanKey] || {};
+          belumBayar[bulanKey] = getEligibleYuranStudentsV2_('2026', nativeBulanKey)
+            .filter(function(student) { return !canonicalPaidSet[student.nama]; })
+            .map(function(student) { return student.nama; });
+          continue;
+        }
+
         var bSheet = ss.getSheetByName(bulanKey);
         if (!bSheet || bSheet.getLastRow() < 2) continue; // skip — tab tak wujud
 

@@ -6345,8 +6345,9 @@
       html += '<div class="esemak-result-name">&#x1F464; ' + escHtml(murid.nama) + '</div>';
       for (var j = 0; j < murid.payments.length; j++) {
         var pay = murid.payments[j];
-        var resitBtn = pay.resitUrl
-          ? '<a href="' + escHtml(pay.resitUrl) + '" target="_blank" class="btn btn-ghost btn-sm" style="margin:0; padding:4px 10px; font-size:12px;">&#x1F4C4; Resit</a>'
+        var receiptUrl = (pay.resitUrl || '').toString().trim();
+        var resitBtn = /^https:\/\//i.test(receiptUrl)
+          ? '<a href="' + escHtml(receiptUrl) + '" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" style="margin:0; padding:4px 10px; font-size:12px;">&#x1F4C4; Resit</a>'
           : '<span style="color:var(--text-muted); font-size:12px;">Tiada resit</span>';
         html += '<div class="esemak-payment-row">';
         html += '<span class="esemak-payment-bulan">&#x2705; ' + escHtml(pay.bulan) + '</span>';
