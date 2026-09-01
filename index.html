@@ -3507,7 +3507,7 @@
   </div>
   <div class="alert alert-error" id="syncMinusError" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">⚠</span>
-    <span>Gagal kemas form. Sila cuba semula.</span>
+    <span id="syncMinusErrorMsg">Gagal kemas form. Sila cuba semula.</span>
   </div>
   <div class="alert alert-error" id="syncError" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">⚠</span>
@@ -5709,14 +5709,28 @@
     );
   }
 
+  function getSyncFormMinusBayarErrorMessage(error) {
+    const fallback = 'Gagal kemas form. Sila cuba semula.';
+    if (!error) return fallback;
+    const message = typeof error === 'string'
+      ? error
+      : (typeof error.message === 'string' ? error.message : '');
+    return message.trim() || fallback;
+  }
+
   function syncFormMinusBayar() {
     const btn = document.getElementById('btnSyncMinusBayar');
     const ok  = document.getElementById('syncMinusSuccess');
     const err = document.getElementById('syncMinusError');
+    const errMsg = document.getElementById('syncMinusErrorMsg');
+    const showError = function(error) {
+      if (errMsg) errMsg.textContent = getSyncFormMinusBayarErrorMessage(error);
+      if (err) err.style.display = '';
+    };
     if (ok) ok.style.display = 'none';
     if (err) err.style.display = 'none';
     const bulan = document.getElementById('yuranBulan').value;
-    if (!bulan) { if (err) err.style.display = ''; return; }
+    if (!bulan) { showError(); return; }
     btn.disabled = true;
     btn.textContent = 'Sedang kemas...';
     callGAS('syncFormBulanIni', { bulan: bulan },
@@ -5728,13 +5742,13 @@
             '✅ Form ' + data.bulan + ' dikemaskini — ' + data.sudahBayar + ' nama disingkir, ' + data.namaInForm + ' nama tinggal dalam form.';
           if (ok) ok.style.display = '';
         } else {
-          if (err) err.style.display = '';
+          showError(data);
         }
       },
-      function() {
+      function(transportError) {
         btn.disabled = false;
         btn.textContent = '🧹 Kemas Form (Tolak Dah Bayar)';
-        if (err) err.style.display = '';
+        showError(transportError);
       }
     );
   }
