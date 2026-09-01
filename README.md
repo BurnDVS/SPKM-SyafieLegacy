@@ -4,17 +4,17 @@ SPKM ialah portal pengurusan kelas mengaji untuk pendaftaran murid, kehadiran, y
 
 ## Status Semasa
 
-Setakat checkpoint production 29 Ogos 2026:
+Setakat checkpoint production 1 September 2026:
 
 - PWA awam beroperasi seperti biasa dan telah disahkan secara visual.
 - eBayar legacy kekal digunakan untuk Januari hingga Ogos 2026.
-- Native eBayar disediakan untuk September 2026 dan bulan seterusnya, tertakluk kepada bulan semasa dan Portal Mode.
-- Portal Mode semasa ialah `AUTO`: legacy sebelum 1 September 2026 dan Native mulai tarikh tersebut.
-- Migrasi dan final reconciliation eBayar V2 Januari–Ogos telah selesai. Ogos berakhir `Synced` dan Legacy vs V2 `Match`: 102 paid, 84 unpaid, 186 murid dan RM3,580.
-- Guarded Auto Sync telah dikeraskan supaya confirmed write menggunakan exact preview IDs, mempunyai timeout/loading cleanup dan no-retry handling. Ujian regression: 7 lulus, 0 gagal.
-- Existing active Apps Script Web App telah dikemas kini in place kepada production **Version 176**; URL sedia ada dikekalkan.
-- Kod Native eBayar Phase 2A/2B berada dalam production, tetapi belum dibuktikan dengan transaksi Native sebenar. Milestone seterusnya ialah satu transaksi terkawal pada atau selepas 1 September 2026.
-- `origin/main` berada pada `01e8634`; `pages/main` kekal pada `db87448` kerana tiada perubahan public PWA diperlukan.
+- Native eBayar bermula September 2026 dan dibenamkan terus dalam PWA; bulan akan datang kekal tertakluk kepada sempadan bulan semasa.
+- Ibu bapa tidak perlu log masuk. Semakan bayaran dan resit dibuat melalui eSemak awam, manakala login Guru/Admin kekal berasingan.
+- eSemak dan Dashboard Yuran menggunakan sumber hybrid: Januari–Ogos daripada sumber legacy, September–Disember daripada canonical `Payments` dengan status tepat `SELESAI`.
+- Ogos Legacy dan V2 telah direconcile sepenuhnya: 109 sudah bayar, 77 belum bayar, 186 murid dan RM3,760.
+- September Native telah production-verified: 15 sudah bayar, 171 belum bayar, 186 murid dan kutipan RM600; nama serta pautan resit dipaparkan dengan betul.
+- Existing active Apps Script Web App ialah production **Version 184** pada deployment/URL sedia ada.
+- Portal Mode kekal `AUTO`: legacy sebelum 1 September 2026 dan Native mulai tarikh tersebut.
 
 Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md) sebelum memulakan kerja atau deployment seterusnya.
 

@@ -2,7 +2,7 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 30 Ogos 2026.** `origin/main` berada pada `076f68a`; production `pages/main` berada pada `7b5476e`. Apps Script production ialah Version 177 dan mengandungi Native Slides receipt. August V2 ialah 67/67 groups `Synced` dan Legacy vs V2 `Match`. Transaksi Native sebenar pertama masih pending pada atau selepas 1 September. Lihat `CURRENT_STATUS.md` untuk handoff penuh. Nota lama di bawah ialah rekod sejarah dan tidak mengatasi checkpoint ini.
+> **Checkpoint berkuat kuasa: 1 September 2026.** `origin/main` berada pada `0c3a355`; Apps Script production ialah Version 184 pada existing deployment identity dan `/exec` URL. Native September serta hybrid eSemak/dashboard telah production-verified. Ogos Legacy dan V2 fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Lihat `CURRENT_STATUS.md`; nota lama di bawah ialah sejarah dan tidak mengatasi checkpoint ini.
 
 ---
 
@@ -62,7 +62,7 @@ Lepas tu push semula, login sebagai `BurnDVS` bila diminta.
 
 Current remote checkpoints:
 
-- `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `076f68a`.
+- `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `0c3a355`.
 - `pages`: `https://github.com/shafielegacy/SPKM.git`, production `pages/main` at `7b5476e`.
 
 ### Aliran push yang selamat
@@ -136,7 +136,7 @@ Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di de
 | Owner akaun | `shafielegacykelasmengaji@gmail.com` |
 | Buka editor | `clasp open` atau `https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit` |
 
-`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App kini Version 177 pada deployment ID dan `/exec` URL yang sama; description ialah `SPKM Native eBayar production - September 2026`. Slides receipt source termasuk dalam Version 177.
+`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App ialah Version 184 pada deployment ID `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1`; deployment identity dan `/exec` URL dikekalkan. Web App executes as `USER_DEPLOYING` di bawah owner `shafielegacykelasmengaji@gmail.com`.
 
 ### 🚨 LANGKAH WAJIB lepas `clasp push`
 `clasp push` HANYA update editor/source Apps Script — ia **TIDAK** mengubah production behavior dan **TIDAK** menukar URL Web App production.
@@ -158,16 +158,18 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 |---|---|---|
 | SPKM Main DB (+ eBayar 2025) | `1QUlrgUeuVI0AVkid1LqXqL7-aQnRHh0ciYXxuhq6otU` | **Satu fail multi-purpose**: Maklumat Guru, PendaftaranBaru, KelasDewasa, Kehadiran (Fasa 1 data) **DAN** tab eBayar 2025 (Mei–Dis) — sebab semua pendaftaran murid baru (kanak-kanak & dewasa) masuk sini, jadi data yuran 2025 sekali dalam fail ni. Tab `LogPertukaranGuru` (ditambah 30 Jun 2026) — log audit Pertukaran Guru, 7 kolum: `Timestamp \| Admin \| Guru Lama \| Guru Baru \| Nama Murid \| Jenis Murid \| Bil` |
 | eBayar 2026 (Jan–present) — `YURAN_SS_ID` | `1AUH-ZwrbDjB5l2J5H8t2MBlbzkITMJp66J2VDLZF9CM` | Tab per bulan (JAN2026...DIS2026), NAMA MURID, Calculation* |
-| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Migrasi/reconciliation Januari–Ogos 2026 selesai dan Version 177 deployed; real Native first-transaction verification masih pending. |
+| eBayar Master V2 — `EBAYAR_MASTER_SS_ID` | Script Property | Canonical `Payments` table. Ogos fully reconciled; Native September dan receipt links production-verified pada Version 184. |
 | Kehadiran — `KEHADIRAN_SS_ID` | `1qez9OLXmJuU0nFCBnbuZqjc_DnTJh7kMElqCRnxK7F4` | Satu tab per guru, scan via `cariTabGuru()`. Tab kini boleh ada 9 kolum (A–G original + H=`Guru Tetap`, I=`Guru Hadir`, ditambah 30 Jun 2026 untuk sokongan relief/backup guru). Tab lama auto-upgrade header H/I bila pertama kali terima rekod relief; data sedia ada (sebelum upgrade) kosong untuk 2 kolum ni — itu normal. |
 | Sijil Khatam | `1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU` | Tab "Khatam Iqra'" + "Khatam Quran" |
 
 ### eBayar Master / Native eBayar — Current Checkpoint
 
 - Januari–Ogos 2026 kekal legacy-only. Native eBayar bermula September 2026.
-- Migrasi/reconciliation V2 Januari–Ogos selesai. Final 30 Ogos: 67 source groups, 67 existing, 0 new dan 0 new child rows, status `Synced`; Legacy vs V2 `Match`, 104 paid, 82 unpaid, 186 total dan RM3,640.
+- Migrasi/reconciliation V2 Januari–Ogos selesai. Final 1 September: 70 source/existing groups, 0 new/changed, 109 paid, 77 unpaid, 186 active students dan RM3,760; Legacy/V2 diffs semuanya sifar dan kedua-dua name-only sets kosong.
 - Snapshot 16 Ogos (46 groups, 69 child rows, RM2,520 melalui source row 47) telah digantikan oleh final sync 29 Ogos: 20 groups, 34 child rows dan RM1,060 ditambah sekali sahaja.
-- Satu anomali sejarah kekal: `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112`; tidak berkaitan catch-up Julai/Ogos.
+- Canonical Ogos sebelum repair berhenti pada source row 68. Groups 69–71 (3 groups, 5 child rows, RM120) ditambah melalui one-time guarded editor backfill menggunakan existing core. Post-write: 70 existing, 0 new/changed, 0 projected rows/RM0, highest row 71. Helper dan dedicated test sudah dibuang.
+- `OGOS2026`: 70 response groups, 110 child-name occurrences dan 109 distinct paid names. PADILLAH mempunyai dua genuine submissions/receipts; kedua-duanya kekal dalam collection. Calculation spill boleh merangkumi inactive records, manakala dashboard menggunakan active roster.
+- Satu anomali sejarah berasingan kekal pada `PG-2026-JUN2026-112`: same payment/source identity dengan hashes `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` dan `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`. Ia bukan multi-child normal dan jangan dipadam tanpa reconciliation khusus.
 - Portal Mode: `AUTO`, `LEGACY`, `NATIVE`, `BOTH`; property `EBAYAR_PORTAL_MODE`, fallback `AUTO`, cutoff `2026-09-01` MYT. Audit menggunakan `EBAYAR_PORTAL_MODE_UPDATED_AT` dan `EBAYAR_PORTAL_MODE_UPDATED_BY`.
 - Current configured mode telah dipulihkan kepada `AUTO`: sebelum 1 September resolve `LEGACY`; mulai 1 September resolve `NATIVE` mengikut Malaysia time.
 - Native identity: `KANAK:<BIL>` / `DEWASA:<BIL>`. MyKid/MyKad tidak digunakan sebagai public selector. Native duplicate check menggunakan `STUDENT_ID`; historical blank IDs menggunakan conservative normalized-name fallback.
@@ -181,10 +183,13 @@ Ini mengemas kini existing active Web App deployment kepada versi source baharu 
 - Preview September sintetik dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya dan menggunakan real Slides-to-PDF path tanpa payment row atau production receipt record.
 - Auto Sync hardening `391f164` binds exact confirmed preview IDs, validates 1–25 unique IDs, rejects stale IDs, adds a 120-second settlement timeout and preserves no-retry handling. Full local suite selepas Slides work: 14 passed, 0 failed.
 - Tambahan 30 Ogos: satu August group, 2 child rows dan RM60.00, disync sekali walaupun browser transport uncertain. Tiada retry; refresh mengesahkan 67 existing, 0 new dan Legacy vs V2 `Match`.
-- Production Version 177 (`SPKM Native eBayar production - September 2026`) menggunakan existing deployment identity dan `/exec` URL serta merangkumi Slides receipt implementation.
+- Production progression 1 September: V180 eSemak hybrid, V181 legacy Form readiness, V182 Admin dashboard hybrid, V183 Form sync observability/read-back verification, V184 Google Forms OAuth scope.
 - GitHub Pages routing: Januari–Ogos kekal pada original Legacy Google Forms. September–Disember membuka production `/exec` mengikut Malaysia time: September pada 1 September, Oktober pada 1 Oktober, November pada 1 November dan Disember pada 1 Disember 2026. Future months disabled dan tiada public `/dev` route.
 - PWA Dashboard Yuran memaparkan shortcut `eBayar V2 Maintenance` hanya kepada authenticated `ADMIN`, membuka production `/exec` dalam protected new tab. Backend Admin authorization kekal authoritative. Full maintenance UI kekal di Apps Script portal; exact duplicate dalam PWA ialah optional future scope.
-- Tiada real Native payment, upload atau receipt test lagi; milestone pertama kekal pending pada atau selepas 1 September.
+- Parents menggunakan public eSemak tanpa login; Guru/Admin login kekal berasingan. `getYuranParent` membaca legacy sources bagi Jan–Ogos dan canonical exact-`SELESAI` bagi Sep–Dis. `getYuranStats` dispatch ke legacy bagi Jan–Ogos dan `getYuranStatsV2()` bagi Sep–Dis.
+- September production verified: 15 paid, 171 unpaid, 186 active students dan RM600; names dan HTTPS receipt links betul.
+- Legacy Form sync menggunakan bounded Calculation readiness kira-kira 15 saat, fail-closed stale handling, surfaced backend/transport errors dan post-write read-back verification. Diagnostic fields ialah `action`, `month`, `formId`, `calculationTab`, `paidCount`, `generatedChoiceCount`, `readBackChoiceCount`, `paidNamesPresentCount`, `verificationResult`.
+- Manifest scope `https://www.googleapis.com/auth/forms` berada dalam Version 184. One-time owner editor check (`authorizationStatus=NOT_REQUIRED`, Form title `eBAYAR MENGAJI OGOS 2026`, 6 items) mengesahkan consent sebelum production Admin Form sync berjaya; helper itu bukan permanent feature.
 
 Schema `Payments`:
 
@@ -321,8 +326,8 @@ Pattern yang digunakan:
 | 7 | Sijil Khatam panel | ✅ Selesai |
 | 8 | Laporan Tahunan | QUEUE |
 | 9 | Canonical eBayar Master + migrasi sejarah Januari–Ogos 2026 | ✅ Selesai dan reconcile |
-| 10 | Dashboard Analisa Yuran | V2 readers/maintenance production tersedia; first Native transaction masih pending |
-| 11 | eSemak upgrade utk spreadsheet baru | V2 read path production tersedia; first Native transaction masih pending |
+| 10 | Dashboard Analisa Yuran | ✅ Hybrid legacy/Native production-verified |
+| 11 | eSemak upgrade utk spreadsheet baru | ✅ Hybrid sources dan Native receipt links production-verified |
 | 12 | Murid Tanpa Guru — assign guru pukal (page Kehadiran) | ✅ Selesai (16 Jul 2026) |
 | 13 | Statistik Kehadiran admin view — guru lookup gap (`getKehadiranStats` hardcode `guru:''` untuk admin branch) | QUEUE — prompt dah dihantar, belum verify/deploy |
 | 14 | Normalize double-whitespace nama murid (`KEHADIRAN_SS_ID`) | QUEUE |
@@ -383,7 +388,7 @@ Pattern yang digunakan:
 
 ---
 
-*Last updated: 30 Ogos 2026 (production Version 177, Pages Native routing/admin shortcut published, 67-group August reconciliation and pending first Native transaction; older queue logs below are historical)*
+*Last updated: 1 September 2026 (production Version 184, Native September verified, Ogos 70-group full reconciliation; older queue logs below are historical)*
 ## Historical Archive — Queue #9 Staging Logs
 
 Semua seksyen di bawah ialah log progres 1–2 Julai 2026. Ia dikekalkan untuk audit tetapi telah digantikan oleh status migrasi/reconciliation Januari–Ogos dalam `CURRENT_STATUS.md`.

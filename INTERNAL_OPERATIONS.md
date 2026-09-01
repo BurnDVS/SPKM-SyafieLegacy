@@ -18,7 +18,7 @@ Maklumat sensitif seperti credential sebenar dan token tidak boleh dimasukkan ke
 | Deploy mobile | Push ke `origin` dan `pages` |
 
 Nota penting:
-- Current source checkpoint ialah `0b1d10b`; `origin/main` aligned pada commit itu. Native Slides receipt implementation ialah `15d7991` dan previous documentation checkpoint ialah `fd3203c`. `pages/main` sengaja kekal pada `db87448` kerana tiada public PWA source change.
+- Current source checkpoint ialah `0c3a355`; `origin/main` aligned pada commit itu. Production Apps Script ialah Version 184 pada existing deployment ID dan `/exec` URL yang dikekalkan.
 - Push ke `origin` tidak update production Pages. Fetch kedua-dua remote, semak divergence dan hanya kemudian gunakan explicit `git push pages main:main`.
 - Jangan stage semua fail secara membuta tuli; semak dirty worktree dan stage fail yang diluluskan sahaja.
 - Bila deploy GAS, pastikan deployment type ialah **Web App**, bukan Library.
@@ -41,7 +41,7 @@ Fallback jika `clasp login` gagal:
 | Peranan | Akses | Cara Masuk |
 |---|---|---|
 | Guru / Admin | Dashboard penuh | Email + No. WhatsApp |
-| Ibu Bapa / Wali | Portal daftar sahaja | Tanpa login |
+| Ibu Bapa / Wali | Portal daftar dan eSemak awam | Tanpa login |
 | Murid Dewasa | Portal daftar sahaja | Tanpa login |
 
 ---
@@ -146,14 +146,15 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 
 #### eBayar V2 — Current Operational State
 
-Checkpoint 30 Ogos 2026 (snapshot 16 dan 29 Ogos di bawah kekal sebagai sejarah):
+Checkpoint 1 September 2026 (snapshot 16, 29 dan 30 Ogos di bawah kekal sebagai sejarah):
 
 - Januari–Ogos 2026 ialah legacy-only. Native eBayar bermula September 2026.
-- Migration/reconciliation V2 Januari–Ogos telah selesai. Final Ogos ialah 104 paid, 82 unpaid, 186 total dan RM3,640 dengan Legacy vs V2 `Match`.
+- Ogos Legacy dan V2 kini fully reconciled: 109 paid, 77 unpaid, 186 active roster dan RM3,760; semua numeric diffs sifar, `onlyLegacy=[]` dan `onlyV2=[]`.
 - Julai catch-up: 39 source groups, 60 child rows, RM1,870. Final July: 71/71 groups unchanged, 0 changed, 0 new.
-- Snapshot 16 Ogos melalui source row 47 ialah 46 groups, 69 child rows dan RM2,520. Pada 29 Ogos, 20 genuinely-new groups menghasilkan 34 child rows dan RM1,060; sync dijalankan sekali dan status menjadi 66 existing. Pada 30 Ogos, satu lagi real August group dengan 2 child rows dan RM60.00 disync sekali. Browser response uncertain, jadi tiada retry; refresh mengesahkan 67 source/67 existing, 0 new, 0 new child rows dan `Synced`.
-- September legacy ialah header-only; tiada legacy import September diperlukan.
-- Historical anomaly `GROUP_ID_MULTIPLE_STAGED_HASHES` pada `PG-2026-JUN2026-112` kekal untuk audit dan tidak berkaitan catch-up Julai/Ogos.
+- Snapshot 16–30 Ogos berakhir pada 67 groups/104 paid/RM3,640 dan kini historical. Audit 1 September mendapati canonical Ogos berhenti di source row 68; rows 69–71 ialah 3 groups, 5 child rows dan RM120.
+- One-time guarded editor backfill menggunakan core sync sedia ada dan menambah tepat 3 groups/5 rows/RM120. Post-write preview ialah 70 unchanged existing, 0 changed/new, 0 projected rows/RM0 dan highest source row 71. Helper serta dedicated test telah dibuang selepas verification dan bukan production behavior kekal.
+- `OGOS2026` mempunyai 70 response/payment groups, 110 child-name occurrences dan 109 distinct paid students. PADILLAH mempunyai dua genuine submissions/receipts; kedua-dua amaun kekal dalam total collection. Calculation registered spill boleh termasuk inactive records, sedangkan dashboard menggunakan active roster 186.
+- Historical anomaly `PG-2026-JUN2026-112` kekal sebagai maintenance item berasingan. Ia bukan multi-child normal: satu payment/source identity mempunyai hashes `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` dan `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`. Jangan delete mana-mana row tanpa reconciliation khusus.
 
 Canonical `Payments` schema:
 
@@ -170,10 +171,28 @@ Maintenance berada dalam panel Yuran yang authenticated, kelihatan kepada admin 
 - Write path menggunakan ScriptLock, fresh post-lock source reread/TOCTOU validation, final staging recheck dan satu bulk `setValues()`.
 - Semua conflict dikumpul sebelum write; tiada partial-write loop.
 - Selepas write, staging diverifikasi. Jika hasil write tidak pasti, jangan jalankan sync kali kedua sebelum rekod disemak.
-- Last August state: 67 source groups, 67 existing, 0 new, 0 new child rows, projected RM0, status `Synced`.
+- Current August state: 70 source groups, 70 existing, 0 new/changed, 0 projected child rows, projected RM0, highest staged source row 71.
 - Confirmed write mesti membawa immutable exact `selectedPaymentGroupIds` daripada preview. Backend memerlukan 1–25 ID non-empty/unique dan menolak ID yang tidak lagi genuinely new.
 - Frontend mempunyai settlement timeout 120 saat, sentiasa membersihkan loading state dan menghalang duplicate click.
 - Jika browser melaporkan outcome tidak pasti, jangan retry. Refresh authoritative maintenance status dan periksa staging dahulu. Sync 29 dan 30 Ogos membuktikan prosedur ini: browser uncertain, backend write disahkan complete melalui fresh status, dan tiada retry dibuat.
+
+#### Hybrid eSemak dan Admin Dashboard
+
+- Parents tidak login; mereka menggunakan public eSemak. Guru/Admin login kekal berasingan.
+- Public action `getYuranParent`: Januari–Ogos membaca legacy monthly sources; September–Disember membaca canonical `Payments` dan hanya exact `STATUS=SELESAI`.
+- Canonical receipt hanya dirender sebagai link apabila HTTPS. September names dan receipt links telah production-verified.
+- Frontend action `getYuranStats` kekal. Backend dispatch Januari–Ogos kepada existing legacy `getYuranStats()`, dan September–Disember kepada canonical `getYuranStatsV2()`.
+- September production verification: 15 paid, 171 unpaid, 186 active students dan RM600; nama serta receipt links betul.
+
+#### Legacy Google Form Sync Hardening
+
+- `onEbayarSubmit` tidak lagi bergantung hanya pada `sleep(3000)`. Nama submission dinormalize dan readiness Calculation dicuba berulang kali sehingga kira-kira 15 saat.
+- Form hanya dibina semula apabila semua submitted paid names sudah kelihatan dalam Calculation. Timeout readiness gagal tertutup tanpa rebuild stale choices.
+- Manual Admin sync memaparkan backend message dan transport error sebenar dengan fallback generik hanya jika tiada mesej berguna.
+- Selepas `setChoiceValues()`, pilihan dibaca semula; count mesti sepadan dan semua paid names mesti tiada.
+- Diagnostic fields: `action`, `month`, `formId`, `calculationTab`, `paidCount`, `generatedChoiceCount`, `readBackChoiceCount`, `paidNamesPresentCount`, `verificationResult`.
+- Pada 1 September, kegagalan production berpunca daripada owner deployment belum memberi consent scope Forms, bukan sync algorithm. Manifest kini mengandungi `https://www.googleapis.com/auth/forms`; Web App executes as `USER_DEPLOYING`.
+- One-time read-only editor authorization check di bawah `shafielegacykelasmengaji@gmail.com` mengembalikan `authorizationStatus=NOT_REQUIRED`, title `eBAYAR MENGAJI OGOS 2026`, dan `itemCount=6`. Selepas authorization, `Kemas Form (Tolak Dah Bayar)` berjaya. Helper diagnostic itu tidak dikekalkan sebagai feature production.
 
 #### Portal Mode Operations
 
@@ -221,24 +240,19 @@ Drive controls:
 - `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID`: must point to a preview-only folder different from the production receipt folder.
 - Safe preview helper: `testCreateNativeEbayarReceiptSlidesPreviewV2`. It uses two synthetic September children and RM100.00, adds `CONTOH / TIDAK SAH`, exercises the real Slides-to-PDF path and does not write payment rows or `RESIT_URL`. The synthetic preview completed successfully.
 
-Validation checkpoint: full local suite 14 passed, 0 failed; `Code.js` syntax, Slides preview generation, `/dev` smoke test and Auto Sync preview/cancel passed. Apps Script `@HEAD` is current, but production remains unchanged at Version 176 and the later Slides source is not yet production-active.
+Production checkpoint 1 September: Version 184 pada existing deployment identity. Version progression: 180 eSemak hybrid, 181 Form readiness, 182 Admin dashboard hybrid, 183 Form sync observability/read-back verification, 184 explicit Google Forms OAuth scope.
 
-#### September First-Transaction Checklist
+#### September Production Monitoring Checklist
 
-1. Confirm repository, dirty worktree, `origin/main` at `0b1d10b` and intentional `pages/main` at `db87448`.
-2. Confirm production Version 176 remains active on the existing deployment URL.
-3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE` on or after 1 September.
+1. Confirm repository, dirty worktree and `origin/main` at `0c3a355`; inspect Pages separately before any push.
+2. Confirm production Version 184 remains active on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
+3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE`.
 4. Verify both configured Drive folder IDs and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`; confirm the slip and receipt folders remain Restricted.
-5. Choose one genuinely unpaid official student.
-6. Use a small valid bank slip and submit exactly once.
-7. If the browser outcome is uncertain, stop; inspect `Payments` and Drive artifacts before considering any retry.
-8. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable IDs, amount semantics, status/source fields and no duplicates.
-9. Verify the bank slip and its folder remain private/restricted.
-10. Verify exactly one final receipt PDF is created.
-11. Verify all child rows share the same `RESIT_URL`.
-12. Verify the temporary Google Slides copy is trashed.
-13. Exercise the receipt read/generation path again to confirm idempotency without a second payment or receipt.
-14. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
+5. Compare September eSemak and Admin dashboard against canonical exact-`SELESAI` rows; current verified totals are 15/171/186/RM600.
+6. If a browser outcome is uncertain, stop; inspect `Payments` and Drive artifacts before considering any retry.
+7. Keep slip storage private and expose only final HTTPS receipt PDFs.
+8. Treat `PG-2026-JUN2026-112` as a separate audit; do not delete either historical row without reconciliation.
+9. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 #### Failure and Rollback Rules
 

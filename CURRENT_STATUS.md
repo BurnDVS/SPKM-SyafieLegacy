@@ -1,6 +1,6 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 30 August 2026, Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 1 September 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
@@ -10,14 +10,14 @@ This file is the primary continuity handoff. Historical plans and staging logs r
 
 - Workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
 - Branch: `main`
-- HEAD: `076f68a` (`feat: prepare native ebayar routing and admin shortcut`)
+- HEAD: `0c3a355` (`chore: remove completed Ogos backfill helper`)
 - Native Slides receipt implementation: `15d7991` (`feat: generate native ebayar receipts from slides template`)
 - Previous documentation checkpoint: `fd3203c` (`docs: record native ebayar production readiness`)
 - Auto Sync hardening: `391f164` (`fix: harden ebayar v2 auto sync`)
 - Development/source remote: `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`
 - Production Pages remote: `pages` → `https://github.com/shafielegacy/SPKM.git`
 - Public PWA: `https://shafielegacy.github.io/SPKM`
-- `origin/main` is aligned at `076f68a`.
+- `origin/main` is aligned at `0c3a355`.
 - Production `pages/main` is at `7b5476e` (`feat: route PWA eBayar to native portal`).
 - Pages was published from the separate detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` using `git push pages HEAD:main`.
 
@@ -29,19 +29,21 @@ Pushing `origin` does not update GitHub Pages. Before any future Pages push, fet
 - `.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js`; `.claspignore` must continue to exclude `tests/**`.
 - Apps Script `@HEAD` is up to date with local source through the latest clasp push.
 - During the first hardening source push, `tests/ebayar-v2-auto-sync.test.js` was accidentally included because `tests/**` was missing from `.claspignore`. The exclusion was added, the test file was removed manually from Apps Script, and a fresh clone confirmed that only the four intended source files remained. This deployment-hygiene incident is resolved.
-- The existing production Web App deployment is now **Version 177**.
-- Deployment description: `SPKM Native eBayar production - September 2026`.
-- The existing deployment ID and `/exec` URL were preserved; no new deployment URL was created.
-- Version 177 includes the Slides-template Native receipt implementation.
+- The existing production Web App deployment is now **Version 184**.
+- Deployment ID remains `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1`; its `/exec` URL and deployment identity were preserved.
+- The Web App executes as `USER_DEPLOYING`; deployment owner is `shafielegacykelasmengaji@gmail.com`.
+- Production progression on 1 September: Version 180 eSemak hybrid, Version 181 legacy Form readiness hardening, Version 182 Admin Yuran hybrid dashboard, Version 183 Form sync observability/verification, and Version 184 Google Forms OAuth scope.
 
 ## 3. Public Safety State
 
 - Production GitHub Pages is published at `7b5476e` from the separate Pages worktree.
-- Apps Script production is Version 177 and includes the Slides-template receipt implementation.
+- Apps Script production is Version 184 and includes Native eBayar, hybrid readers, Form sync hardening and the Slides-template receipt implementation.
 - Portal Mode is `AUTO`.
 - `AUTO` resolves to `LEGACY` before 1 September 2026 and to `NATIVE` from 1 September 2026 onward in Malaysia time.
-- Production Version 177 is active on the preserved `/exec` URL. Portal Mode was restored to `AUTO`; it resolves to `LEGACY` before 1 September and `NATIVE` from 1 September in Malaysia time.
-- August production status is `Synced`: 67 source groups, 67 existing, 0 new, 0 new child rows, Legacy vs V2 `Match`, 104 paid, 82 unpaid, 186 total students and RM3,640 collection.
+- Production Version 184 is active on the preserved `/exec` URL. Portal Mode is `AUTO`; it resolves to `NATIVE` from 1 September in Malaysia time.
+- Native eBayar is live and embedded in the PWA. Parents use public eSemak without login; Guru/Admin login remains separate.
+- September production verification: 15 paid, 171 unpaid, 186 active students and RM600 collection. Names and HTTPS receipt links display correctly.
+- Ogos production status is fully reconciled: 70 response/payment groups, 109 distinct paid students, 77 unpaid, 186 active students and RM3,760 collection.
 
 ## 4. eBayar V2 Migration and Reconciliation
 
@@ -53,10 +55,14 @@ January–August 2026 legacy history remains authoritative. The corresponding V2
 - Before the final 29 August sync, `OGOS2026` contained 66 source groups: 46 existing, 20 genuinely new, 0 manual review, 34 projected child rows and RM1,060 projected amount.
 - The guarded Auto Sync was authorized and executed once. The browser reported an uncertain connection outcome, but a fresh authoritative status confirmed that the backend write completed. No retry was performed.
 - The 29 August result above remains a historical checkpoint. On 30 August, one additional real August legacy payment group containing 2 child rows and RM60.00 was synced once. The browser transport response was uncertain, so no retry was made; refresh confirmed the write.
-- Final 30 August state: 67 source groups, 67 existing, 0 new, 0 new child rows and status `Synced`.
-- Final Legacy vs V2 reconciliation: `Match`; 104 paid, 82 unpaid, 186 total students and RM3,640 collection.
-- September legacy source is header-only. No September legacy migration is required at this checkpoint.
-- Known historical anomaly: `GROUP_ID_MULTIPLE_STAGED_HASHES` for `PG-2026-JUN2026-112`. It was investigated and is unrelated to the July/August catch-ups.
+- The 30 August state of 67 groups, 104 paid and RM3,640 is a superseded historical checkpoint.
+- On 1 September, canonical `Payments` was found to stop at Ogos source row 68. Missing groups `PG-2026-OGOS2026-69`, `-70` and `-71` represented 3 groups, 5 child rows and RM120.
+- A one-time guarded editor-only backfill delegated to `syncCurrentMonthEbayarV2Core_(meta, true, paymentGroupIds)`. It appended exactly 3 groups, 5 child rows and RM120; post-write verification found 70 existing, 0 new, 0 changed-existing, all selected groups present and source groups unchanged.
+- Final preview: 70 unchanged existing groups, 0 changed/new groups, 0 projected child rows, RM0 projected and highest existing source row 71. The temporary helper and its dedicated test were removed after verification; they are not permanent production behavior.
+- Final Legacy and V2 metrics both equal 109 paid, 77 unpaid, 186 total and RM3,760. All numeric diffs are zero; `onlyLegacy` and `onlyV2` are empty. Ogos Legacy and canonical V2 are fully reconciled.
+- `OGOS2026` contains 70 response/payment groups and 110 child-name occurrences representing 109 distinct paid names. PADILLAH appears twice because of two genuine submissions/receipts; both amounts remain in collection totals.
+- `CalculationOgos2026` may show a larger registered spill because it includes currently inactive records; the production dashboard uses the 186-member active roster.
+- Separate unresolved maintenance item: `PG-2026-JUN2026-112` has the same payment/source identity with two staged hashes (`c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` and `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`). This is not normal multi-child behavior, was not modified during the Ogos repair, and must not be deleted without separate reconciliation.
 
 Canonical `Payments` schema:
 
@@ -84,7 +90,16 @@ The generic current-month sync engine:
 
 The original `/dev` defect combined a lost preview-ID handoff with an unbounded Promise wait. Action naming and backend routing were already correct. Commit `391f164` corrected the request contract and loading cleanup; `tests/ebayar-v2-auto-sync.test.js` passed 7 tests with 0 failures.
 
-The 29 and 30 August uncertain browser responses demonstrated the intended no-retry procedure: inspect fresh authoritative staging/status first, and never repeat a potentially completed write merely because the browser response was uncertain. The 30 August refresh confirmed 67 existing groups and 0 new groups.
+The 29 and 30 August uncertain browser responses demonstrated the intended no-retry procedure: inspect fresh authoritative staging/status first, and never repeat a potentially completed write merely because the browser response was uncertain.
+
+Legacy Form synchronization is now hardened:
+
+- `onEbayarSubmit` no longer relies only on fixed `sleep(3000)`; it retries Calculation readiness for approximately 15 seconds maximum.
+- Every submitted normalized paid name must appear in the relevant Calculation source before Form choices are rebuilt. If readiness never arrives, sync fails closed without rebuilding from stale data.
+- Manual Admin sync surfaces backend and transport messages rather than silently reporting success.
+- After `setChoiceValues()`, choices are read back and verified for count and absence of paid names.
+- Diagnostics record `action`, `month`, `formId`, `calculationTab`, `paidCount`, `generatedChoiceCount`, `readBackChoiceCount`, `paidNamesPresentCount` and `verificationResult`.
+- The initial 1 September production failure was an owner OAuth issue, not an algorithm failure. Manifest scope `https://www.googleapis.com/auth/forms` is explicit in Version 184. A one-time read-only editor check under the deployment owner returned `authorizationStatus=NOT_REQUIRED`, Form title `eBAYAR MENGAJI OGOS 2026`, and 6 items. Production `Kemas Form (Tolak Dah Bayar)` then updated the Ogos Form successfully. The temporary authorization helper is not a permanent production feature.
 
 ## 6. Portal Mode
 
@@ -111,6 +126,15 @@ Allowed modes are `AUTO`, `LEGACY`, `NATIVE` and `BOTH`.
 - The unpaid-only lookup is a UX filter; backend preflight and locked duplicate checks remain authoritative.
 - Future-month submission remains blocked.
 - Do not introduce or use a testing bypass merely to submit before September.
+
+Public payment readers use a deliberate hybrid boundary:
+
+- Public frontend action remains `getYuranParent`; no parent authentication is required.
+- January–August 2026 read the existing legacy monthly payment sources unchanged.
+- September–December 2026 read canonical `Payments`, accepting only exact `STATUS=SELESAI` rows.
+- Valid canonical HTTPS receipt URLs are returned and rendered safely; September names and receipt links are production-verified.
+- Admin frontend action remains `getYuranStats`. January–August dispatch to existing legacy `getYuranStats()`, while September–December dispatch to canonical `getYuranStatsV2()`.
+- September Admin verification matches eSemak: 15 paid, 171 unpaid, 186 active students and RM600.
 
 ## 8. Native Student Identity
 
@@ -168,7 +192,7 @@ Frontend handling:
 - `receiptReady: false` reports that payment succeeded but the receipt is unavailable.
 - Neither path retries the payment.
 
-The synthetic September preview generated successfully through the real Slides-to-PDF path using two sample children and RM100.00, with an obvious `CONTOH / TIDAK SAH` indication. It created no payment row or production receipt record. Full local validation passed 14 tests with 0 failures; `Code.js` syntax, `/dev` smoke testing and Auto Sync preview/cancel also passed. The Slides renderer is now included in production Version 177, but no real Native production receipt has been generated.
+The earlier synthetic September preview generated successfully through the real Slides-to-PDF path using two sample children and RM100.00, with an obvious `CONTOH / TIDAK SAH` indication. It created no payment row or production receipt record. Since then, the Slides renderer has been production-verified through Native September payments: eSemak displays the correct names and receipt links. Payment and receipt failure handling remain independent and no-retry rules still apply.
 
 ## 11. Drive Folder Configuration
 
@@ -208,10 +232,18 @@ Receipt folder:
 - `0b1d10b` — finalised the safe synthetic Slides receipt preview.
 - `cf6c8b8` — showed Maybank QR instructions in Native eBayar.
 - `e21e37d` — recorded Native receipt readiness and August reconciliation.
-- `076f68a` — prepared Native PWA monthly routing and the Admin maintenance shortcut; current `origin/main` application checkpoint.
+- `076f68a` — historical checkpoint that prepared Native PWA monthly routing and the Admin maintenance shortcut.
 - Pages `7b5476e` — published Native routing to the production GitHub Pages repository.
+- `7ac6bab` — showed Native payments and receipts in hybrid public eSemak.
+- `cf9c299` — hardened legacy eBayar Form Calculation readiness.
+- `7c84438` — routed Admin Yuran dashboard to canonical Native payments from September.
+- `b158952` — added Form sync observability and read-back verification.
+- `ba996fa` — made Admin sync alerts visible.
+- `d363c07` — added explicit Google Forms OAuth scope.
+- `410de7e` / `ba1c1cc` — temporary guarded Ogos backfill and stable anomaly assertion.
+- `0c3a355` — removed the completed one-time backfill helper and dedicated test; current application checkpoint.
 
-The application commits are present on `origin`; `origin/main` is aligned at `076f68a`. Production `pages/main` is separately aligned at `7b5476e`.
+The application commits are present on `origin`; `origin/main` is aligned at `0c3a355`. Production `pages/main` remains a separately managed deployment branch.
 
 ## 13. Preserved Dirty Worktree
 
@@ -234,23 +266,20 @@ The three `native-ebayar-*.diff.txt` files are local audit artifacts and must no
 
 ## 14. Next Session Checklist
 
-Production Version 177 and GitHub Pages Native routing are published. The remaining controlled milestone is the first real Native transaction on or after 1 September 2026:
+Production Version 184, Native September routing, hybrid eSemak/dashboard readers and hardened Form sync are live. For the next operational session:
 
 1. Read this file, `REFERENCE.md` and `INTERNAL_OPERATIONS.md`.
-2. Verify `git status --short`, current branch, `origin/main` at `076f68a`, production `pages/main` at `7b5476e`, and the preserved detached Pages worktree.
-3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE` on or after 1 September 2026.
-4. Confirm production remains Version 177 on the existing deployment ID and `/exec` URL, with Portal Mode `AUTO` and the Slides receipt source included.
+2. Verify `git status --short`, current branch and `origin/main` at `0c3a355`; inspect the separately managed Pages branch before any Pages push.
+3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE`.
+4. Confirm production remains Version 184 on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
 5. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID`, `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` in Script Properties. Verify both folders remain Restricted, slip files private, only final receipt PDFs link-view, and the configured template is approved.
-6. Select one genuinely unpaid official student and use a small valid bank slip.
-7. Submit exactly once. If the browser outcome is uncertain, do not retry; refresh authoritative status and inspect `Payments` and Drive artifacts first.
-8. Verify one `PAYMENT_GROUP_ID`, the expected child-row count, stable `STUDENT_ID` values, correct amount/source metadata and no duplicates.
-9. Verify the bank slip and slip folder remain private/restricted.
-10. Verify exactly one final receipt PDF, one common `RESIT_URL` across all child rows, safe receipt content and a trashed temporary Slides copy.
-11. Exercise the receipt read/generation path again to confirm idempotency without creating a second payment or receipt.
-12. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
+6. Monitor September dashboard/eSemak consistency and verify only exact `STATUS=SELESAI` canonical rows are counted.
+7. On uncertain writes, do not retry; refresh authoritative `Payments`/Drive state first.
+8. Keep the historical June duplicate as a separate audit item; do not delete either row without dedicated reconciliation.
+9. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 ## 15. Current Completion Boundary
 
-Implemented, reconciled and published: V2 historical migration, guarded maintenance Auto Sync with exact confirmed IDs, Portal Mode, Native Phase 2A/2B with Slides receipts in production Version 177, GitHub Pages monthly Native routing and the admin-only PWA maintenance shortcut.
+Implemented, reconciled and published: V2 historical migration, guarded maintenance Auto Sync, Portal Mode, Native Phase 2A/2B with Slides receipts, PWA Native routing, public hybrid eSemak, Admin hybrid dashboard and hardened/verified legacy Form synchronization in production Version 184.
 
-Not yet complete: the first real Native payment/upload/receipt transaction and its privacy/idempotency verification on or after 1 September 2026. Do not mark Native eBayar fully proven until that controlled milestone succeeds. Parent Google login/dashboard work in the original V2 plan also remains future scope.
+Native September payments, names and receipt links are production-verified. Parent Google login from the original V2 plan is not part of the current public architecture: parents use unauthenticated eSemak, while Guru/Admin login remains separate. The unresolved `PG-2026-JUN2026-112` duplicate remains future maintenance.

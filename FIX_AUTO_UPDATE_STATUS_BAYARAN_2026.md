@@ -91,6 +91,10 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 
 Tujuan: elak mismatch antara `sudahBayarSet` dan `eligibleSet2` bila nama ada double spaces atau spacing pelik.
 
-## Konteks Semasa — 16 Ogos 2026
+## Konteks Semasa — 1 September 2026
 
-Dokumen ini menerangkan pembaikan legacy Google Form dan dikekalkan sebagai rekod sejarah. Januari–Ogos 2026 terus menggunakan aliran legacy ini, jadi pembaikan Calculation/form ini tidak boleh dibuang selagi operasi dan sejarah legacy masih diperlukan. Native eBayar bermula September 2026, menulis terus ke Master V2 dan tidak bergantung pada tab Calculation legacy untuk merekod bayaran Native. Ia tidak menggantikan atau menulis semula rekod legacy terdahulu. Existing active Web App production belum ditetapkan kepada versi yang mengandungi Native Phase 2A/2B, dan transaksi Native sebenar masih belum dilakukan. Rujuk `CURRENT_STATUS.md` sebelum sebarang operasi atau deployment.
+Dokumen ini menerangkan pembaikan legacy Google Form dan dikekalkan sebagai rekod sejarah. Januari–Ogos 2026 terus menggunakan aliran legacy ini; Native eBayar bermula September 2026 dan menulis terus ke canonical `Payments`.
+
+Aliran legacy kini mempunyai hardening tambahan: `onEbayarSubmit` menunggu secara bounded sehingga nama yang dihantar kelihatan dalam sumber `Calculation` (maksimum kira-kira 15 saat), lalu rebuild Form sekali sahaja. Jika `Calculation` kekal stale, sync gagal tertutup tanpa menulis pilihan lama. Sync manual Admin pula memaparkan kegagalan backend/transport, membaca semula pilihan selepas `setChoiceValues()`, dan mengesahkan nama berbayar sudah tiada.
+
+Pada 1 September 2026, sync production pada mulanya gagal kerana owner deployment belum mengizinkan scope Google Forms yang baru. Manifest kini menyatakan `https://www.googleapis.com/auth/forms`; one-time read-only editor check di bawah akaun owner mengesahkan akses sebelum tindakan Admin berjaya mengemas kini Form Ogos. Ini ialah prosedur authorization sekali sahaja, bukan ciri production kekal. Rujuk `CURRENT_STATUS.md` dan `INTERNAL_OPERATIONS.md` untuk status berkuat kuasa.

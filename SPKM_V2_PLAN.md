@@ -1,8 +1,8 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 30 Ogos 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Migrasi serta final reconciliation eBayar V2 Januari–Ogos 2026 telah siap; Ogos kini 67/67 groups `Synced` dan Legacy vs V2 `Match`. Production Web App ialah Version 177 dengan Native Slides receipt, dan GitHub Pages Native monthly routing serta Admin maintenance shortcut telah diterbitkan. Ini masih **bukan bukti transaksi Native sebenar**: milestone terkawal pertama kekal pending pada atau selepas 1 September 2026. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+> **Status 1 September 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Ogos Legacy/V2 kini fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Production Web App ialah Version 184; Native September, public hybrid eSemak, Admin hybrid dashboard dan receipt links telah production-verified. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
-> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar telah dipromosi dalam Version 177 untuk cutoff September, tetapi ia tidak boleh ditandakan fully proven sebelum transaksi sebenar terkawal dan pemeriksaan data/Drive/idempotency selesai.
+> **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar bermula September. Parents menggunakan public eSemak tanpa login, manakala Guru/Admin login kekal berasingan.
 
 ---
 
@@ -409,11 +409,23 @@ Checkpoint 29 Ogos di atas pula telah disusuli reconciliation 30 Ogos 2026:
 - Final: 67 source groups, 67 existing, 0 new, 0 new child rows dan status `Synced`.
 - Legacy vs V2: `Match`; 104 paid, 82 unpaid, 186 total dan RM3,640.
 
+Checkpoint 30 Ogos di atas ialah sejarah dan digantikan oleh final repair/reconciliation 1 September 2026:
+
+- Canonical `Payments` asalnya berhenti pada Ogos source row 68. Missing IDs `PG-2026-OGOS2026-69`, `-70` dan `-71` mewakili 3 groups, 5 child rows dan RM120.
+- One-time guarded editor-only backfill menggunakan `syncCurrentMonthEbayarV2Core_(meta, true, paymentGroupIds)` dan menambah tepat 3 groups, 5 child rows dan RM120.
+- Post-write: 70 existing, 0 genuinely new, 0 changed-existing, all selected groups present dan source groups unchanged. Preview seterusnya menunjukkan 0 projected rows/RM0 dan highest existing source row 71.
+- Helper one-time dan dedicated test telah dibuang selepas verification; ia bukan permanent production behavior.
+- Final Legacy dan V2 masing-masing: 109 paid, 77 unpaid, 186 total dan RM3,760. Semua numeric diffs sifar; `onlyLegacy=[]`, `onlyV2=[]`.
+- `OGOS2026` mempunyai 70 response groups, 110 child-name occurrences dan 109 distinct names. PADILLAH mempunyai dua genuine submissions/receipts dan kedua-dua amaun kekal sah.
+- Calculation registered spill boleh merangkumi inactive records; production dashboard menggunakan active roster 186.
+- Separate unresolved audit: `PG-2026-JUN2026-112` mempunyai same payment/source identity dengan dua staged hashes (`c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930`, `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`). Ini bukan normal multi-child behavior dan tidak boleh dipadam tanpa reconciliation khusus.
+
 ### September 2026
 
-- Source tab `SEPT2026` telah wujud tetapi masih mengandungi header sahaja.
-- Belum ada payment rows untuk `2026-09`.
-- Tiada migration atau import September diperlukan pada masa ini.
+- Native eBayar live dan embedded dalam PWA. Parents tidak login; mereka menggunakan public eSemak.
+- Public `getYuranParent` menggunakan legacy monthly sources bagi Jan–Ogos dan canonical exact-`STATUS=SELESAI` bagi Sep–Dis.
+- Existing frontend `getYuranStats` dispatch ke legacy `getYuranStats()` bagi Jan–Ogos dan canonical `getYuranStatsV2()` bagi Sep–Dis.
+- Production verification: 15 paid, 171 unpaid, 186 active students dan RM600; names serta receipt links dipaparkan dengan betul.
 
 ### Peralihan ke automation mode
 
@@ -456,28 +468,30 @@ Admin panel `Auto Sync` kini disambungkan kepada aliran preview-first dan explic
 
 Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Full local suite selepas Native Slides receipt: 14 passed, 0 failed.
 
-Production Version 176 telah diverify pada 29 Ogos 2026 menggunakan existing deployment URL; ini ialah checkpoint sejarah yang kini digantikan oleh Version 177. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
+Production Version 176/177 ialah checkpoint sejarah. Current production ialah Version 184 pada deployment ID dan `/exec` URL yang sama. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
 
 Native receipt rendering source kini menyalin existing Google Slides template `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`, mengganti lima placeholders, mengeksport PDF dan trash temporary Slides copy dalam `finally`. Layout satu slide landscape 576 × 288 pt dikekalkan; multiple children menggunakan balanced wrapping dan local font reduction. `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` menyimpan template config, manakala `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID` digunakan oleh helper `testCreateNativeEbayarReceiptSlidesPreviewV2`.
 
 Synthetic September preview dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya melalui real Slides-to-PDF path tanpa live payment row atau production receipt record. Privacy, idempotency, one-PDF-per-group, shared `RESIT_URL`, final-PDF permissions dan payment-independent receipt failure handling kekal.
 
-Apps Script production kini Version 177 (`SPKM Native eBayar production - September 2026`) pada existing deployment ID dan `/exec` URL, termasuk Slides receipt implementation. Portal Mode telah dipulihkan kepada `AUTO`: sebelum 1 September resolve `LEGACY`, mulai 1 September resolve `NATIVE` mengikut Malaysia time.
+Apps Script production kini Version 184 pada existing deployment ID dan `/exec` URL; Web App executes as `USER_DEPLOYING`. Progression: V180 eSemak hybrid, V181 legacy Form readiness, V182 Admin dashboard hybrid, V183 Form sync observability/read-back verification, V184 Google Forms OAuth scope. Portal Mode `AUTO` resolve `NATIVE` mulai 1 September mengikut Malaysia time.
 
 PWA Native routing dan Admin shortcut publication ditandakan complete:
 
-- `origin/main` application checkpoint ialah `076f68a` (`feat: prepare native ebayar routing and admin shortcut`).
+- Historical PWA routing checkpoint ialah `076f68a` (`feat: prepare native ebayar routing and admin shortcut`); current source checkpoint ialah `0c3a355`.
 - Production `pages/main` ialah `7b5476e` (`feat: route PWA eBayar to native portal`), diterbitkan dari detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`.
 - Januari–Ogos kekal menggunakan original Legacy Google Form routes. September–Disember menggunakan approved production `/exec` mengikut Malaysia time: September dibuka 1 September, Oktober 1 Oktober, November 1 November dan Disember 1 Disember 2026. Future months kekal disabled dan tiada public route menggunakan `/dev`.
 - PWA Dashboard Yuran menyediakan shortcut `eBayar V2 Maintenance` hanya kepada authenticated `ADMIN`, membuka production `/exec` dalam protected new tab. Backend Admin authorization kekal authoritative dan full maintenance UI kekal di Apps Script portal. Exact PWA duplicate ialah optional future scope.
 
-Native eBayar belum dianggap fully proven sehingga satu transaksi terkawal pada atau selepas 1 September mengesahkan payment rows, slip privacy, satu receipt PDF, shared `RESIT_URL`, temporary Slides cleanup dan idempotency tanpa retry atau duplicate.
+Native eBayar September, names dan receipt links telah production-verified. Public architecture kekal tanpa parent login; original Google parent-login plan masih KIV dan bukan dependency eSemak semasa.
+
+Legacy Form sync turut selesai dihardening pada 1 September: bounded Calculation readiness kira-kira 15 saat menggantikan fixed-sleep-only behavior, stale Calculation gagal tertutup, manual errors disurface, dan post-write Form choices dibaca semula serta diverify. Diagnostics meliputi action/month/Form/Calculation counts dan verification result. Initial production failure ialah missing owner consent untuk explicit scope `https://www.googleapis.com/auth/forms`; one-time read-only owner check mengesahkan access sebelum `Kemas Form (Tolak Dah Bayar)` berjaya. Helper authorization itu bukan permanent feature.
 
 ### Nota operasi
 
-- Satu anomaly sejarah June, `GROUP_ID_MULTIPLE_STAGED_HASHES`, masih wujud. Ia telah disiasat dan disahkan tidak berkaitan dengan July catch-up.
-- Catatan “belum production deployment” dan Version 176 dalam snapshot terdahulu ialah sejarah. Existing production Web App kini Version 177 pada URL yang sama.
-- Portal Mode mesti kekal `AUTO`; sebelum 1 September ia resolve `LEGACY`, dan milestone seterusnya perlu mengesahkan resolve `NATIVE` pada atau selepas tarikh cutoff.
+- Satu anomaly sejarah June, `GROUP_ID_MULTIPLE_STAGED_HASHES`, masih wujud sebagai audit berasingan dan tidak berkaitan Ogos.
+- Catatan “belum production deployment”, Version 176/177 dan pending first transaction dalam snapshot terdahulu ialah sejarah. Existing production Web App kini Version 184 pada URL yang sama.
+- Portal Mode mesti kekal `AUTO`; mulai 1 September ia resolve `NATIVE`.
 
 ---
 

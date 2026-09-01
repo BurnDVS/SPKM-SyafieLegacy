@@ -4,6 +4,53 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [1 September 2026] — Native production verification, hybrid readers, hardened Form sync and final Ogos reconciliation
+
+### Production progression and architecture
+
+- Existing Apps Script deployment identity and `/exec` URL were preserved through **Version 184**; deployment ID remains `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1` and the Web App executes as `USER_DEPLOYING`.
+- Version 180 added hybrid public eSemak; Version 181 hardened legacy Form readiness; Version 182 added Admin Yuran hybrid dispatch; Version 183 added Form sync observability/read-back verification; Version 184 added the explicit Google Forms OAuth scope.
+- Native eBayar is live from September and embedded in the PWA. Parents do not log in and use public eSemak; Guru/Admin login remains separate.
+- September production verification: 15 paid, 171 unpaid, 186 active students and RM600. Names and HTTPS receipt links display correctly.
+
+### Hybrid eSemak and dashboard
+
+- Public action remains `getYuranParent`: January–August use legacy monthly payment sources; September–December use canonical `Payments`, including only exact `STATUS=SELESAI` rows.
+- Existing frontend action remains `getYuranStats`: January–August dispatch to legacy `getYuranStats()`, September–December to canonical `getYuranStatsV2()`.
+- September eSemak and Admin dashboard values, names and receipt links were production-verified.
+
+### Legacy Google Form synchronization
+
+- `onEbayarSubmit` no longer depends only on fixed `sleep(3000)`. It retries Calculation readiness for approximately 15 seconds and requires every submitted normalized name to appear before rebuilding choices.
+- Readiness timeout fails closed without rebuilding from stale Calculation data. Manual Admin sync surfaces backend/transport errors.
+- Choices are read back after `setChoiceValues()` and verified for generated count and absence of paid names. Diagnostics include `action`, `month`, `formId`, `calculationTab`, `paidCount`, `generatedChoiceCount`, `readBackChoiceCount`, `paidNamesPresentCount` and `verificationResult`.
+- Initial production Form sync failure was missing owner consent for `https://www.googleapis.com/auth/forms`. A one-time read-only editor check under `shafielegacykelasmengaji@gmail.com` returned `authorizationStatus=NOT_REQUIRED`, title `eBAYAR MENGAJI OGOS 2026` and 6 items. Production `Kemas Form (Tolak Dah Bayar)` then succeeded. The helper was diagnostic only and is not permanent production behavior.
+
+### Ogos canonical repair and reconciliation
+
+- Canonical `Payments` originally stopped at source row 68. Missing IDs `PG-2026-OGOS2026-69`, `-70` and `-71` represented 3 payment groups, 5 child rows and RM120.
+- A guarded editor-only one-time backfill delegated to existing `syncCurrentMonthEbayarV2Core_(meta, true, paymentGroupIds)`, preserving deterministic IDs, source identity/hash/fingerprint checks, exact requested IDs, ScriptLock, fresh post-lock reread, TOCTOU comparison, one bulk write, post-write verification and no automatic retry.
+- Successful result: 3 appended groups, 5 child rows and RM120. Post-write state: 70 existing, 0 new, 0 changed-existing; selected groups were fully present and source groups unchanged. Fresh preview showed 0 projected rows/RM0 and highest existing source row 71.
+- The temporary backfill helper and dedicated test were removed after verification; they are not permanent production behavior.
+- Final Legacy and V2 values match exactly: 109 paid, 77 unpaid, 186 active students and RM3,760; all numeric diffs are zero and `onlyLegacy=[]`, `onlyV2=[]`.
+- `OGOS2026` contains 70 response/payment groups, 110 child-name occurrences and 109 distinct paid names. PADILLAH has two genuine submissions/receipts; both remain in collection totals. Calculation registered spill may include inactive records, while production uses the active roster.
+
+### Separate unresolved maintenance item
+
+- `PG-2026-JUN2026-112` is a historical canonical duplicate with the same payment/source identity but hashes `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` and `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`.
+- This is not normal multi-child behavior, is unrelated to Ogos and was intentionally not modified. Do not delete either row without dedicated reconciliation.
+
+### Source commits
+
+- `7ac6bab` — show Native payments in eSemak.
+- `cf9c299` — harden legacy Form sync readiness.
+- `7c84438` — route Admin Yuran dashboard to Native payments.
+- `b158952` — verify Form sync results.
+- `ba996fa` — show Admin sync alerts.
+- `d363c07` — add Google Forms OAuth scope.
+- `410de7e` / `ba1c1cc` — temporary guarded Ogos backfill and stable anomaly comparison.
+- `0c3a355` — remove completed Ogos backfill helper and test.
+
 ## [30 Ogos 2026] — Production Version 177 and GitHub Pages Native launch routing
 
 ### Apps Script production
@@ -29,8 +76,8 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ### Remaining controlled milestone
 
-- August remains reconciled at 67 source/existing groups, 0 new, 104 paid, 82 unpaid, 186 total students, RM3,640 and Legacy vs V2 `Match`.
-- The first real Native production payment, slip upload and receipt verification remain pending on or after 1 September. Native eBayar is not yet fully proven by a real transaction.
+- At this superseded 30 August checkpoint, August was reconciled at 67 source/existing groups, 0 new, 104 paid, 82 unpaid, 186 total students, RM3,640 and Legacy vs V2 `Match`.
+- At this historical checkpoint, the first real Native production payment, slip upload and receipt verification were still pending. The 1 September entry above supersedes that status.
 
 ---
 
@@ -54,7 +101,7 @@ Semua perubahan utama sistem direkodkan di sini.
 
 - At this earlier checkpoint, the latest source commit was `0b1d10b`; Slides implementation commit was `15d7991`, and the preceding documentation checkpoint was `fd3203c`. `origin/main` and Apps Script `@HEAD` were up to date.
 - At this earlier checkpoint, production remained Version 176 and the later Slides receipt source was not yet production-active. This state was subsequently superseded by Version 177 as recorded above.
-- The first real Native production transaction and receipt remain pending on or after 1 September 2026. No production Native receipt has been generated yet.
+- At this earlier checkpoint, the first real Native production transaction and receipt were still pending. The 1 September entry above supersedes this status.
 
 ---
 
