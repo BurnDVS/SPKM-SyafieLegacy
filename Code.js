@@ -1763,6 +1763,12 @@ function syncNamaMuridToAllForms() {
     for (var bi = 0; bi < BULAN_2026.length; bi++) {
       var bulan         = BULAN_2026[bi];
       var bulanMonthIdx = bi;
+      var monthDiagnostic = {
+        action: 'syncForms', month: bulan, formId: FORM_IDS[bulan],
+        calculationTab: CALC_TAB_MAP[bulan], paidCount: 0,
+        generatedChoiceCount: 0, readBackChoiceCount: 0,
+        paidNamesPresentCount: 0, verificationResult: false
+      };
 
       try {
         var eligibleSet = {};
@@ -1783,9 +1789,11 @@ function syncNamaMuridToAllForms() {
           eligibleSet[n] = true;
         });
 
+        var calcTabName = CALC_TAB_MAP[bulan];
         var dahBayarSet = {};
         try {
-          var calcSheet = yuranSS.getSheetByName(CALC_TAB_MAP[bulan]);
+          var calcSheet = yuranSS.getSheetByName(calcTabName);
+          if (!calcSheet) throw new Error('Tab ' + calcTabName + ' tidak dijumpai.');
           if (calcSheet && calcSheet.getLastRow() >= 2) {
             var calcData = calcSheet.getRange(2, 4, calcSheet.getLastRow() - 1, 1).getValues();
             calcData.forEach(function(r) {
@@ -1796,21 +1804,46 @@ function syncNamaMuridToAllForms() {
             });
           }
         } catch (calcErr) {
+          errors.push(bulan + ': gagal membaca ' + calcTabName + ' — ' + calcErr.message);
           Logger.log('syncNamaMuridToAllForms calc ' + bulan + ': ' + calcErr.message);
+          logLegacyEbayarFormSyncDiagnostic_(monthDiagnostic);
+          continue;
         }
 
         var namaUntukForm = Object.keys(eligibleSet)
           .filter(function(n) { return !dahBayarSet[n]; })
           .sort();
+        monthDiagnostic.paidCount = Object.keys(dahBayarSet).length;
+        monthDiagnostic.generatedChoiceCount = namaUntukForm.length;
 
         var form  = FormApp.openById(FORM_IDS[bulan]);
         var items = form.getItems(FormApp.ItemType.CHECKBOX);
         var found = false;
         for (var j = 0; j < items.length; j++) {
           if (items[j].getTitle() === 'NAMA PENUH MURID') {
-            items[j].asCheckboxItem().setChoiceValues(namaUntukForm);
-            updated++;
+            var checkboxItem = items[j].asCheckboxItem();
+            checkboxItem.setChoiceValues(namaUntukForm);
+            var readBackChoices = checkboxItem.getChoices().map(function(choice) {
+              return normalizeLegacyEbayarName_(choice.getValue());
+            });
+            var readBackSet = {};
+            readBackChoices.forEach(function(name) { if (name) readBackSet[name] = true; });
+            var paidNamesPresent = Object.keys(dahBayarSet).filter(function(name) {
+              return !!readBackSet[name];
+            });
+            var verified = readBackChoices.length === namaUntukForm.length && paidNamesPresent.length === 0;
             found = true;
+            monthDiagnostic.readBackChoiceCount = readBackChoices.length;
+            monthDiagnostic.paidNamesPresentCount = paidNamesPresent.length;
+            monthDiagnostic.verificationResult = verified;
+            logLegacyEbayarFormSyncDiagnostic_(monthDiagnostic);
+            if (!verified) {
+              errors.push(bulan + ': pengesahan Form gagal (jana=' + namaUntukForm.length
+                + ', baca semula=' + readBackChoices.length
+                + ', nama berbayar masih ada=' + paidNamesPresent.length + ')');
+              break;
+            }
+            updated++;
             Logger.log('syncNamaMuridToAllForms: ' + bulan
               + ' eligible=' + Object.keys(eligibleSet).length
               + ' dahBayar=' + Object.keys(dahBayarSet).length
@@ -1818,25 +1851,69 @@ function syncNamaMuridToAllForms() {
             break;
           }
         }
-        if (!found) errors.push(bulan + ': NAMA PENUH MURID tidak dijumpai');
+        if (!found) {
+          errors.push(bulan + ': NAMA PENUH MURID tidak dijumpai');
+          logLegacyEbayarFormSyncDiagnostic_(monthDiagnostic);
+        }
 
       } catch (formErr) {
         errors.push(bulan + ': ' + formErr.message);
         Logger.log('syncNamaMuridToAllForms ralat ' + bulan + ': ' + formErr.message);
+        logLegacyEbayarFormSyncDiagnostic_(monthDiagnostic);
       }
     }
 
     Logger.log('syncNamaMuridToAllForms selesai: ' + updated + '/' + BULAN_2026.length + ' forms, ' + errors.length + ' ralat.');
-    return { success: true, updated: updated, totalNames: totalNames, errors: errors };
+    var success = errors.length === 0 && updated === BULAN_2026.length;
+    var message = success
+      ? 'Semua ' + updated + '/' + BULAN_2026.length + ' Google Form berjaya dikemaskini dan disahkan.'
+      : 'Sync tidak lengkap: ' + updated + '/' + BULAN_2026.length
+        + ' Google Form berjaya dikemaskini dan disahkan; ' + errors.length + ' ralat.';
+    return {
+      success: success,
+      updated: updated,
+      totalForms: BULAN_2026.length,
+      totalNames: totalNames,
+      errors: errors,
+      message: message
+    };
 
   } catch (err) {
     Logger.log('syncNamaMuridToAllForms error: ' + err.message);
-    return { success: false, message: err.message };
+    logLegacyEbayarFormSyncDiagnostic_({
+      action: 'syncForms', month: 'ALL', formId: '', calculationTab: '',
+      paidCount: 0, generatedChoiceCount: 0, readBackChoiceCount: 0,
+      verificationResult: false
+    });
+    return {
+      success: false,
+      updated: typeof updated === 'number' ? updated : 0,
+      totalForms: 12,
+      totalNames: typeof totalNames === 'number' ? totalNames : 0,
+      errors: [err.message],
+      message: 'Sync Google Form gagal: ' + err.message
+    };
   }
 }
 
 function normalizeLegacyEbayarName_(value) {
   return (value || '').toString().trim().toUpperCase();
+}
+
+function logLegacyEbayarFormSyncDiagnostic_(details) {
+  details = details || {};
+  Logger.log([
+    'legacyEbayarFormSync',
+    'action=' + (details.action || ''),
+    'month=' + (details.month || ''),
+    'formId=' + (details.formId || ''),
+    'calculationTab=' + (details.calculationTab || ''),
+    'paidCount=' + Number(details.paidCount || 0),
+    'generatedChoiceCount=' + Number(details.generatedChoiceCount || 0),
+    'readBackChoiceCount=' + Number(details.readBackChoiceCount || 0),
+    'paidNamesPresentCount=' + Number(details.paidNamesPresentCount || 0),
+    'verificationResult=' + (details.verificationResult === true ? 'PASS' : 'FAIL')
+  ].join(' '));
 }
 
 function getLegacyEbayarCalculationTabName_(bulan) {
@@ -1859,9 +1936,24 @@ function getLegacyEbayarCalculationTabName_(bulan) {
 
 function syncFormMinusBayar(params) {
   params = params || {};
+  var diagnostic = {
+    action: 'syncFormBulanIni',
+    month: '',
+    formId: '',
+    calculationTab: '',
+    paidCount: 0,
+    generatedChoiceCount: 0,
+    readBackChoiceCount: 0,
+    paidNamesPresentCount: 0,
+    verificationResult: false
+  };
   try {
     var bulan = (params.bulan || '').toString().trim().toUpperCase();
-    if (!bulan) return { success: false, message: 'Parameter bulan diperlukan.' };
+    diagnostic.month = bulan;
+    if (!bulan) {
+      logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+      return { success: false, message: 'Parameter bulan diperlukan.', diagnostic: diagnostic };
+    }
     var FORM_IDS = {
       'JAN2026':   '1v0OkAu1LU7SCxI5CCYO9Fjwskd4Oz0A3PoQIyeNQBwA',
       'FEB2026':   '1gmlORBMHc-eGAXFtVV_tDHnMrZouUMMWYCsTi6Xepqw',
@@ -1876,12 +1968,27 @@ function syncFormMinusBayar(params) {
       'NOV2026':   '1QoV63w2Ecl2lipapwrsvMYXKMtD9M1HeLfJsRN27zFY',
       'DIS2026':   '1gvcn6djuF9Xlatoe6b78RrGU0TVFFXpGIhiA1ML5O24'
     };
-    if (!FORM_IDS[bulan]) return { success: false, message: 'Bulan tidak dikenali: ' + bulan };
+    diagnostic.formId = FORM_IDS[bulan] || '';
+    if (!FORM_IDS[bulan]) {
+      logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+      return { success: false, message: 'Bulan tidak dikenali: ' + bulan, diagnostic: diagnostic };
+    }
     var calcTabNama = getLegacyEbayarCalculationTabName_(bulan);
-    if (!calcTabNama) return { success: false, message: 'Tab Calculation tidak dijumpai untuk: ' + bulan };
+    diagnostic.calculationTab = calcTabNama;
+    if (!calcTabNama) {
+      logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+      return {
+        success: false,
+        message: 'Tab Calculation tidak dijumpai untuk: ' + bulan,
+        diagnostic: diagnostic
+      };
+    }
     var yuranSS   = SpreadsheetApp.openById(YURAN_SS_ID);
     var calcSheet = yuranSS.getSheetByName(calcTabNama);
-    if (!calcSheet) return { success: false, message: 'Tab ' + calcTabNama + ' tidak dijumpai.' };
+    if (!calcSheet) {
+      logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+      return { success: false, message: 'Tab ' + calcTabNama + ' tidak dijumpai.', diagnostic: diagnostic };
+    }
     var lastRow = calcSheet.getLastRow();
     var dahBayarSet = {};
     if (lastRow >= 2) {
@@ -1894,6 +2001,7 @@ function syncFormMinusBayar(params) {
       });
     }
     var sudahBayarCount = Object.keys(dahBayarSet).length;
+    diagnostic.paidCount = sudahBayarCount;
     var mainSS = SpreadsheetApp.openById(SPREADSHEET_ID);
     var kanakSheet = mainSS.getSheetByName(TAB.KANAK);
     var allNames = [];
@@ -1918,22 +2026,62 @@ function syncFormMinusBayar(params) {
     allNames.forEach(function(n) { if (n) uniqueAll[n] = true; });
     var totalAktif = Object.keys(uniqueAll).length;
     var namaUntukForm = Object.keys(uniqueAll).filter(function(n) { return !dahBayarSet[n]; }).sort();
+    diagnostic.generatedChoiceCount = namaUntukForm.length;
     var form = FormApp.openById(FORM_IDS[bulan]);
     var items = form.getItems(FormApp.ItemType.CHECKBOX);
     var updated = false;
     for (var j = 0; j < items.length; j++) {
       if (items[j].getTitle() === 'NAMA PENUH MURID') {
-        items[j].asCheckboxItem().setChoiceValues(namaUntukForm);
+        var checkboxItem = items[j].asCheckboxItem();
+        checkboxItem.setChoiceValues(namaUntukForm);
+        var readBackChoices = checkboxItem.getChoices().map(function(choice) {
+          return normalizeLegacyEbayarName_(choice.getValue());
+        });
+        diagnostic.readBackChoiceCount = readBackChoices.length;
+        var readBackSet = {};
+        readBackChoices.forEach(function(name) { if (name) readBackSet[name] = true; });
+        var paidNamesPresentCount = Object.keys(dahBayarSet).filter(function(name) {
+          return !!readBackSet[name];
+        }).length;
+        diagnostic.paidNamesPresentCount = paidNamesPresentCount;
+        diagnostic.verificationResult = readBackChoices.length === namaUntukForm.length
+          && paidNamesPresentCount === 0;
         updated = true;
         break;
       }
     }
-    if (!updated) return { success: false, message: 'Soalan NAMA PENUH MURID tidak dijumpai dalam form ' + bulan + '.' };
+    if (!updated) {
+      logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+      return {
+        success: false,
+        message: 'Soalan NAMA PENUH MURID tidak dijumpai dalam form ' + bulan + '.',
+        diagnostic: diagnostic
+      };
+    }
+    logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+    if (!diagnostic.verificationResult) {
+      return {
+        success: false,
+        message: 'Pengesahan Form ' + bulan + ' gagal selepas kemas kini. '
+          + 'Pilihan dijana: ' + diagnostic.generatedChoiceCount
+          + '; pilihan dibaca semula: ' + diagnostic.readBackChoiceCount
+          + '; nama berbayar masih ada: ' + diagnostic.paidNamesPresentCount + '.',
+        diagnostic: diagnostic
+      };
+    }
     Logger.log('syncFormMinusBayar: ' + bulan + ' totalAktif=' + totalAktif + ' sudahBayar=' + sudahBayarCount + ' namaInForm=' + namaUntukForm.length);
-    return { success: true, bulan: bulan, totalAktif: totalAktif, sudahBayar: sudahBayarCount, namaInForm: namaUntukForm.length };
+    return {
+      success: true,
+      bulan: bulan,
+      totalAktif: totalAktif,
+      sudahBayar: sudahBayarCount,
+      namaInForm: namaUntukForm.length,
+      diagnostic: diagnostic
+    };
   } catch (err) {
     Logger.log('syncFormMinusBayar error: ' + err.message);
-    return { success: false, message: err.message };
+    logLegacyEbayarFormSyncDiagnostic_(diagnostic);
+    return { success: false, message: err.message, diagnostic: diagnostic };
   }
 }
 

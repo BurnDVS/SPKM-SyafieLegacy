@@ -3512,7 +3512,7 @@
   </div>
   <div class="alert alert-error" id="syncError" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">⚠</span>
-    <span>Sync gagal. Sila cuba semula.</span>
+    <span id="syncErrorMsg">Sync gagal. Sila cuba semula.</span>
   </div>
 
   <!-- EMPTY NOTICE -->
@@ -5683,10 +5683,35 @@
     return true;
   }
 
+  function getSyncFormsMessage(result) {
+    const fallback = 'Sync gagal. Sila cuba semula.';
+    if (!result) return fallback;
+    if (typeof result === 'string') return result.trim() || fallback;
+    const parts = [];
+    if (typeof result.message === 'string' && result.message.trim()) {
+      parts.push(result.message.trim());
+    }
+    if (typeof result.updated === 'number') {
+      parts.push('Dikemaskini dan disahkan: ' + result.updated + '/12.');
+    }
+    if (Array.isArray(result.errors)) {
+      const safeErrors = result.errors
+        .filter(function(error) { return typeof error === 'string' && error.trim(); })
+        .map(function(error) { return error.trim(); });
+      if (safeErrors.length) parts.push('Ralat: ' + safeErrors.join(' | '));
+    }
+    return parts.join(' ') || fallback;
+  }
+
   function syncMuridToForms() {
     const btn = document.getElementById('btnSyncGF');
     const ok  = document.getElementById('syncSuccess');
     const err = document.getElementById('syncError');
+    const errMsg = document.getElementById('syncErrorMsg');
+    const showError = function(error) {
+      if (errMsg) errMsg.textContent = getSyncFormsMessage(error);
+      if (err) err.style.display = '';
+    };
     ok.style.display = err.style.display = 'none';
     btn.disabled = true;
     btn.textContent = 'Sedang sync...';
@@ -5696,16 +5721,17 @@
         btn.textContent = '🔄 Sync Senarai Murid ke Google Form';
         if (data && data.success) {
           document.getElementById('syncSuccessMsg').textContent =
-            '✅ Sync berjaya! ' + (data.totalNames || 0) + ' nama dikemaskini dalam 12 Google Form';
+            '✅ Sync berjaya! ' + (data.totalNames || 0) + ' nama diproses — '
+            + (data.updated || 0) + '/12 Google Form dikemaskini dan disahkan.';
           ok.style.display = '';
         } else {
-          err.style.display = '';
+          showError(data);
         }
       },
-      function() {
+      function(transportError) {
         btn.disabled = false;
         btn.textContent = '🔄 Sync Senarai Murid ke Google Form';
-        err.style.display = '';
+        showError(transportError);
       }
     );
   }
