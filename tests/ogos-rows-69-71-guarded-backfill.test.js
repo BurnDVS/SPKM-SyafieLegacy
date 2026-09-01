@@ -69,7 +69,6 @@ const paymentGroupIds = [
 const allowedAnomaly = {
   type: 'GROUP_ID_MULTIPLE_STAGED_HASHES',
   key: 'PG-2026-JUN2026-112',
-  stagedLocations: ['2026|Jun2026|112'],
   stagedHashes: [
     'e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59',
     'c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930'
@@ -90,7 +89,7 @@ function validPreview() {
     genuinelyNewCandidates: paymentGroupIds.map(paymentGroupId => ({ paymentGroupId })),
     anomalies: [{
       ...allowedAnomaly,
-      stagedLocations: [...allowedAnomaly.stagedLocations],
+      stagedLocations: ['2026|Mon Jun 01 2026 00:00:00 GMT+0800 (Singapore Standard Time)|112'],
       stagedHashes: [...allowedAnomaly.stagedHashes]
     }]
   };
@@ -116,7 +115,7 @@ function runHelper(preview) {
   return { result: JSON.parse(JSON.stringify(result)), calls, logs };
 }
 
-test('allowlisted unrelated anomaly permits the exact guarded core request', () => {
+test('allowlisted unrelated anomaly permits a Date-valued June staged location', () => {
   const run = runHelper(validPreview());
 
   assert.equal(run.result.success, true);

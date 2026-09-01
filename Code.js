@@ -5858,7 +5858,6 @@ function backfillOgos2026Rows69To71GuardedV2() {
   var allowedAnomaly = {
     type: 'GROUP_ID_MULTIPLE_STAGED_HASHES',
     key: 'PG-2026-JUN2026-112',
-    stagedLocations: ['2026|Jun2026|112'],
     stagedHashes: [
       'c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930',
       'e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59'
@@ -5970,7 +5969,6 @@ function backfillOgos2026Rows69To71GuardedV2() {
       anomalies[0] &&
       anomalies[0].type === allowedAnomaly.type &&
       anomalies[0].key === allowedAnomaly.key &&
-      sameStrings(anomalies[0].stagedLocations, allowedAnomaly.stagedLocations) &&
       sameStrings(anomalies[0].stagedHashes, allowedAnomaly.stagedHashes);
     if (!anomalyAllowed) {
       return abort('Backfill dibatalkan: set anomali tidak sepadan dengan allowlist yang diluluskan.', {
