@@ -41,6 +41,44 @@ function getButtonMarkup(index) {
   return match[0];
 }
 
+function makeClassList() {
+  const values = new Set();
+  return {
+    add: (...names) => names.forEach(name => values.add(name)),
+    remove: (...names) => names.forEach(name => values.delete(name)),
+    contains: name => values.has(name),
+    toggle(name, force) {
+      if (force === undefined ? !values.has(name) : force) values.add(name);
+      else values.delete(name);
+    }
+  };
+}
+
+function makeElement(overrides = {}) {
+  const attributes = {};
+  return Object.assign({
+    attributes,
+    classList: makeClassList(),
+    style: {},
+    textContent: '',
+    value: '',
+    disabled: false,
+    children: [],
+    appendChild(child) { this.children.push(child); },
+    addEventListener() {},
+    setAttribute(name, value) { attributes[name] = String(value); },
+    removeAttribute(name) { delete attributes[name]; delete this[name]; },
+    scrollIntoView() {},
+    reset() {}
+  }, overrides);
+}
+
+function loadFunctions(context, names) {
+  vm.createContext(context);
+  names.forEach(name => vm.runInContext(extractFunction(indexSource, name), context));
+  return context;
+}
+
 test('January through August retain their exact Legacy Google Form routes', () => {
   const expected = [
     'https://forms.gle/DuzmZnoSu1JxY95fA',
@@ -64,13 +102,6 @@ test('September through December are static fail-closed Native cards', () => {
   });
 });
 
-test('one production Native URL constant is used and it is never a dev URL', () => {
-  const declarations = indexSource.match(/const NATIVE_EBAYAR_PRODUCTION_URL\s*=\s*'([^']+)'/g) || [];
-  assert.equal(declarations.length, 1);
-  assert.match(declarations[0], /https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/);
-  assert.doesNotMatch(declarations[0], /\/dev/);
-});
-
 test('Malaysia-date routing opens only the applicable Native month', () => {
   const context = {};
   vm.createContext(context);
@@ -90,38 +121,50 @@ test('Malaysia-date routing opens only the applicable Native month', () => {
   assert.equal(context.getEbayarMonthRouting(10, '2026-10-01').isFuture, true);
 });
 
-test('an open Native month points to production while a future month has no href', () => {
-  const constantMatch = /const NATIVE_EBAYAR_PRODUCTION_URL\s*=\s*'([^']+)'/.exec(indexSource);
-  assert.ok(constantMatch);
+test('current-month stats refresh preserves the Bulan Ini indicator', async () => {
+  const elements = {};
+  for (let index = 0; index < 12; index += 1) {
+    elements['ecard-' + index] = makeElement();
+    elements['ebadge-' + index] = makeElement({ innerHTML: '', className: '' });
+  }
+  const stats = Array.from({ length: 12 }, () => ({ jumlahBayar: 1, totalMurid: 2 }));
+  const context = {
+    document: { getElementById: id => elements[id] || null },
+    getEbayarMalaysiaDateParts: () => ({ dateKey: '2026-09-01', year: 2026, monthIndex: 8 }),
+    applyNativeEbayarMonthRoute() {},
+    callGASPromise: async () => ({ success: true, stats }),
+    console
+  };
+  loadFunctions(context, ['getEbayarMonthRouting', 'initEbayar']);
+
+  await context.initEbayar();
+
+  assert.equal(elements['ebadge-8'].textContent, '● Bulan Ini');
+  assert.equal(elements['ebadge-8'].className, 'ebayar-badge current-badge');
+});
+
+test('an open Native month reveals the embedded form without creating exec navigation', () => {
+  const openedMonths = [];
   function makeButton() {
-    const attributes = {};
-    return {
-      attributes,
-      classList: { add() {} },
-      setAttribute(name, value) { attributes[name] = String(value); },
-      removeAttribute(name) { delete attributes[name]; if (name === 'href') delete this.href; },
-      textContent: '',
-      href: undefined,
-      target: undefined,
-      rel: undefined
-    };
+    return makeElement({ href: undefined, target: undefined, rel: undefined, onclick: null });
   }
   const buttons = { 'ebtn-8': makeButton(), 'ebtn-9': makeButton() };
   const context = {
-    NATIVE_EBAYAR_PRODUCTION_URL: constantMatch[1],
-    document: { getElementById: id => buttons[id] || null }
+    document: { getElementById: id => buttons[id] || null },
+    openNativeEbayarForm: monthKey => openedMonths.push(monthKey)
   };
-  vm.createContext(context);
-  vm.runInContext(extractFunction(indexSource, 'getNativeEbayarProductionUrl'), context);
-  vm.runInContext(extractFunction(indexSource, 'applyNativeEbayarMonthRoute'), context);
+  loadFunctions(context, ['applyNativeEbayarMonthRoute']);
 
   context.applyNativeEbayarMonthRoute(8, {
     monthKey: '2026-09', routeType: 'NATIVE', isOpen: true, isFuture: false
   });
-  assert.equal(buttons['ebtn-8'].href, constantMatch[1]);
-  assert.equal(buttons['ebtn-8'].target, '_blank');
-  assert.equal(buttons['ebtn-8'].rel, 'noopener noreferrer');
+  assert.equal(buttons['ebtn-8'].href, undefined);
+  assert.equal(buttons['ebtn-8'].target, undefined);
+  assert.equal(buttons['ebtn-8'].rel, undefined);
   assert.equal(buttons['ebtn-8'].attributes['aria-disabled'], 'false');
+  assert.equal(typeof buttons['ebtn-8'].onclick, 'function');
+  buttons['ebtn-8'].onclick({ preventDefault() {} });
+  assert.deepEqual(openedMonths, ['2026-09']);
 
   context.applyNativeEbayarMonthRoute(9, {
     monthKey: '2026-10', routeType: 'NATIVE', isOpen: false, isFuture: true
@@ -129,6 +172,260 @@ test('an open Native month points to production while a future month has no href
   assert.equal(buttons['ebtn-9'].href, undefined);
   assert.equal(buttons['ebtn-9'].attributes['aria-disabled'], 'true');
   assert.equal(buttons['ebtn-9'].textContent, 'Akan Datang');
+});
+
+test('Native API transport sends JSON by POST and keeps Base64 out of the URL', async () => {
+  const calls = [];
+  const context = {
+    _gasUrlReady: Promise.resolve(),
+    window: { GAS_URL: 'https://script.google.com/macros/s/PRODUCTION_ID/exec' },
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      return { ok: true, json: async () => ({ success: true }) };
+    }
+  };
+  loadFunctions(context, ['postNativeEbayarAction']);
+
+  await context.postNativeEbayarAction('submitNativeEbayarPayment', {
+    bulanKey: '2026-09',
+    fileDataBase64: 'QUJDRA=='
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://script.google.com/macros/s/PRODUCTION_ID/exec');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['Content-Type'], 'text/plain;charset=UTF-8');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    action: 'submitNativeEbayarPayment',
+    bulanKey: '2026-09',
+    fileDataBase64: 'QUJDRA=='
+  });
+  assert.doesNotMatch(calls[0].url, /QUJDRA|fileDataBase64|\?/);
+});
+
+test('student lookup uses the Native POST action and renders safe result text', async () => {
+  const apiCalls = [];
+  const elements = {
+    nativeEbayarStudentSearch: makeElement({ value: 'ALI' }),
+    nativeEbayarMonth: makeElement({ value: '2026-09' }),
+    nativeEbayarStudentResults: makeElement()
+  };
+  const context = {
+    nativeEbayarSelectedStudents: [],
+    nativeEbayarSearchTimer: null,
+    nativeEbayarSearchSequence: 0,
+    clearTimeout() {},
+    setTimeout(fn) { Promise.resolve().then(fn); return 1; },
+    document: {
+      getElementById: id => elements[id] || null,
+      createElement: tag => makeElement({ tagName: tag.toUpperCase() })
+    },
+    hideNativeEbayarConfirmation() {},
+    clearNativeEbayarStudentChecks() {},
+    postNativeEbayarAction: async (action, payload) => {
+      apiCalls.push({ action, payload });
+      return {
+        success: true,
+        results: [{ studentKey: 'KANAK:7', nama: 'ALI BIN AMIN', studentType: 'KANAK', guru: 'USTAZ A' }],
+        cappedAt: 20
+      };
+    }
+  };
+  loadFunctions(context, ['renderNativeEbayarStudentResults', 'queueNativeEbayarStudentSearch']);
+
+  context.queueNativeEbayarStudentSearch();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(apiCalls.length, 1);
+  assert.equal(apiCalls[0].action, 'getNativeEbayarStudentLookup');
+  assert.equal(apiCalls[0].payload.keyword, 'ALI');
+  assert.equal(apiCalls[0].payload.bulanKey, '2026-09');
+  const resultButton = elements.nativeEbayarStudentResults.children.at(-1);
+  assert.equal(resultButton.children[0].textContent, 'ALI BIN AMIN');
+  assert.equal(resultButton.children[1].textContent, 'KANAK · Guru: USTAZ A');
+});
+
+test('preflight sends canonical student keys and reveals confirmation only when ready', async () => {
+  const apiCalls = [];
+  const confirmation = makeElement();
+  const elements = {
+    nativeEbayarMonth: makeElement({ value: '2026-09', selectedIndex: 0, options: [{ disabled: false }] }),
+    nativeEbayarDate: makeElement({ value: '2026-09-01' }),
+    nativeEbayarAmount: makeElement({ value: '60.00' }),
+    nativeEbayarReference: makeElement({ value: 'MBB-123' }),
+    nativeEbayarSubmitBtn: makeElement(),
+    nativeEbayarConfirmation: confirmation,
+    nativeEbayarConfirmStudents: makeElement(),
+    nativeEbayarConfirmMonth: makeElement(),
+    nativeEbayarConfirmDate: makeElement(),
+    nativeEbayarConfirmAmount: makeElement(),
+    nativeEbayarConfirmFile: makeElement()
+  };
+  const context = {
+    nativeEbayarSelectedStudents: [{ studentKey: 'KANAK:7', nama: 'ALI BIN AMIN' }],
+    nativeEbayarSelectedFile: { name: 'slip.pdf', type: 'application/pdf', size: 1024 },
+    nativeEbayarPendingSubmission: null,
+    document: {
+      getElementById: id => elements[id] || null,
+      createElement: tag => makeElement({ tagName: tag.toUpperCase() })
+    },
+    postNativeEbayarAction: async (action, payload) => {
+      apiCalls.push({ action, payload });
+      return {
+        success: true,
+        readyToSubmit: true,
+        students: ['ALI BIN AMIN'],
+        studentChecks: [{ studentKey: 'KANAK:7', nama: 'ALI BIN AMIN', duplicate: false }],
+        bulanKey: '2026-09', bulanLabel: 'September 2026', tarikhBayaran: '2026-09-01',
+        jumlahKeseluruhan: 60, noRujukan: 'MBB-123', fileName: 'slip.pdf',
+        mimeType: 'application/pdf', fileSize: 1024, hasDuplicate: false
+      };
+    }
+  };
+  Object.assign(context, {
+    hideNativeEbayarConfirmation() { confirmation.classList.remove('show'); context.nativeEbayarPendingSubmission = null; },
+    clearNativeEbayarStudentChecks() {},
+    renderNativeEbayarStudentChecks() {},
+    showNativeEbayarMessage() {}
+  });
+  loadFunctions(context, ['formatEbayarV2Amount', 'submitNativeEbayarPreflight']);
+
+  await context.submitNativeEbayarPreflight({ preventDefault() {} });
+
+  assert.equal(apiCalls.length, 1);
+  assert.equal(apiCalls[0].action, 'preflightNativeEbayarSubmission');
+  assert.equal(apiCalls[0].payload.students.length, 1);
+  assert.equal(apiCalls[0].payload.students[0].studentKey, 'KANAK:7');
+  assert.equal(apiCalls[0].payload.students[0].namaMurid, 'ALI BIN AMIN');
+  assert.equal(apiCalls[0].payload.fileDataBase64, undefined);
+  assert.equal(confirmation.classList.contains('show'), true);
+  assert.equal(context.nativeEbayarPendingSubmission.bulanKey, '2026-09');
+});
+
+function createConfirmationContext(responseFactory) {
+  const apiCalls = [];
+  const messages = [];
+  const revokedPreviewUrls = [];
+  const elements = {
+    nativeEbayarCancelBtn: makeElement(),
+    nativeEbayarConfirmSubmitBtn: makeElement(),
+    nativeEbayarConfirmation: makeElement(),
+    nativeEbayarSuccess: makeElement(),
+    nativeEbayarSuccessGroupId: makeElement(),
+    nativeEbayarSuccessStudents: makeElement(),
+    nativeEbayarSuccessMonth: makeElement(),
+    nativeEbayarSuccessAmount: makeElement(),
+    nativeEbayarReceiptStatus: makeElement(),
+    nativeEbayarReceiptLink: makeElement({ href: undefined }),
+    nativeEbayarForm: makeElement(),
+    nativeEbayarFileName: makeElement(),
+    nativeEbayarImagePreview: makeElement({ src: 'blob:slip-preview', style: { display: 'block' } })
+  };
+  const context = {
+    nativeEbayarSubmissionBusy: false,
+    nativeEbayarPendingSubmission: {
+      students: [{ studentKey: 'KANAK:7', namaMurid: 'ALI BIN AMIN' }],
+      bulanKey: '2026-09', tarikhBayaran: '2026-09-01', jumlahKeseluruhan: '60.00',
+      noRujukan: 'MBB-123', fileName: 'slip.pdf', mimeType: 'application/pdf', fileSize: 4
+    },
+    nativeEbayarSelectedFile: { name: 'slip.pdf', type: 'application/pdf', size: 4 },
+    nativeEbayarSelectedStudents: [{ studentKey: 'KANAK:7', nama: 'ALI BIN AMIN' }],
+    nativeEbayarPreviewUrl: 'blob:slip-preview',
+    URL: { revokeObjectURL: url => revokedPreviewUrls.push(url) },
+    document: { getElementById: id => elements[id] || null },
+    readNativeEbayarFileBase64V2_: async () => 'QUJDRA==',
+    postNativeEbayarAction: async (action, payload) => {
+      apiCalls.push({ action, payload });
+      return responseFactory();
+    },
+    showNativeEbayarMessage: (message, isError) => messages.push({ message, isError }),
+    renderNativeEbayarSelectedStudents() {},
+    initNativeEbayarForm() {}
+  };
+  loadFunctions(context, ['formatEbayarV2Amount', 'renderNativeEbayarSubmissionSuccess', 'hideNativeEbayarConfirmation', 'confirmNativeEbayarSubmission']);
+  return { context, elements, apiCalls, messages, revokedPreviewUrls };
+}
+
+test('confirmation lock permits only one payment submission and sends Base64 in its POST payload', async () => {
+  let release;
+  const responsePromise = new Promise(resolve => { release = resolve; });
+  const setup = createConfirmationContext(() => responsePromise);
+
+  const first = setup.context.confirmNativeEbayarSubmission();
+  const second = setup.context.confirmNativeEbayarSubmission();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(setup.apiCalls.length, 1);
+  assert.equal(setup.apiCalls[0].action, 'submitNativeEbayarPayment');
+  assert.equal(setup.apiCalls[0].payload.fileDataBase64, 'QUJDRA==');
+
+  release({
+    success: true, mode: 'NATIVE_EBAYAR_SUBMISSION_COMPLETED', paymentGroupId: 'NATIVE-1',
+    students: ['ALI BIN AMIN'], bulanKey: '2026-09', bulanLabel: 'September 2026',
+    jumlahKeseluruhan: 60, receiptReady: false, receiptUrl: '',
+    receiptMode: 'NATIVE_EBAYAR_RECEIPT_GENERATION_FAILED', message: 'Bayaran berjaya dihantar.'
+  });
+  await Promise.all([first, second]);
+  assert.equal(setup.apiCalls.length, 1);
+});
+
+test('successful submission exposes only a ready HTTPS receipt using safe link attributes', async () => {
+  const setup = createConfirmationContext(() => ({
+    success: true, mode: 'NATIVE_EBAYAR_SUBMISSION_COMPLETED', paymentGroupId: 'NATIVE-2',
+    students: ['ALI BIN AMIN'], bulanKey: '2026-09', bulanLabel: 'September 2026',
+    jumlahKeseluruhan: 60, receiptReady: true, receiptUrl: 'https://drive.google.com/receipt.pdf',
+    receiptMode: 'NATIVE_EBAYAR_RECEIPT_READY', message: 'Bayaran berjaya dihantar dan resit telah dijana.'
+  }));
+
+  await setup.context.confirmNativeEbayarSubmission();
+
+  assert.equal(setup.elements.nativeEbayarReceiptLink.href, 'https://drive.google.com/receipt.pdf');
+  assert.equal(setup.elements.nativeEbayarReceiptLink.attributes.rel, 'noopener noreferrer');
+  assert.equal(setup.elements.nativeEbayarReceiptLink.attributes.target, '_blank');
+  assert.equal(setup.elements.nativeEbayarReceiptLink.style.display, 'inline-flex');
+  assert.equal(setup.elements.nativeEbayarSuccessGroupId.textContent, 'NATIVE-2');
+  assert.deepEqual(setup.revokedPreviewUrls, ['blob:slip-preview']);
+  assert.equal(setup.context.nativeEbayarPreviewUrl, '');
+  assert.equal(setup.elements.nativeEbayarImagePreview.src, undefined);
+  assert.equal(setup.elements.nativeEbayarImagePreview.style.display, 'none');
+});
+
+test('payment success without a ready receipt never exposes a receipt URL', async () => {
+  const setup = createConfirmationContext(() => ({
+    success: true, mode: 'NATIVE_EBAYAR_SUBMISSION_COMPLETED', paymentGroupId: 'NATIVE-3',
+    students: ['ALI BIN AMIN'], bulanKey: '2026-09', bulanLabel: 'September 2026',
+    jumlahKeseluruhan: 60, receiptReady: false, receiptUrl: 'https://unexpected.example/receipt.pdf',
+    receiptMode: 'NATIVE_EBAYAR_RECEIPT_GENERATION_FAILED', message: 'Bayaran berjaya dihantar.'
+  }));
+
+  await setup.context.confirmNativeEbayarSubmission();
+
+  assert.equal(setup.elements.nativeEbayarReceiptLink.href, undefined);
+  assert.equal(setup.elements.nativeEbayarReceiptLink.style.display, 'none');
+  assert.match(setup.elements.nativeEbayarReceiptStatus.textContent, /belum tersedia/i);
+});
+
+test('uncertain backend result is not retried automatically', async () => {
+  const setup = createConfirmationContext(() => ({
+    success: false,
+    mode: 'NATIVE_EBAYAR_POST_WRITE_VERIFICATION_FAILED',
+    message: 'Write mungkin telah berlaku.'
+  }));
+
+  await setup.context.confirmNativeEbayarSubmission();
+
+  assert.equal(setup.apiCalls.length, 1);
+  assert.match(setup.messages.at(-1).message, /Jangan cuba semula/i);
+  assert.equal(setup.messages.at(-1).isError, true);
+});
+
+test('network failure is not retried automatically', async () => {
+  const setup = createConfirmationContext(() => Promise.reject(new Error('network down')));
+
+  await setup.context.confirmNativeEbayarSubmission();
+
+  assert.equal(setup.apiCalls.length, 1);
+  assert.match(setup.messages.at(-1).message, /Jangan cuba semula/i);
+  assert.equal(setup.messages.at(-1).isError, true);
 });
 
 test('PWA exposes one hidden-by-default eBayar V2 Maintenance shortcut', () => {

@@ -941,6 +941,203 @@
     color: rgba(255,255,255,0.7);
   }
 
+  .native-ebayar {
+    display: none;
+    max-width: 1000px;
+    margin: 32px auto 0;
+    overflow: visible;
+    border: 1px solid #D9CEAC;
+    border-radius: 16px;
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+  .native-ebayar-head {
+    padding: 22px 20px;
+    border-radius: 16px 16px 0 0;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--green), #164B3B);
+    border-bottom: 4px solid var(--gold);
+  }
+  .native-ebayar-head h2 { margin: 0 0 6px; color: var(--white); font-size: 22px; }
+  .native-ebayar-head p { margin: 0; color: rgba(255,255,255,.82); font-size: 13px; line-height: 1.55; }
+  .native-ebayar-badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: #17362D;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+  }
+  .native-ebayar-body { padding: 20px; }
+  .native-ebayar-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+  .native-ebayar-field { min-width: 0; }
+  .native-ebayar-field.full { grid-column: 1 / -1; }
+  .native-ebayar-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-dark);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .native-ebayar-field input,
+  .native-ebayar-field select {
+    width: 100%;
+    min-height: 46px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 11px 12px;
+    color: var(--text-dark);
+    background: var(--white);
+    font: inherit;
+    font-size: 14px;
+  }
+  .native-ebayar-field input:focus,
+  .native-ebayar-field select:focus {
+    outline: none;
+    border-color: var(--green-mid);
+    box-shadow: 0 0 0 3px rgba(40,105,83,.12);
+  }
+  .native-ebayar-help { margin: 6px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+  .native-ebayar-student-wrap { position: relative; }
+  .native-ebayar-results {
+    display: none;
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    box-shadow: 0 12px 30px rgba(0,0,0,.16);
+  }
+  .native-ebayar-results.show { display: block; }
+  .native-ebayar-result {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #EEE9DB;
+    padding: 11px 13px;
+    text-align: left;
+    color: var(--text-dark);
+    background: var(--white);
+    cursor: pointer;
+    font: inherit;
+  }
+  .native-ebayar-result:last-child { border-bottom: 0; }
+  .native-ebayar-result:hover,
+  .native-ebayar-result:focus { background: var(--cream); outline: none; }
+  .native-ebayar-result:disabled { cursor: not-allowed; opacity: .6; background: #F7F5EF; }
+  .native-ebayar-result strong { display: block; font-size: 13px; }
+  .native-ebayar-result span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 10px; }
+  .native-ebayar-results-note { padding: 12px 13px; color: var(--text-muted); font-size: 12px; }
+  .native-ebayar-selected { display: grid; gap: 8px; margin-top: 10px; }
+  .native-ebayar-selected-empty { color: var(--text-muted); font-size: 11px; }
+  .native-ebayar-student-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 11px;
+    border: 1px solid #B9D8C2;
+    border-radius: 9px;
+    background: #EFF9F1;
+  }
+  .native-ebayar-student-chip strong { display: block; color: var(--green); font-size: 12px; }
+  .native-ebayar-student-chip span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 10px; }
+  .native-ebayar-student-remove {
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 7px;
+    padding: 6px 8px;
+    background: #F8D7DA;
+    color: #8B1E2D;
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .native-ebayar-student-checks { display: none; margin: 0 0 14px; padding: 11px 13px; border-radius: 8px; background: #FFF6E4; }
+  .native-ebayar-student-checks.show { display: grid; gap: 6px; }
+  .native-ebayar-student-check { font-size: 12px; line-height: 1.45; }
+  .native-ebayar-student-check.ok { color: #236B36; }
+  .native-ebayar-student-check.duplicate { color: var(--error); }
+  .native-ebayar-file {
+    border: 1px dashed #B7A76E;
+    border-radius: 10px;
+    padding: 14px;
+    background: #FCFAF3;
+  }
+  .native-ebayar-file input { min-height: 0; border: 0; padding: 0; background: transparent; }
+  .native-ebayar-file-name { margin-top: 9px; color: var(--green); font-size: 12px; overflow-wrap: anywhere; }
+  .native-ebayar-image-preview {
+    display: none;
+    width: 100%;
+    max-width: 260px;
+    max-height: 220px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    object-fit: contain;
+    background: #F4F4F4;
+  }
+  .native-ebayar-privacy {
+    margin: 17px 0;
+    padding: 11px 13px;
+    border-radius: 9px;
+    background: #EAF4FB;
+    color: #1A4D69;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .native-ebayar-message {
+    display: none;
+    margin-bottom: 14px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .native-ebayar-message.error { display: block; background: #FDECEA; color: var(--error); }
+  .native-ebayar-confirmation {
+    display: none;
+    margin-top: 18px;
+    padding: 17px;
+    border: 1px solid #A8D5B2;
+    border-radius: 12px;
+    background: #EFF9F1;
+  }
+  .native-ebayar-confirmation.show { display: block; }
+  .native-ebayar-confirmation h3 { margin: 0 0 12px; color: #236B36; font-size: 15px; }
+  .native-ebayar-confirmation dl { margin: 0; }
+  .native-ebayar-confirmation-row {
+    display: grid;
+    grid-template-columns: 105px minmax(0, 1fr);
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 12px;
+  }
+  .native-ebayar-confirmation dt { color: var(--text-muted); }
+  .native-ebayar-confirmation dd { margin: 0; color: var(--text-dark); font-weight: 600; overflow-wrap: anywhere; }
+  .native-ebayar-confirm-actions { display: flex; gap: 10px; margin-top: 15px; }
+  .native-ebayar-confirm-actions .btn { flex: 1; margin: 0; }
+  .native-ebayar-success { display: none; margin-top: 18px; padding: 17px; border: 1px solid #A8D5B2; border-radius: 12px; background: #EFF9F1; }
+  .native-ebayar-success.show { display: block; }
+  .native-ebayar-success h3 { margin: 0 0 10px; color: #236B36; font-size: 16px; }
+  .native-ebayar-success p { margin: 6px 0; font-size: 12px; overflow-wrap: anywhere; }
+  @media (min-width: 700px) {
+    .native-ebayar-head { padding: 26px 28px; }
+    .native-ebayar-body { padding: 26px 28px 28px; }
+    .native-ebayar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   /* === EBAYAR STATS BADGE === */
   .ebayar-stats {
     display: flex;
@@ -3550,6 +3747,98 @@
     </div>
   </div>
 
+  <section class="native-ebayar" id="nativeEbayarSection" aria-labelledby="nativeEbayarTitle">
+    <div class="native-ebayar-head">
+      <span class="native-ebayar-badge">Native eBayar · Penghantaran Selamat</span>
+      <h2 id="nativeEbayarTitle">Bayaran Yuran Online</h2>
+      <p>Hantar bukti bayaran terus melalui SPKM tanpa meninggalkan aplikasi ini.</p>
+    </div>
+    <div class="native-ebayar-body">
+      <form id="nativeEbayarForm" onsubmit="submitNativeEbayarPreflight(event)" novalidate>
+        <div class="native-ebayar-grid">
+          <div class="native-ebayar-field full">
+            <label for="nativeEbayarStudentSearch">Pilih Murid / Anak <span class="req">*</span></label>
+            <div class="native-ebayar-student-wrap">
+              <input type="search" id="nativeEbayarStudentSearch" autocomplete="off" placeholder="Taip sekurang-kurangnya 2 aksara" aria-autocomplete="list" aria-controls="nativeEbayarStudentResults">
+              <div class="native-ebayar-results" id="nativeEbayarStudentResults" role="listbox"></div>
+            </div>
+            <div class="native-ebayar-selected" id="nativeEbayarSelectedStudents" aria-live="polite"></div>
+            <p class="native-ebayar-help" id="nativeEbayarStudentHelp">Cari dan pilih 1 hingga 5 murid daripada rekod rasmi SPKM.</p>
+          </div>
+
+          <div class="native-ebayar-field">
+            <label for="nativeEbayarMonth">Bayaran Untuk <span class="req">*</span></label>
+            <select id="nativeEbayarMonth" required>
+              <option value="2026-09">September 2026</option>
+              <option value="2026-10">Oktober 2026</option>
+              <option value="2026-11">November 2026</option>
+              <option value="2026-12">Disember 2026</option>
+            </select>
+            <p class="native-ebayar-help">Bayaran Januari–Ogos 2026 kekal di sistem bayaran lama. Bulan akan datang tidak boleh dipilih.</p>
+            <p class="native-ebayar-help" id="nativeEbayarLaunchStatus" role="status"></p>
+          </div>
+
+          <div class="native-ebayar-field">
+            <label for="nativeEbayarDate">Tarikh Bayaran <span class="req">*</span></label>
+            <input type="date" id="nativeEbayarDate" required>
+          </div>
+
+          <div class="native-ebayar-field">
+            <label for="nativeEbayarAmount">Jumlah Keseluruhan Bayaran (RM) <span class="req">*</span></label>
+            <input type="number" id="nativeEbayarAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="Contoh: 30.00" required>
+            <p class="native-ebayar-help">Masukkan jumlah keseluruhan seperti yang tertera pada slip untuk semua murid yang dipilih.</p>
+          </div>
+
+          <div class="native-ebayar-field">
+            <label for="nativeEbayarReference">No. Rujukan Transaksi</label>
+            <input type="text" id="nativeEbayarReference" maxlength="80" autocomplete="off" placeholder="Jika ada">
+          </div>
+
+          <div class="native-ebayar-field full">
+            <label for="nativeEbayarSlip">Slip Online Banking <span class="req">*</span></label>
+            <div class="native-ebayar-file">
+              <input type="file" id="nativeEbayarSlip" accept="image/jpeg,image/png,application/pdf" required>
+              <div class="native-ebayar-file-name" id="nativeEbayarFileName">Belum ada fail dipilih.</div>
+              <img class="native-ebayar-image-preview" id="nativeEbayarImagePreview" alt="Pratonton slip yang dipilih">
+            </div>
+            <p class="native-ebayar-help">JPEG, PNG, atau PDF sahaja. Saiz maksimum 3 MB.</p>
+          </div>
+        </div>
+
+        <div class="native-ebayar-privacy">🔒 Slip disimpan dalam ruang Google Drive sistem SPKM dan tidak dikongsi secara awam.</div>
+        <div class="native-ebayar-message" id="nativeEbayarMessage" role="alert"></div>
+        <div class="native-ebayar-student-checks" id="nativeEbayarStudentChecks" role="status"></div>
+        <button class="btn btn-primary" type="submit" id="nativeEbayarSubmitBtn" style="width:100%;">Hantar Bayaran</button>
+      </form>
+
+      <div class="native-ebayar-confirmation" id="nativeEbayarConfirmation" role="status">
+        <h3>Maklumat telah disahkan. Teruskan hantar bayaran?</h3>
+        <dl>
+          <div class="native-ebayar-confirmation-row"><dt>Murid</dt><dd><ul id="nativeEbayarConfirmStudents" style="margin:0; padding-left:18px;"></ul></dd></div>
+          <div class="native-ebayar-confirmation-row"><dt>Bulan</dt><dd id="nativeEbayarConfirmMonth">—</dd></div>
+          <div class="native-ebayar-confirmation-row"><dt>Tarikh</dt><dd id="nativeEbayarConfirmDate">—</dd></div>
+          <div class="native-ebayar-confirmation-row"><dt>Jumlah Keseluruhan</dt><dd id="nativeEbayarConfirmAmount">—</dd></div>
+          <div class="native-ebayar-confirmation-row"><dt>Slip</dt><dd id="nativeEbayarConfirmFile">—</dd></div>
+        </dl>
+        <div class="native-ebayar-confirm-actions">
+          <button class="btn btn-ghost" type="button" id="nativeEbayarCancelBtn" onclick="cancelNativeEbayarSubmission()">Batal</button>
+          <button class="btn btn-primary" type="button" id="nativeEbayarConfirmSubmitBtn" onclick="confirmNativeEbayarSubmission()">Hantar Sekarang</button>
+        </div>
+      </div>
+
+      <div class="native-ebayar-success" id="nativeEbayarSuccess" role="status">
+        <h3>Bayaran berjaya dihantar.</h3>
+        <p><strong>ID Rujukan:</strong> <span id="nativeEbayarSuccessGroupId">—</span></p>
+        <p><strong>Murid:</strong> <span id="nativeEbayarSuccessStudents">—</span></p>
+        <p><strong>Bulan:</strong> <span id="nativeEbayarSuccessMonth">—</span></p>
+        <p><strong>Jumlah:</strong> <span id="nativeEbayarSuccessAmount">—</span></p>
+        <p>✓ Slip telah diterima.</p>
+        <p id="nativeEbayarReceiptStatus"><strong>Resit rasmi belum tersedia.</strong></p>
+        <a class="btn btn-primary" id="nativeEbayarReceiptLink" href="#" target="_blank" rel="noopener noreferrer" style="display:none; margin-top:10px;">Lihat / Muat Turun Resit</a>
+      </div>
+    </div>
+  </section>
+
 </section>
 
 
@@ -3698,9 +3987,14 @@
 <script>
   const _isGAS  = window.location.hostname.endsWith('google.com');
   const APP_VERSION = "1.0.0";
-  // GitHub Pages Native eBayar launch route. Never use a /dev URL here.
-  // Update this single constant only when the approved production Web App URL changes.
-  const NATIVE_EBAYAR_PRODUCTION_URL = 'https://script.google.com/macros/s/AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1/exec';
+  let nativeEbayarSelectedStudents = [];
+  let nativeEbayarSelectedFile = null;
+  let nativeEbayarSearchTimer = null;
+  let nativeEbayarSearchSequence = 0;
+  let nativeEbayarPreviewUrl = '';
+  let nativeEbayarInitialized = false;
+  let nativeEbayarPendingSubmission = null;
+  let nativeEbayarSubmissionBusy = false;
 
   // Load GAS_URL dynamically so URL changes only need a config.json update
   var _gasUrlReady = new Promise(function(resolve) {
@@ -4041,6 +4335,29 @@
         method: 'GET',
         redirect: 'follow'
       }).then(function(r) { return r.json(); });
+    });
+  }
+
+  function postNativeEbayarAction(action, payload) {
+    var allowedActions = [
+      'getNativeEbayarStudentLookup',
+      'preflightNativeEbayarSubmission',
+      'submitNativeEbayarPayment'
+    ];
+    if (allowedActions.indexOf(action) === -1) {
+      return Promise.reject(new Error('Tindakan Native eBayar tidak dibenarkan.'));
+    }
+    return _gasUrlReady.then(function() {
+      var url = (window.GAS_URL || '').toString().trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/i.test(url)) {
+        throw new Error('URL API Native eBayar tidak tersedia.');
+      }
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify(Object.assign({ action: action }, payload || {})),
+        redirect: 'follow'
+      }).then(function(response) { return response.json(); });
     });
   }
 
@@ -6135,6 +6452,566 @@
   // =====================
   // EBAYAR
   // =====================
+  function formatEbayarV2Amount(value) {
+    var amount = parseFloat(value);
+    if (isNaN(amount)) amount = 0;
+    return 'RM ' + amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function normalizeNativeEbayarStudentName(value) {
+    return (value || '').toString().replace(/\s+/g, ' ').trim().toUpperCase();
+  }
+
+  function showNativeEbayarMessage(message, isError) {
+    var element = document.getElementById('nativeEbayarMessage');
+    if (!element) return;
+    element.textContent = message || '';
+    element.className = 'native-ebayar-message' + (message ? (isError ? ' error' : '') : '');
+    element.style.display = message ? 'block' : 'none';
+    if (message && !isError) {
+      element.style.background = '#EAF4FB';
+      element.style.color = '#1A4D69';
+    } else {
+      element.style.background = '';
+      element.style.color = '';
+    }
+  }
+
+  function hideNativeEbayarConfirmation() {
+    var confirmation = document.getElementById('nativeEbayarConfirmation');
+    if (confirmation) confirmation.classList.remove('show');
+    nativeEbayarPendingSubmission = null;
+    var success = document.getElementById('nativeEbayarSuccess');
+    if (success) success.classList.remove('show');
+  }
+
+  function clearNativeEbayarStudentChecks() {
+    var container = document.getElementById('nativeEbayarStudentChecks');
+    if (!container) return;
+    container.textContent = '';
+    container.classList.remove('show');
+  }
+
+  function renderNativeEbayarStudentChecks(checks) {
+    var container = document.getElementById('nativeEbayarStudentChecks');
+    if (!container) return;
+    container.textContent = '';
+    (checks || []).forEach(function(check) {
+      var row = document.createElement('div');
+      row.className = 'native-ebayar-student-check ' + (check.duplicate ? 'duplicate' : 'ok');
+      row.textContent = (check.duplicate ? '✗ ' : '✓ ') + (check.nama || '') +
+        (check.duplicate ? ' — rekod bayaran bulan ini telah wujud' : ' — boleh diteruskan');
+      container.appendChild(row);
+    });
+    if ((checks || []).length) container.classList.add('show');
+  }
+
+  function renderNativeEbayarSelectedStudents() {
+    var container = document.getElementById('nativeEbayarSelectedStudents');
+    var help = document.getElementById('nativeEbayarStudentHelp');
+    if (!container) return;
+    container.textContent = '';
+    if (!nativeEbayarSelectedStudents.length) {
+      var empty = document.createElement('div');
+      empty.className = 'native-ebayar-selected-empty';
+      empty.textContent = 'Belum ada murid dipilih.';
+      container.appendChild(empty);
+    }
+    nativeEbayarSelectedStudents.forEach(function(student) {
+      var chip = document.createElement('div');
+      chip.className = 'native-ebayar-student-chip';
+      var detailsWrap = document.createElement('div');
+      var name = document.createElement('strong');
+      name.textContent = '✓ ' + (student.nama || '');
+      detailsWrap.appendChild(name);
+      var detailParts = [];
+      if (student.studentType) detailParts.push(student.studentType);
+      if (student.guru) detailParts.push('Guru: ' + student.guru);
+      if (detailParts.length) {
+        var details = document.createElement('span');
+        details.textContent = detailParts.join(' · ');
+        detailsWrap.appendChild(details);
+      }
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'native-ebayar-student-remove';
+      remove.textContent = 'Buang';
+      remove.setAttribute('aria-label', 'Buang ' + (student.nama || '') + ' daripada pilihan');
+      remove.addEventListener('click', function() {
+        nativeEbayarSelectedStudents = nativeEbayarSelectedStudents.filter(function(selected) {
+          return selected.studentKey !== student.studentKey;
+        });
+        renderNativeEbayarSelectedStudents();
+        clearNativeEbayarStudentChecks();
+        hideNativeEbayarConfirmation();
+        showNativeEbayarMessage('', false);
+      });
+      chip.appendChild(detailsWrap);
+      chip.appendChild(remove);
+      container.appendChild(chip);
+    });
+    if (help) help.textContent = nativeEbayarSelectedStudents.length + '/5 murid dipilih. Cari lagi untuk menambah murid.';
+  }
+
+  function renderNativeEbayarStudentResults(results, message) {
+    var container = document.getElementById('nativeEbayarStudentResults');
+    if (!container) return;
+    container.textContent = '';
+    if (message) {
+      var note = document.createElement('div');
+      note.className = 'native-ebayar-results-note';
+      note.textContent = message;
+      container.appendChild(note);
+      container.classList.add('show');
+      return;
+    }
+    (results || []).forEach(function(student) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'native-ebayar-result';
+      button.setAttribute('role', 'option');
+      var name = document.createElement('strong');
+      name.textContent = student.nama || '';
+      var details = document.createElement('span');
+      var detailParts = [];
+      if (student.studentType) detailParts.push(student.studentType);
+      if (student.guru) detailParts.push('Guru: ' + student.guru);
+      var alreadySelected = nativeEbayarSelectedStudents.some(function(selected) {
+        return selected.studentKey === student.studentKey;
+      });
+      if (alreadySelected) {
+        detailParts.push('Sudah dipilih');
+        button.disabled = true;
+      }
+      details.textContent = detailParts.join(' · ');
+      button.appendChild(name);
+      if (detailParts.length) button.appendChild(details);
+      button.addEventListener('mousedown', function(event) {
+        event.preventDefault();
+        selectNativeEbayarStudent(student);
+      });
+      container.appendChild(button);
+    });
+    if (!(results || []).length) {
+      var empty = document.createElement('div');
+      empty.className = 'native-ebayar-results-note';
+      empty.textContent = 'Tiada murid belum bayar ditemui untuk carian ini.';
+      container.appendChild(empty);
+    }
+    container.classList.add('show');
+  }
+
+  function selectNativeEbayarStudent(student) {
+    var studentKey = (student && student.studentKey || '').toString().trim();
+    var normalizedName = normalizeNativeEbayarStudentName(student && student.nama);
+    if (!studentKey || !normalizedName) return;
+    var alreadySelected = nativeEbayarSelectedStudents.some(function(selected) {
+      return selected.studentKey === studentKey;
+    });
+    if (alreadySelected) {
+      showNativeEbayarMessage('Murid ini telah dipilih.', true);
+      return;
+    }
+    if (nativeEbayarSelectedStudents.length >= 5) {
+      showNativeEbayarMessage('Maksimum 5 murid dibenarkan untuk satu bayaran.', true);
+      return;
+    }
+    nativeEbayarSelectedStudents.push({
+      studentKey: studentKey,
+      nama: student.nama || '',
+      studentType: student.studentType || '',
+      guru: student.guru || ''
+    });
+    var search = document.getElementById('nativeEbayarStudentSearch');
+    var results = document.getElementById('nativeEbayarStudentResults');
+    clearTimeout(nativeEbayarSearchTimer);
+    nativeEbayarSearchSequence++;
+    if (search) search.value = '';
+    if (results) results.classList.remove('show');
+    renderNativeEbayarSelectedStudents();
+    clearNativeEbayarStudentChecks();
+    hideNativeEbayarConfirmation();
+    showNativeEbayarMessage('', false);
+  }
+
+  function queueNativeEbayarStudentSearch() {
+    var search = document.getElementById('nativeEbayarStudentSearch');
+    if (!search) return;
+    hideNativeEbayarConfirmation();
+    clearNativeEbayarStudentChecks();
+    clearTimeout(nativeEbayarSearchTimer);
+    var keyword = search.value.trim();
+    var monthSelect = document.getElementById('nativeEbayarMonth');
+    var bulanKey = monthSelect ? monthSelect.value : '';
+    var sequence = ++nativeEbayarSearchSequence;
+    var results = document.getElementById('nativeEbayarStudentResults');
+    if (keyword.length < 2) {
+      if (results) results.classList.remove('show');
+      return;
+    }
+    renderNativeEbayarStudentResults([], 'Mencari rekod rasmi...');
+    nativeEbayarSearchTimer = setTimeout(async function() {
+      try {
+        var data = await postNativeEbayarAction('getNativeEbayarStudentLookup', { keyword: keyword, bulanKey: bulanKey });
+        if (sequence !== nativeEbayarSearchSequence) return;
+        if (!data || !data.success) {
+          renderNativeEbayarStudentResults([], (data && data.message) || 'Carian murid gagal.');
+          return;
+        }
+        renderNativeEbayarStudentResults(data.results || [], '');
+      } catch (err) {
+        if (sequence === nativeEbayarSearchSequence) {
+          renderNativeEbayarStudentResults([], 'Ralat sambungan semasa mencari murid.');
+        }
+      }
+    }, 300);
+  }
+
+  function resetNativeEbayarStudentsForMonthChange() {
+    nativeEbayarSelectedStudents = [];
+    clearTimeout(nativeEbayarSearchTimer);
+    nativeEbayarSearchSequence++;
+    var search = document.getElementById('nativeEbayarStudentSearch');
+    var results = document.getElementById('nativeEbayarStudentResults');
+    var help = document.getElementById('nativeEbayarStudentHelp');
+    if (search) search.value = '';
+    if (results) {
+      results.textContent = '';
+      results.classList.remove('show');
+    }
+    renderNativeEbayarSelectedStudents();
+    if (help) help.textContent = 'Pilihan murid dikosongkan kerana bulan bayaran berubah. Sila pilih semula.';
+    clearNativeEbayarStudentChecks();
+    hideNativeEbayarConfirmation();
+    showNativeEbayarMessage('', false);
+  }
+
+  function handleNativeEbayarFileSelection() {
+    var input = document.getElementById('nativeEbayarSlip');
+    var fileName = document.getElementById('nativeEbayarFileName');
+    var imagePreview = document.getElementById('nativeEbayarImagePreview');
+    if (nativeEbayarPreviewUrl) {
+      URL.revokeObjectURL(nativeEbayarPreviewUrl);
+      nativeEbayarPreviewUrl = '';
+    }
+    nativeEbayarSelectedFile = null;
+    if (imagePreview) {
+      imagePreview.removeAttribute('src');
+      imagePreview.style.display = 'none';
+    }
+    var file = input && input.files ? input.files[0] : null;
+    if (!file) {
+      if (fileName) fileName.textContent = 'Belum ada fail dipilih.';
+      hideNativeEbayarConfirmation();
+      return;
+    }
+    var allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (allowedTypes.indexOf(file.type) === -1) {
+      input.value = '';
+      if (fileName) fileName.textContent = 'Fail ditolak: jenis tidak disokong.';
+      showNativeEbayarMessage('Gunakan slip JPEG, PNG, atau PDF sahaja.', true);
+      return;
+    }
+    if (file.size <= 0 || file.size > 3 * 1024 * 1024) {
+      input.value = '';
+      if (fileName) fileName.textContent = 'Fail ditolak: saiz mesti antara 1 bait hingga 3 MB.';
+      showNativeEbayarMessage('Saiz slip mesti tidak melebihi 3 MB.', true);
+      return;
+    }
+    nativeEbayarSelectedFile = file;
+    if (fileName) fileName.textContent = file.name + ' · ' + (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    if (imagePreview && file.type.indexOf('image/') === 0) {
+      nativeEbayarPreviewUrl = URL.createObjectURL(file);
+      imagePreview.src = nativeEbayarPreviewUrl;
+      imagePreview.style.display = 'block';
+    }
+    hideNativeEbayarConfirmation();
+    showNativeEbayarMessage('', false);
+  }
+
+  function initNativeEbayarForm() {
+    var form = document.getElementById('nativeEbayarForm');
+    if (!form) return;
+    var malaysia = getEbayarMalaysiaDateParts();
+    var malaysiaMonthKey = malaysia.dateKey.slice(0, 7);
+    var dateInput = document.getElementById('nativeEbayarDate');
+    if (dateInput) {
+      dateInput.max = malaysia.dateKey;
+      if (!dateInput.value) dateInput.value = malaysia.dateKey;
+    }
+    var monthSelect = document.getElementById('nativeEbayarMonth');
+    if (monthSelect) {
+      var lastEnabled = '';
+      Array.prototype.forEach.call(monthSelect.options, function(option) {
+        option.disabled = option.value > malaysiaMonthKey;
+        if (!option.disabled) lastEnabled = option.value;
+      });
+      var beforeNativeEbayarLaunch = malaysiaMonthKey < '2026-09';
+      if (beforeNativeEbayarLaunch) {
+        monthSelect.value = '2026-09';
+      } else if (!nativeEbayarInitialized && malaysiaMonthKey.indexOf('2026-') === 0 && lastEnabled) {
+        monthSelect.value = malaysiaMonthKey > '2026-12' ? lastEnabled : malaysiaMonthKey;
+      } else if (!monthSelect.value || (monthSelect.options[monthSelect.selectedIndex] && monthSelect.options[monthSelect.selectedIndex].disabled)) {
+        monthSelect.value = lastEnabled;
+      }
+      var launchStatus = document.getElementById('nativeEbayarLaunchStatus');
+      if (launchStatus) launchStatus.textContent = beforeNativeEbayarLaunch ? 'Native eBayar akan mula digunakan pada September 2026.' : '';
+      var submitButton = document.getElementById('nativeEbayarSubmitBtn');
+      if (submitButton) submitButton.disabled = beforeNativeEbayarLaunch;
+    }
+    if (nativeEbayarInitialized) return;
+    nativeEbayarInitialized = true;
+    var search = document.getElementById('nativeEbayarStudentSearch');
+    var slip = document.getElementById('nativeEbayarSlip');
+    if (search) {
+      search.addEventListener('input', queueNativeEbayarStudentSearch);
+      search.addEventListener('focus', function() {
+        if (search.value.trim().length >= 2) queueNativeEbayarStudentSearch();
+      });
+      search.addEventListener('blur', function() {
+        setTimeout(function() {
+          var results = document.getElementById('nativeEbayarStudentResults');
+          if (results) results.classList.remove('show');
+        }, 180);
+      });
+    }
+    renderNativeEbayarSelectedStudents();
+    if (monthSelect) monthSelect.addEventListener('change', resetNativeEbayarStudentsForMonthChange);
+    if (slip) slip.addEventListener('change', handleNativeEbayarFileSelection);
+    ['nativeEbayarDate', 'nativeEbayarAmount', 'nativeEbayarReference'].forEach(function(id) {
+      var element = document.getElementById(id);
+      if (element) element.addEventListener('input', hideNativeEbayarConfirmation);
+    });
+  }
+
+  function openNativeEbayarForm(monthKey) {
+    var section = document.getElementById('nativeEbayarSection');
+    if (!section) return false;
+    section.style.display = 'block';
+    initNativeEbayarForm();
+    var monthSelect = document.getElementById('nativeEbayarMonth');
+    if (monthSelect && monthSelect.value !== monthKey) {
+      monthSelect.value = monthKey;
+      resetNativeEbayarStudentsForMonthChange();
+    }
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
+  }
+
+  async function submitNativeEbayarPreflight(event) {
+    event.preventDefault();
+    hideNativeEbayarConfirmation();
+    clearNativeEbayarStudentChecks();
+    showNativeEbayarMessage('', false);
+    var monthSelect = document.getElementById('nativeEbayarMonth');
+    if (!monthSelect || monthSelect.value < '2026-09' || monthSelect.options[monthSelect.selectedIndex].disabled) {
+      showNativeEbayarMessage('Bulan bayaran ini belum tersedia untuk Native eBayar.', true);
+      return;
+    }
+    if (nativeEbayarSelectedStudents.length < 1 || nativeEbayarSelectedStudents.length > 5) {
+      showNativeEbayarMessage('Sila pilih 1 hingga 5 murid daripada senarai rasmi SPKM.', true);
+      return;
+    }
+    if (!nativeEbayarSelectedFile) {
+      showNativeEbayarMessage('Sila pilih slip Online Banking dalam format JPEG, PNG, atau PDF.', true);
+      return;
+    }
+    var payload = {
+      students: nativeEbayarSelectedStudents.map(function(student) {
+        return { studentKey: student.studentKey, namaMurid: student.nama };
+      }),
+      bulanKey: monthSelect.value,
+      tarikhBayaran: document.getElementById('nativeEbayarDate').value,
+      jumlahKeseluruhan: document.getElementById('nativeEbayarAmount').value,
+      noRujukan: document.getElementById('nativeEbayarReference').value,
+      fileName: nativeEbayarSelectedFile.name,
+      mimeType: nativeEbayarSelectedFile.type,
+      fileSize: nativeEbayarSelectedFile.size
+    };
+    var button = document.getElementById('nativeEbayarSubmitBtn');
+    button.disabled = true;
+    button.textContent = 'Menyemak Maklumat...';
+    try {
+      var data = await postNativeEbayarAction('preflightNativeEbayarSubmission', payload);
+      if (data && data.hasDuplicate) {
+        renderNativeEbayarStudentChecks(data.studentChecks || []);
+        showNativeEbayarMessage(data.message || 'Satu atau lebih murid telah mempunyai rekod bayaran untuk bulan ini.', true);
+        return;
+      }
+      if (!data || data.success !== true || data.readyToSubmit !== true) {
+        if (data && data.studentChecks) renderNativeEbayarStudentChecks(data.studentChecks);
+        showNativeEbayarMessage((data && data.message) || 'Maklumat bayaran gagal disahkan.', true);
+        return;
+      }
+      clearNativeEbayarStudentChecks();
+      var values = {
+        nativeEbayarConfirmMonth: data.bulanLabel || data.bulanKey || '',
+        nativeEbayarConfirmDate: data.tarikhBayaran || '',
+        nativeEbayarConfirmAmount: formatEbayarV2Amount(data.jumlahKeseluruhan),
+        nativeEbayarConfirmFile: data.fileName || ''
+      };
+      Object.keys(values).forEach(function(id) {
+        var element = document.getElementById(id);
+        if (element) element.textContent = values[id];
+      });
+      var studentList = document.getElementById('nativeEbayarConfirmStudents');
+      if (studentList) {
+        studentList.textContent = '';
+        (data.students || []).forEach(function(studentName) {
+          var item = document.createElement('li');
+          item.textContent = studentName;
+          studentList.appendChild(item);
+        });
+      }
+      var confirmation = document.getElementById('nativeEbayarConfirmation');
+      if (confirmation) {
+        nativeEbayarPendingSubmission = payload;
+        confirmation.classList.add('show');
+        confirmation.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    } catch (err) {
+      showNativeEbayarMessage('Ralat sambungan semasa menyemak bayaran. Tiada data dihantar.', true);
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Hantar Bayaran';
+    }
+  }
+
+  function cancelNativeEbayarSubmission() {
+    if (nativeEbayarSubmissionBusy) return;
+    hideNativeEbayarConfirmation();
+    showNativeEbayarMessage('Penghantaran dibatalkan. Tiada data disimpan.', false);
+  }
+
+  function readNativeEbayarFileBase64V2_(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() {
+        var result = (reader.result || '').toString();
+        var commaIndex = result.indexOf(',');
+        if (commaIndex < 0) {
+          reject(new Error('Format data fail tidak sah.'));
+          return;
+        }
+        resolve(result.slice(commaIndex + 1));
+      };
+      reader.onerror = function() { reject(new Error('Fail tidak dapat dibaca.')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderNativeEbayarSubmissionSuccess(result) {
+    var values = {
+      nativeEbayarSuccessGroupId: result.paymentGroupId || '',
+      nativeEbayarSuccessStudents: (result.students || []).join(', '),
+      nativeEbayarSuccessMonth: result.bulanLabel || result.bulanKey || '',
+      nativeEbayarSuccessAmount: formatEbayarV2Amount(result.jumlahKeseluruhan)
+    };
+    Object.keys(values).forEach(function(id) {
+      var element = document.getElementById(id);
+      if (element) element.textContent = values[id];
+    });
+    var receiptStatus = document.getElementById('nativeEbayarReceiptStatus');
+    var receiptLink = document.getElementById('nativeEbayarReceiptLink');
+    var receiptUrl = (result.receiptUrl || '').toString().trim();
+    var receiptReady = result.receiptReady === true && /^https:\/\//i.test(receiptUrl);
+    if (receiptStatus) {
+      receiptStatus.textContent = receiptReady
+        ? 'Resit rasmi telah tersedia.'
+        : 'Bayaran berjaya direkod. Resit rasmi belum tersedia.';
+      if (!receiptReady && result.receiptMode === 'NATIVE_EBAYAR_RECEIPT_POST_WRITE_VERIFICATION_FAILED') {
+        receiptStatus.textContent += ' Bayaran telah direkod tetapi pengesahan resit gagal. Jangan hantar bayaran semula.';
+      }
+    }
+    if (receiptLink) {
+      if (receiptReady) {
+        receiptLink.href = receiptUrl;
+        receiptLink.setAttribute('target', '_blank');
+        receiptLink.setAttribute('rel', 'noopener noreferrer');
+        receiptLink.style.display = 'inline-flex';
+      } else {
+        receiptLink.removeAttribute('href');
+        receiptLink.style.display = 'none';
+      }
+    }
+    var success = document.getElementById('nativeEbayarSuccess');
+    if (success) {
+      success.classList.add('show');
+      success.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  async function confirmNativeEbayarSubmission() {
+    if (nativeEbayarSubmissionBusy) return;
+    if (!nativeEbayarPendingSubmission || !nativeEbayarSelectedFile) {
+      hideNativeEbayarConfirmation();
+      showNativeEbayarMessage('Maklumat penghantaran telah berubah. Sila semak semula bayaran.', true);
+      return;
+    }
+    if (nativeEbayarSelectedFile.size > 3 * 1024 * 1024) {
+      hideNativeEbayarConfirmation();
+      showNativeEbayarMessage('Saiz slip mesti tidak melebihi 3 MB.', true);
+      return;
+    }
+    nativeEbayarSubmissionBusy = true;
+    var cancelButton = document.getElementById('nativeEbayarCancelBtn');
+    var confirmButton = document.getElementById('nativeEbayarConfirmSubmitBtn');
+    if (cancelButton) cancelButton.disabled = true;
+    if (confirmButton) {
+      confirmButton.disabled = true;
+      confirmButton.textContent = 'Memuat Naik Slip...';
+    }
+    showNativeEbayarMessage('Memuat naik slip dan menyimpan bayaran. Jangan tutup halaman ini.', false);
+    try {
+      var fileDataBase64 = await readNativeEbayarFileBase64V2_(nativeEbayarSelectedFile);
+      if (confirmButton) confirmButton.textContent = 'Menyimpan Bayaran...';
+      var payload = Object.assign({}, nativeEbayarPendingSubmission, { fileDataBase64: fileDataBase64 });
+      var result = await postNativeEbayarAction('submitNativeEbayarPayment', payload);
+      if (!result || result.success !== true) {
+        var uncertain = result && result.mode === 'NATIVE_EBAYAR_POST_WRITE_VERIFICATION_FAILED';
+        hideNativeEbayarConfirmation();
+        showNativeEbayarMessage(uncertain
+          ? 'Write mungkin telah berlaku tetapi verifikasi selepas write gagal. Jangan cuba semula sehingga rekod disemak.'
+          : ((result && result.message) || 'Bayaran gagal dihantar.'), true);
+        return;
+      }
+      var confirmation = document.getElementById('nativeEbayarConfirmation');
+      if (confirmation) confirmation.classList.remove('show');
+      nativeEbayarPendingSubmission = null;
+      renderNativeEbayarSubmissionSuccess(result);
+      showNativeEbayarMessage(result.message || 'Bayaran berjaya dihantar.', false);
+      nativeEbayarSelectedStudents = [];
+      nativeEbayarSelectedFile = null;
+      if (nativeEbayarPreviewUrl) {
+        URL.revokeObjectURL(nativeEbayarPreviewUrl);
+        nativeEbayarPreviewUrl = '';
+      }
+      var imagePreview = document.getElementById('nativeEbayarImagePreview');
+      if (imagePreview) {
+        imagePreview.removeAttribute('src');
+        imagePreview.style.display = 'none';
+      }
+      var form = document.getElementById('nativeEbayarForm');
+      if (form) form.reset();
+      var fileName = document.getElementById('nativeEbayarFileName');
+      if (fileName) fileName.textContent = 'Belum ada fail dipilih.';
+      renderNativeEbayarSelectedStudents();
+      initNativeEbayarForm();
+    } catch (err) {
+      var confirmation = document.getElementById('nativeEbayarConfirmation');
+      if (confirmation) confirmation.classList.remove('show');
+      nativeEbayarPendingSubmission = null;
+      showNativeEbayarMessage('Ralat sambungan semasa penghantaran. Jangan cuba semula sehingga status bayaran disemak.', true);
+    } finally {
+      nativeEbayarSubmissionBusy = false;
+      if (cancelButton) cancelButton.disabled = false;
+      if (confirmButton) {
+        confirmButton.disabled = false;
+        confirmButton.textContent = 'Hantar Sekarang';
+      }
+    }
+  }
+
   function getEbayarMalaysiaDateParts() {
     var parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Kuala_Lumpur',
@@ -6167,34 +7044,30 @@
     };
   }
 
-  function getNativeEbayarProductionUrl() {
-    var url = (NATIVE_EBAYAR_PRODUCTION_URL || '').trim();
-    return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/i.test(url) ? url : '';
-  }
-
   function applyNativeEbayarMonthRoute(monthIndex, routing) {
     if (!routing || routing.routeType !== 'NATIVE') return;
     var button = document.getElementById('ebtn-' + monthIndex);
     if (!button) return;
-    var productionUrl = getNativeEbayarProductionUrl();
-    var enabled = routing.isOpen && !!productionUrl;
+    var enabled = routing.isOpen;
     button.classList.add('native-route');
     button.setAttribute('data-native-month', routing.monthKey);
+    button.removeAttribute('href');
+    button.removeAttribute('target');
+    button.removeAttribute('rel');
     if (!enabled) {
-      button.removeAttribute('href');
-      button.removeAttribute('target');
-      button.removeAttribute('rel');
+      button.onclick = null;
       button.setAttribute('aria-disabled', 'true');
       button.setAttribute('tabindex', '-1');
-      button.textContent = routing.isFuture ? 'Akan Datang' : 'Native eBayar Belum Tersedia';
+      button.textContent = 'Akan Datang';
       return;
     }
-    button.href = productionUrl;
-    button.target = '_blank';
-    button.rel = 'noopener noreferrer';
+    button.onclick = function(event) {
+      if (event) event.preventDefault();
+      openNativeEbayarForm(routing.monthKey);
+    };
     button.setAttribute('aria-disabled', 'false');
     button.removeAttribute('tabindex');
-    button.textContent = 'Buka Native eBayar';
+    button.textContent = 'Bayar Yuran';
   }
 
   async function initEbayar() {
@@ -6239,6 +7112,7 @@
 
           var statBadge = document.getElementById('ebadge-' + j);
           if (!statBadge) continue;
+          if (isCurrent) continue;
 
           var stat = data.stats[j];
           if (!stat || stat.error) {
