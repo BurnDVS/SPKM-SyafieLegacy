@@ -257,7 +257,7 @@ function doPost(e) {
     else if (action === 'getKehadiranHariIni')    result = getKehadiranHariIni();
     else if (action === 'getMuridList')           result = getMuridList();
     else if (action === 'getGuru')                result = getGuru();
-    else if (action === 'getYuranStats')          result = getYuranStats(body);
+    else if (action === 'getYuranStats')          result = getYuranStatsForDashboard_(body);
     else if (action === 'getEbayarStats')         result = getEbayarStats();
     else if (action === 'getYuranParent')         result = getYuranParent(body);
     else if (action === 'getNativeEbayarStudentLookup') result = getNativeEbayarStudentLookup(body);
@@ -410,7 +410,7 @@ function doAction(action, payload) {
   else if (action === 'getKehadiranHariIni')   return getKehadiranHariIni();
   else if (action === 'getMuridList')          return getMuridList();
   else if (action === 'getGuru')               return getGuru();
-  else if (action === 'getYuranStats')         return getYuranStats(payload);
+  else if (action === 'getYuranStats')         return getYuranStatsForDashboard_(payload);
   else if (action === 'getEbayarStats')        return getEbayarStats();
   else if (action === 'getYuranParent')        return getYuranParent(payload);
   else if (action === 'getNativeEbayarStudentLookup') return getNativeEbayarStudentLookup(payload);
@@ -7810,6 +7810,20 @@ function getMonthlyPaymentSummaryV2(params) {
   }
 }
 
+function getYuranStatsForDashboard_(params) {
+  params = params || {};
+  var bulan = (params.bulan || '').toString().trim().toUpperCase();
+  var NATIVE_MONTH_KEYS = {
+    'SEPT2026': '2026-09',
+    'OKT2026':  '2026-10',
+    'NOV2026':  '2026-11',
+    'DIS2026':  '2026-12'
+  };
+  var bulanKey = NATIVE_MONTH_KEYS[bulan];
+  if (!bulanKey) return getYuranStats(params);
+  return getYuranStatsV2({ tahun: '2026', bulanKey: bulanKey, requireExactSelesai: true });
+}
+
 function getYuranStatsV2(params) {
   params = params || {};
   try {
@@ -7827,7 +7841,7 @@ function getYuranStatsV2(params) {
       var rowBulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
       if (rowBulanKey !== bulanKey) return;
       var status = (r.STATUS || '').toString().trim().toUpperCase();
-      if (status && status !== 'SELESAI') return;
+      if (params.requireExactSelesai === true ? status !== 'SELESAI' : (status && status !== 'SELESAI')) return;
       var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
       if (nama) {
         paid[nama] = true;
