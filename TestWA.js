@@ -1,7 +1,7 @@
 function testWA() {
-  var nombor = '0172875136'; // tukar kepada nombor kau
-  var mesej  = 'Assalamualaikum, ini adalah mesej ujian dari sistem SPKM. Sila abaikan. Terima kasih.';
-  
-  var result = hantarWhatsApp(nombor, mesej);
-  Logger.log('Result: ' + result);
+  var nombor = PropertiesService.getScriptProperties().getProperty('TEST_WA_NUMBER');
+  if (!nombor) throw new Error('TEST_WA_NUMBER Script Property diperlukan untuk ujian editor.');
+  var mesej = 'Assalamualaikum, ini adalah mesej ujian dari sistem SPKM. Sila abaikan. Terima kasih.';
+
+  return hantarWhatsApp(nombor, mesej);
 }

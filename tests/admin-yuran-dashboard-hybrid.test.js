@@ -135,8 +135,10 @@ test('non-dashboard V2 callers retain their previous blank-status behaviour', ()
   assert.equal(result.listNamaBayar.includes('BUDI'), true);
 });
 
-test('both getYuranStats routes use the dashboard dispatcher without changing auth lists', () => {
+test('central getYuranStats route uses the dashboard dispatcher without changing auth policy', () => {
   const routeMatches = backendSource.match(/action === 'getYuranStats'[^\n]+getYuranStatsForDashboard_\(/g) || [];
-  assert.equal(routeMatches.length, 2);
+  assert.equal(routeMatches.length, 1);
+  assert.match(backendSource, /function doPost[\s\S]*?doAction\(action, body\)/);
+  assert.match(backendSource, /function doGet[\s\S]*?doAction\(action, payload\)/);
   assert.match(backendSource, /AUTH_REQUIRED_ACTIONS[\s\S]*?'getYuranStats'/);
 });

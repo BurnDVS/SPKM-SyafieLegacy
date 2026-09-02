@@ -2443,11 +2443,15 @@
           <div class="hdr-form-pad">
             <label class="hdr-label" for="loginEmail">E-mel</label>
             <input class="hdr-input" type="email" id="loginEmail" placeholder="guru@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()">
-            <label class="hdr-label" for="loginPhone">Kata Laluan</label>
-            <input class="hdr-input" type="password" id="loginPhone" placeholder="6 digit terakhir telefon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')handleLogin()">
+            <div id="headerLoginOtpStep" style="display:none;">
+              <label class="hdr-label" for="loginOtp">Kod OTP</label>
+              <input class="hdr-input" type="text" inputmode="numeric" id="loginOtp" placeholder="6 digit OTP" maxlength="6" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')handleLogin()">
+              <button type="button" class="btn btn-ghost btn-sm" style="width:100%; margin:0 0 8px;" onclick="resetHeaderStaffLoginOtp()">Guna e-mel lain</button>
+            </div>
+            <div class="hdr-login-err" id="headerLoginInfo" style="display:none; color:var(--green);"></div>
             <div class="hdr-login-err" id="headerLoginErr"></div>
             <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()" style="margin-top:0; background:var(--gold); color:#0A1F44; border:none;">
-              <span class="btn-text">Log Masuk</span>
+              <span class="btn-text">Hantar OTP</span>
               <span class="btn-loader" style="border-color:rgba(10,31,68,0.3); border-top-color:#0A1F44;"></span>
             </button>
           </div>
@@ -4397,81 +4401,133 @@
   // =====================
   // LOGIN / LOGOUT
   // =====================
-  function handleLogin() {
-    hideAlert('loginError'); hideAlert('loginSuccess');
-    const hdrErr = document.getElementById('headerLoginErr');
-    if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
+  function startStaffSessionRenewal_() {
+    if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
+    window._sessionRenewTimer = setInterval(function() {
+      callGASPromise('renewSession', {}).catch(function() {});
+    }, 20 * 60 * 1000);
+  }
 
-    const email = document.getElementById('loginEmail').value.trim();
-    const phone = document.getElementById('loginPhone').value.trim();
-    if (!email || !phone) {
-      if (hdrErr) { hdrErr.textContent = 'Sila isi e-mel dan nombor telefon.'; hdrErr.style.display = 'block'; }
-      showErr('loginError', 'Sila isi e-mel dan nombor telefon.');
+  function completeStaffLogin_(data) {
+    if (!data || !data.success || !data.token) return false;
+    loggedInGuru = data.user;
+    loggedInTabKehadiran = data.tabKehadiran || null;
+    currentRole = data.role || 'GURU';
+    _spkm_st.setItem('spkm_token', data.token);
+    localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+      token: data.token,
+      user: data.user,
+      email: data.email || '',
+      role: currentRole,
+      tabKehadiran: loggedInTabKehadiran
+    }));
+
+    document.getElementById('guruName').textContent = data.user;
+    document.getElementById('loginFormWrapper').style.display = 'none';
+    document.getElementById('dashboardPreview').style.display = 'block';
+    document.getElementById('headerUserName').textContent = data.user;
+    document.getElementById('headerUserNameDropdown').textContent = data.user;
+    document.getElementById('headerPreLogin').style.display = 'none';
+    document.getElementById('headerPostLogin').style.display = '';
+    document.getElementById('headerLoginDropdown').classList.remove('open');
+
+    if (window.innerWidth <= 1024) {
+      var initials = data.user.split(' ').slice(0, 2).map(function(word) { return word[0] || ''; }).join('').toUpperCase();
+      document.getElementById('mobLoggedAv').textContent = initials;
+      document.getElementById('mobLoggedName').textContent = data.user;
+      document.getElementById('guestMenu').style.display = 'none';
+      document.getElementById('guruMenu').style.display = 'block';
+    }
+
+    setLoginState(true);
+    updateNav(true);
+    updateMobileBottomNav(true);
+    loadOrgChart();
+    resetIdleTimer();
+    var guruEl = document.getElementById('hadirGuru');
+    if (guruEl) guruEl.value = data.user;
+    initFCM();
+    startNotifPolling();
+    startStaffSessionRenewal_();
+    return true;
+  }
+
+  function resetHeaderStaffLoginOtp() {
+    var emailEl = document.getElementById('loginEmail');
+    var otpEl = document.getElementById('loginOtp');
+    var otpStep = document.getElementById('headerLoginOtpStep');
+    var info = document.getElementById('headerLoginInfo');
+    var btnText = document.querySelector('#loginBtn .btn-text');
+    emailEl.disabled = false;
+    otpEl.value = '';
+    otpStep.style.display = 'none';
+    if (info) { info.style.display = 'none'; info.textContent = ''; }
+    if (btnText) btnText.textContent = 'Hantar OTP';
+    emailEl.focus();
+  }
+
+  async function handleLogin() {
+    hideAlert('loginError'); hideAlert('loginSuccess');
+    var hdrErr = document.getElementById('headerLoginErr');
+    var info = document.getElementById('headerLoginInfo');
+    if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
+    if (info) { info.style.display = 'none'; info.textContent = ''; }
+
+    var emailEl = document.getElementById('loginEmail');
+    var otpEl = document.getElementById('loginOtp');
+    var otpStep = document.getElementById('headerLoginOtpStep');
+    var email = emailEl.value.trim();
+    var confirming = otpStep.style.display !== 'none';
+    var otp = otpEl.value.trim();
+    var btn = document.getElementById('loginBtn');
+    var btnText = btn.querySelector('.btn-text');
+
+    if (!email || (confirming && !/^\d{6}$/.test(otp))) {
+      var validationMessage = confirming ? 'Masukkan kod OTP 6 digit.' : 'Masukkan alamat e-mel anda.';
+      showErr('loginError', validationMessage);
+      if (hdrErr) { hdrErr.textContent = validationMessage; hdrErr.style.display = 'block'; }
       return;
     }
 
-    const btn = document.getElementById('loginBtn');
-    btn.classList.add('loading'); btn.disabled = true;
-
-    callGAS('login', { email, phone },
-      function(data) {
-        btn.classList.remove('loading'); btn.disabled = false;
-        if (data.success) {
-          loggedInGuru         = data.user;
-          loggedInTabKehadiran = data.tabKehadiran || null;
-          if (window.innerWidth <= 1024) {
-            const initials = data.user.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-            document.getElementById('mobLoggedAv').textContent = initials;
-            document.getElementById('mobLoggedName').textContent = data.user;
-            document.getElementById('guestMenu').style.display = 'none';
-            document.getElementById('guruMenu').style.display = 'block';
-          }
-          currentRole  = data.role || 'GURU';
-          if (data.token) {
-            _spkm_st.setItem('spkm_token', data.token);
-            localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-              token: data.token, user: data.user,
-              role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-            }));
-          }
-          document.getElementById('guruName').textContent = data.user;
-          document.getElementById('loginFormWrapper').style.display = 'none';
-          document.getElementById('dashboardPreview').style.display = 'block';
-          document.getElementById('headerUserName').textContent = data.user;
-          document.getElementById('headerUserNameDropdown').textContent = data.user;
-          document.getElementById('headerPreLogin').style.display = 'none';
-          document.getElementById('headerPostLogin').style.display = '';
-          document.getElementById('headerLoginDropdown').classList.remove('open');
-          if (hdrErr) { hdrErr.style.display = 'none'; hdrErr.textContent = ''; }
-          setLoginState(true);
-          updateNav(true);
-          updateMobileBottomNav(true);
-          loadOrgChart();
-          resetIdleTimer();
-          const gEl = document.getElementById('hadirGuru');
-          if (gEl) gEl.value = data.user;
-          initFCM();
-          startNotifPolling();
-          if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
-          window._sessionRenewTimer = setInterval(function() {
-            callGASPromise('renewSession', {}).catch(function() {});
-          }, 20 * 60 * 1000);
-        } else {
-          const msg = data.message || 'E-mel atau nombor tidak sepadan.';
-          showErr('loginError', msg);
-          if (hdrErr) { hdrErr.textContent = msg; hdrErr.style.display = 'block'; }
+    btn.classList.add('loading');
+    btn.disabled = true;
+    try {
+      if (!confirming) {
+        var requestResult = await callGASPromise('requestStaffLoginOtp', { email: email });
+        otpStep.style.display = '';
+        emailEl.disabled = true;
+        if (btnText) btnText.textContent = 'Sahkan OTP';
+        if (info) {
+          info.textContent = requestResult && requestResult.message
+            ? requestResult.message
+            : 'Jika e-mel layak, kod log masuk akan dihantar.';
+          info.style.display = 'block';
         }
-      },
-      function(err) {
-        btn.classList.remove('loading'); btn.disabled = false;
-        const msg = 'Ralat sambungan. Sila cuba sebentar lagi.';
-        showErr('loginError', msg);
-        if (hdrErr) { hdrErr.textContent = msg; hdrErr.style.display = 'block'; }
+        otpEl.focus();
+        return;
       }
-    );
+
+      var data = await callGASPromise('confirmStaffLoginOtp', { email: email, otp: otp });
+      if (completeStaffLogin_(data)) {
+        resetHeaderStaffLoginOtp();
+        return;
+      }
+      var message = data && data.message ? data.message : 'Kod log masuk tidak sah atau telah tamat tempoh.';
+      showErr('loginError', message);
+      if (hdrErr) { hdrErr.textContent = message; hdrErr.style.display = 'block'; }
+    } catch (error) {
+      var connectionMessage = 'Ralat sambungan. Sila cuba sebentar lagi.';
+      showErr('loginError', connectionMessage);
+      if (hdrErr) { hdrErr.textContent = connectionMessage; hdrErr.style.display = 'block'; }
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
   }
 
   function handleLogout() {
+    var sessionToken = _spkm_st.getItem('spkm_token');
+    if (sessionToken) callGASPromise('logout', { token: sessionToken }).catch(function() {});
     _spkm_st.removeItem('spkm_token');
     localStorage.removeItem(SPKM_LS_USER); localStorage.removeItem(SPKM_LAST_ID);
     if (window._sessionRenewTimer) { clearInterval(window._sessionRenewTimer); window._sessionRenewTimer = null; }
@@ -4490,7 +4546,9 @@
     document.getElementById('loginFormWrapper').style.display = 'block';
     document.getElementById('dashboardPreview').style.display = 'none';
     document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPhone').value = '';
+    document.getElementById('loginEmailModal').value = '';
+    resetHeaderStaffLoginOtp();
+    resetModalStaffLoginOtp();
     document.getElementById('headerPreLogin').style.display = '';
     document.getElementById('headerPostLogin').style.display = 'none';
     document.getElementById('headerLoginDropdown').classList.remove('open');
@@ -7457,77 +7515,89 @@
   });
 
   function showLoginModal() {
-    const m = document.getElementById('loginModal');
-    m.style.display = 'flex';
-    requestAnimationFrame(() => m.classList.add('open'));
+    var modal = document.getElementById('loginModal');
+    modal.style.display = 'flex';
+    requestAnimationFrame(function() { modal.classList.add('open'); });
     document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+      var otpStep = document.getElementById('loginModalOtpStep');
+      var target = otpStep.style.display === 'none'
+        ? document.getElementById('loginEmailModal')
+        : document.getElementById('loginOtpModal');
+      if (target) target.focus();
+    }, 50);
   }
+
   function hideLoginModal() {
-    const m = document.getElementById('loginModal');
-    m.classList.remove('open');
-    setTimeout(() => { m.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+    var modal = document.getElementById('loginModal');
+    modal.classList.remove('open');
+    setTimeout(function() {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }, 300);
   }
-  async function handleLoginModal() {
+
+  function resetModalStaffLoginOtp() {
+    var emailEl = document.getElementById('loginEmailModal');
+    var otpEl = document.getElementById('loginOtpModal');
+    var otpStep = document.getElementById('loginModalOtpStep');
+    var btnText = document.querySelector('#loginModalBtn .btn-text');
+    emailEl.disabled = false;
+    otpEl.value = '';
+    otpStep.style.display = 'none';
+    if (btnText) btnText.textContent = 'Hantar OTP';
     document.getElementById('loginModalError').classList.remove('show');
-    const email = document.getElementById('loginEmailModal').value.trim();
-    const phone = document.getElementById('loginPhoneModal').value.trim();
-    if (!email || !phone) {
-      document.getElementById('loginModalErrorMsg').textContent = 'Sila isi e-mel dan nombor telefon.';
-      document.getElementById('loginModalError').classList.add('show');
+    emailEl.focus();
+  }
+
+  async function handleLoginModal() {
+    var errorBox = document.getElementById('loginModalError');
+    var errorMessage = document.getElementById('loginModalErrorMsg');
+    errorBox.classList.remove('show');
+
+    var emailEl = document.getElementById('loginEmailModal');
+    var otpEl = document.getElementById('loginOtpModal');
+    var otpStep = document.getElementById('loginModalOtpStep');
+    var email = emailEl.value.trim();
+    var confirming = otpStep.style.display !== 'none';
+    var otp = otpEl.value.trim();
+    var btn = document.getElementById('loginModalBtn');
+    var btnText = btn.querySelector('.btn-text');
+
+    if (!email || (confirming && !/^\d{6}$/.test(otp))) {
+      errorMessage.textContent = confirming ? 'Masukkan kod OTP 6 digit.' : 'Masukkan alamat e-mel anda.';
+      errorBox.classList.add('show');
       return;
     }
-    const btn = document.getElementById('loginModalBtn');
-    btn.classList.add('loading'); btn.disabled = true;
+
+    btn.classList.add('loading');
+    btn.disabled = true;
     try {
-      const data = await callGASPromise('login', { email, phone });
-      if (data.success) {
-        hideLoginModal();
-        loggedInGuru = data.user;
-        document.getElementById('guruName').textContent = data.user;
-        document.getElementById('loginFormWrapper').style.display = 'none';
-        document.getElementById('dashboardPreview').style.display = 'block';
-        if (window.innerWidth <= 1024) {
-          const initials = data.user.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-          document.getElementById('mobLoggedAv').textContent = initials;
-          document.getElementById('mobLoggedName').textContent = data.user;
-          document.getElementById('guestMenu').style.display = 'none';
-          document.getElementById('guruMenu').style.display = 'block';
-        }
-        loggedInTabKehadiran = data.tabKehadiran || null;
-        currentRole = data.role || 'GURU';
-        if (data.token) {
-          _spkm_st.setItem('spkm_token', data.token);
-          localStorage.setItem(SPKM_LS_USER, JSON.stringify({
-            token: data.token, user: data.user,
-            role: data.role || 'GURU', tabKehadiran: data.tabKehadiran || null
-          }));
-        }
-        document.getElementById('headerUserName').textContent = data.user;
-        document.getElementById('headerUserNameDropdown').textContent = data.user;
-        document.getElementById('headerPreLogin').style.display = 'none';
-        document.getElementById('headerPostLogin').style.display = '';
-        setLoginState(true);
-        updateNav(true);
-        updateMobileBottomNav(true);
-        resetIdleTimer();
-        const gEl = document.getElementById('hadirGuru');
-        if (gEl) gEl.value = data.user;
-        loadOrgChart();
-        initFCM();
-        startNotifPolling();
-        if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
-        window._sessionRenewTimer = setInterval(function() {
-          callGASPromise('renewSession', {}).catch(function() {});
-        }, 20 * 60 * 1000);
-      } else {
-        document.getElementById('loginModalErrorMsg').textContent = data.message || 'E-mel atau nombor tidak sepadan.';
-        document.getElementById('loginModalError').classList.add('show');
+      if (!confirming) {
+        await callGASPromise('requestStaffLoginOtp', { email: email });
+        otpStep.style.display = '';
+        emailEl.disabled = true;
+        if (btnText) btnText.textContent = 'Sahkan OTP';
+        otpEl.focus();
+        return;
       }
-    } catch(e) {
-      document.getElementById('loginModalErrorMsg').textContent = 'Ralat sambungan. Sila cuba sebentar lagi.';
-      document.getElementById('loginModalError').classList.add('show');
+
+      var data = await callGASPromise('confirmStaffLoginOtp', { email: email, otp: otp });
+      if (completeStaffLogin_(data)) {
+        resetModalStaffLoginOtp();
+        hideLoginModal();
+        return;
+      }
+      errorMessage.textContent = data && data.message
+        ? data.message
+        : 'Kod log masuk tidak sah atau telah tamat tempoh.';
+      errorBox.classList.add('show');
+    } catch (error) {
+      errorMessage.textContent = 'Ralat sambungan. Sila cuba sebentar lagi.';
+      errorBox.classList.add('show');
     } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.disabled = false;
     }
   }
 
@@ -7795,16 +7865,19 @@
       <input type="email" id="loginEmailModal" placeholder="guru@example.com" autocomplete="email">
     </div>
     <div class="form-group">
-      <label for="loginPhoneModal">No. WhatsApp <span class="req">*</span></label>
-      <input type="password" id="loginPhoneModal" placeholder="0123456789" autocomplete="off">
-      <p class="helper">Masukkan nombor telefon WhatsApp anda</p>
+      <div id="loginModalOtpStep" style="display:none;">
+        <label for="loginOtpModal">Kod OTP <span class="req">*</span></label>
+        <input type="text" inputmode="numeric" id="loginOtpModal" placeholder="6 digit OTP" maxlength="6" autocomplete="one-time-code">
+        <p class="helper">Masukkan kod yang dihantar ke e-mel anda.</p>
+        <button type="button" class="btn btn-ghost btn-sm" style="width:100%; margin-top:0;" onclick="resetModalStaffLoginOtp()">Guna e-mel lain</button>
+      </div>
     </div>
     <div class="alert alert-error" id="loginModalError">
       <span class="alert-icon">⚠</span>
       <span id="loginModalErrorMsg">E-mel atau nombor tidak sepadan.</span>
     </div>
     <button class="btn btn-primary" id="loginModalBtn" onclick="handleLoginModal()">
-      <span class="btn-text">Log Masuk</span>
+      <span class="btn-text">Hantar OTP</span>
       <span class="btn-loader"></span>
     </button>
   </div>
@@ -8102,27 +8175,33 @@
             return;
           }
           // Token sah — tunjuk state login
-          loggedInGuru         = u.user;
+          var renewedUser = data.user || u.user;
+          var renewedRole = data.role || u.role || 'GURU';
+          loggedInGuru         = renewedUser;
           loggedInTabKehadiran = u.tabKehadiran || null;
-          currentRole          = u.role || 'GURU';
-          document.getElementById('guruName').textContent = u.user;
+          currentRole          = renewedRole;
+          localStorage.setItem(SPKM_LS_USER, JSON.stringify({
+            token: u.token, user: renewedUser, email: data.email || u.email || '',
+            role: renewedRole, tabKehadiran: loggedInTabKehadiran
+          }));
+          document.getElementById('guruName').textContent = renewedUser;
           document.getElementById('loginFormWrapper').style.display = 'none';
           document.getElementById('dashboardPreview').style.display = 'block';
-          var initials = u.user.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+          var initials = renewedUser.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
           var avEl = document.getElementById('mobLoggedAv');
           var nmEl = document.getElementById('mobLoggedName');
           if (avEl) avEl.textContent = initials;
-          if (nmEl) nmEl.textContent = u.user;
+          if (nmEl) nmEl.textContent = renewedUser;
           setLoginState(true);
           updateNav(true);
           document.getElementById('headerPreLogin').style.display = 'none';
           document.getElementById('headerPostLogin').style.display = '';
-          document.getElementById('headerUserName').textContent = u.user;
-          document.getElementById('headerUserNameDropdown').textContent = u.user;
+          document.getElementById('headerUserName').textContent = renewedUser;
+          document.getElementById('headerUserNameDropdown').textContent = renewedUser;
           updateMobileBottomNav(true);
           loadOrgChart();
           var gEl = document.getElementById('hadirGuru');
-          if (gEl) gEl.value = u.user;
+          if (gEl) gEl.value = renewedUser;
           initFCM();
           startNotifPolling();
           if (window._sessionRenewTimer) clearInterval(window._sessionRenewTimer);
