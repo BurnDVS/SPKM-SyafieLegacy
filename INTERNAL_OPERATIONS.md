@@ -146,7 +146,7 @@ nama.replace(/\s+/g, ' ').trim().toUpperCase()
 
 #### eBayar V2 — Current Operational State
 
-Checkpoint 1 September 2026 (snapshot 16, 29 dan 30 Ogos di bawah kekal sebagai sejarah):
+Checkpoint 2 September 2026 (snapshot 16, 29 dan 30 Ogos di bawah kekal sebagai sejarah):
 
 - Januari–Ogos 2026 ialah legacy-only. Native eBayar bermula September 2026.
 - Ogos Legacy dan V2 kini fully reconciled: 109 paid, 77 unpaid, 186 active roster dan RM3,760; semua numeric diffs sifar, `onlyLegacy=[]` dan `onlyV2=[]`.
@@ -154,7 +154,9 @@ Checkpoint 1 September 2026 (snapshot 16, 29 dan 30 Ogos di bawah kekal sebagai 
 - Snapshot 16–30 Ogos berakhir pada 67 groups/104 paid/RM3,640 dan kini historical. Audit 1 September mendapati canonical Ogos berhenti di source row 68; rows 69–71 ialah 3 groups, 5 child rows dan RM120.
 - One-time guarded editor backfill menggunakan core sync sedia ada dan menambah tepat 3 groups/5 rows/RM120. Post-write preview ialah 70 unchanged existing, 0 changed/new, 0 projected rows/RM0 dan highest source row 71. Helper serta dedicated test telah dibuang selepas verification dan bukan production behavior kekal.
 - `OGOS2026` mempunyai 70 response/payment groups, 110 child-name occurrences dan 109 distinct paid students. PADILLAH mempunyai dua genuine submissions/receipts; kedua-dua amaun kekal dalam total collection. Calculation registered spill boleh termasuk inactive records, sedangkan dashboard menggunakan active roster 186.
-- Historical anomaly `PG-2026-JUN2026-112` kekal sebagai maintenance item berasingan. Ia bukan multi-child normal: satu payment/source identity mempunyai hashes `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` dan `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`. Jangan delete mana-mana row tanpa reconciliation khusus.
+- Historical anomaly `PG-2026-JUN2026-112` selesai dibaiki pada 2 September 2026. Puncanya ialah `JUN2026!G112` berubah daripada teks `RM10.00` kepada nombor `10`, menghasilkan source hash berbeza; historical importer yang deduplicate berdasarkan source hash sahaja telah append payment sama sekali lagi. Ini bukan bayaran kedua atau multi-child normal.
+- Repair dynamically resolved obsolete row 749 dan clear kandungan `A:Z` sahaja tanpa structural row deletion. Row 1571 dikekalkan kerana sepadan dengan current source: preserve hash `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930`; obsolete hash `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59` telah dibuang.
+- Post-repair June: 174 payment rows, 111 distinct groups, 172 distinct paid names dan RM5,780. Legacy/V2 paid diff `0`, total diff `RM0`, `onlyLegacy=[]`, `onlyV2=[]`; `nativeOrSeptemberIdentityCount=0`, maka September/Native tidak disentuh. Temporary editor-only helper dan dedicated test telah dibuang selepas verification (`2add115`).
 
 Canonical `Payments` schema:
 
@@ -244,14 +246,14 @@ Production checkpoint 1 September: Version 184 pada existing deployment identity
 
 #### September Production Monitoring Checklist
 
-1. Confirm repository, dirty worktree and `origin/main` at `0c3a355`; inspect Pages separately before any push.
+1. Confirm repository, dirty worktree and `origin/main` at `2add115`; inspect Pages separately before any push.
 2. Confirm production Version 184 remains active on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
 3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE`.
 4. Verify both configured Drive folder IDs and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`; confirm the slip and receipt folders remain Restricted.
 5. Compare September eSemak and Admin dashboard against canonical exact-`SELESAI` rows; current verified totals are 15/171/186/RM600.
 6. If a browser outcome is uncertain, stop; inspect `Payments` and Drive artifacts before considering any retry.
 7. Keep slip storage private and expose only final HTTPS receipt PDFs.
-8. Treat `PG-2026-JUN2026-112` as a separate audit; do not delete either historical row without reconciliation.
+8. Retain the resolved `PG-2026-JUN2026-112` audit record; no temporary June repair helper remains available for execution.
 9. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 #### Failure and Rollback Rules

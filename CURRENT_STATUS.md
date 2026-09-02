@@ -1,6 +1,6 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 1 September 2026, Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 2 September 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
@@ -10,7 +10,7 @@ This file is the primary continuity handoff. Historical plans and staging logs r
 
 - Workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
 - Branch: `main`
-- HEAD: `0c3a355` (`chore: remove completed Ogos backfill helper`)
+- HEAD: `2add115` (`chore: remove completed June repair helper`)
 - Native Slides receipt implementation: `15d7991` (`feat: generate native ebayar receipts from slides template`)
 - Previous documentation checkpoint: `fd3203c` (`docs: record native ebayar production readiness`)
 - Auto Sync hardening: `391f164` (`fix: harden ebayar v2 auto sync`)
@@ -62,7 +62,8 @@ January–August 2026 legacy history remains authoritative. The corresponding V2
 - Final Legacy and V2 metrics both equal 109 paid, 77 unpaid, 186 total and RM3,760. All numeric diffs are zero; `onlyLegacy` and `onlyV2` are empty. Ogos Legacy and canonical V2 are fully reconciled.
 - `OGOS2026` contains 70 response/payment groups and 110 child-name occurrences representing 109 distinct paid names. PADILLAH appears twice because of two genuine submissions/receipts; both amounts remain in collection totals.
 - `CalculationOgos2026` may show a larger registered spill because it includes currently inactive records; the production dashboard uses the 186-member active roster.
-- Separate unresolved maintenance item: `PG-2026-JUN2026-112` has the same payment/source identity with two staged hashes (`c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` and `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`). This is not normal multi-child behavior, was not modified during the Ogos repair, and must not be deleted without separate reconciliation.
+- Resolved 2 September: `PG-2026-JUN2026-112` was the same payment appended twice after legacy `JUN2026!G112` changed representation from text `RM10.00` to numeric `10`; the historical importer deduplicated by source hash only. This was not a second payment or normal multi-child behavior. The repair dynamically resolved and cleared obsolete row 749 without structural row deletion, removed hash `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`, and preserved current-source-matching row 1571 with hash `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930`.
+- Post-repair June canonical state is 174 payment rows, 111 distinct groups, 172 distinct paid names and RM5,780. Legacy/V2 paid diff is `0`, total diff is `RM0`, `onlyLegacy=[]` and `onlyV2=[]`. Safety verification returned `nativeOrSeptemberIdentityCount=0`; September/Native data was not touched. The temporary editor-only helper and dedicated test were removed after verification in cleanup source commit `2add115`.
 
 Canonical `Payments` schema:
 
@@ -269,17 +270,17 @@ The three `native-ebayar-*.diff.txt` files are local audit artifacts and must no
 Production Version 184, Native September routing, hybrid eSemak/dashboard readers and hardened Form sync are live. For the next operational session:
 
 1. Read this file, `REFERENCE.md` and `INTERNAL_OPERATIONS.md`.
-2. Verify `git status --short`, current branch and `origin/main` at `0c3a355`; inspect the separately managed Pages branch before any Pages push.
+2. Verify `git status --short`, current branch and `origin/main` at `2add115`; inspect the separately managed Pages branch before any Pages push.
 3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE`.
 4. Confirm production remains Version 184 on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
 5. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID`, `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` in Script Properties. Verify both folders remain Restricted, slip files private, only final receipt PDFs link-view, and the configured template is approved.
 6. Monitor September dashboard/eSemak consistency and verify only exact `STATUS=SELESAI` canonical rows are counted.
 7. On uncertain writes, do not retry; refresh authoritative `Payments`/Drive state first.
-8. Keep the historical June duplicate as a separate audit item; do not delete either row without dedicated reconciliation.
+8. Preserve the resolved June anomaly audit record; no one-time June repair helper remains in source.
 9. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
 
 ## 15. Current Completion Boundary
 
 Implemented, reconciled and published: V2 historical migration, guarded maintenance Auto Sync, Portal Mode, Native Phase 2A/2B with Slides receipts, PWA Native routing, public hybrid eSemak, Admin hybrid dashboard and hardened/verified legacy Form synchronization in production Version 184.
 
-Native September payments, names and receipt links are production-verified. Parent Google login from the original V2 plan is not part of the current public architecture: parents use unauthenticated eSemak, while Guru/Admin login remains separate. The unresolved `PG-2026-JUN2026-112` duplicate remains future maintenance.
+Native September payments, names and receipt links are production-verified. Parent Google login from the original V2 plan is not part of the current public architecture: parents use unauthenticated eSemak, while Guru/Admin login remains separate. Historical anomaly `PG-2026-JUN2026-112` was repaired, reconciled and closed on 2 September 2026 without touching September/Native data.

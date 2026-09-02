@@ -418,7 +418,8 @@ Checkpoint 30 Ogos di atas ialah sejarah dan digantikan oleh final repair/reconc
 - Final Legacy dan V2 masing-masing: 109 paid, 77 unpaid, 186 total dan RM3,760. Semua numeric diffs sifar; `onlyLegacy=[]`, `onlyV2=[]`.
 - `OGOS2026` mempunyai 70 response groups, 110 child-name occurrences dan 109 distinct names. PADILLAH mempunyai dua genuine submissions/receipts dan kedua-dua amaun kekal sah.
 - Calculation registered spill boleh merangkumi inactive records; production dashboard menggunakan active roster 186.
-- Separate unresolved audit: `PG-2026-JUN2026-112` mempunyai same payment/source identity dengan dua staged hashes (`c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930`, `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`). Ini bukan normal multi-child behavior dan tidak boleh dipadam tanpa reconciliation khusus.
+- Resolved 2 September 2026: `PG-2026-JUN2026-112` ialah payment sama yang di-append semula apabila `JUN2026!G112` berubah daripada teks `RM10.00` kepada nombor `10`, lalu menghasilkan hash baharu bagi historical importer yang deduplicate berdasarkan source hash sahaja. Ini bukan bayaran kedua atau normal multi-child behavior.
+- Obsolete row 749/hash `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59` dynamically resolved dan `A:Z` sahaja dikosongkan tanpa structural row deletion. Current-source row 1571/hash `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` dikekalkan. June selepas repair: 174 payment rows, 111 groups, 172 paid names, RM5,780; Legacy/V2 diffs sifar dan kedua-dua name-only sets kosong. `nativeOrSeptemberIdentityCount=0`; September/Native tidak disentuh. Temporary helper/test telah dibuang (`2add115`).
 
 ### September 2026
 

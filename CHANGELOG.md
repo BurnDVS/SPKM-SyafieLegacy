@@ -4,6 +4,16 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [2 September 2026] — Resolved historical June canonical duplicate
+
+- Repair of `PG-2026-JUN2026-112` completed successfully. The obsolete canonical record was dynamically resolved at execution time and only its `A:Z` contents were cleared; no spreadsheet row was structurally deleted.
+- Cleared obsolete row 749 with source hash `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`. Preserved current-source-matching row 1571 with source hash `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930`.
+- Root cause: legacy `JUN2026!G112` changed representation from text `RM10.00` to numeric `10`. That produced a different source hash, and the historical importer, which deduplicated by source hash only, appended the same payment again. This was not a second payment and not normal multi-child behavior.
+- Post-repair June canonical state: 174 payment rows, 111 distinct groups, 172 distinct paid names and RM5,780 collection.
+- Legacy and V2 remained fully reconciled after repair: paid diff `0`, total diff `RM0`, `onlyLegacy=[]` and `onlyV2=[]`.
+- Safety verification returned `nativeOrSeptemberIdentityCount=0`; September/Native data was not touched.
+- The temporary editor-only repair helper and its dedicated test were removed after verification. Cleanup source commit: `2add115`.
+
 ## [1 September 2026] — Native production verification, hybrid readers, hardened Form sync and final Ogos reconciliation
 
 ### Production progression and architecture
@@ -35,10 +45,10 @@ Semua perubahan utama sistem direkodkan di sini.
 - Final Legacy and V2 values match exactly: 109 paid, 77 unpaid, 186 active students and RM3,760; all numeric diffs are zero and `onlyLegacy=[]`, `onlyV2=[]`.
 - `OGOS2026` contains 70 response/payment groups, 110 child-name occurrences and 109 distinct paid names. PADILLAH has two genuine submissions/receipts; both remain in collection totals. Calculation registered spill may include inactive records, while production uses the active roster.
 
-### Separate unresolved maintenance item
+### Historical diagnosis at the 1 September checkpoint
 
 - `PG-2026-JUN2026-112` is a historical canonical duplicate with the same payment/source identity but hashes `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` and `e8ada66407f1b7873e4adacc6cf510dbcfd823007ff0663b9acccb3fad144b59`.
-- This is not normal multi-child behavior, is unrelated to Ogos and was intentionally not modified. Do not delete either row without dedicated reconciliation.
+- At this checkpoint it was unresolved, unrelated to Ogos and intentionally not modified. It was subsequently repaired and verified on 2 September 2026 as recorded above.
 
 ### Source commits
 
@@ -172,7 +182,7 @@ Semua perubahan utama sistem direkodkan di sini.
 - Existing active production Web App deployment belum ditetapkan kepada versi yang mengandungi source Phase 2A/2B; URL production sedia ada perlu dikekalkan.
 - Tiada real Native payment write, slip upload atau receipt generation pernah dijalankan.
 - Ujian `/dev` dengan mode `BOTH` hanya mengesahkan UI; September kekal disabled ketika Ogos. Mode telah dipulihkan ke `AUTO`.
-- Satu anomali sejarah Jun kekal: `GROUP_ID_MULTIPLE_STAGED_HASHES` untuk `PG-2026-JUN2026-112`; disahkan tidak berkaitan dengan catch-up Julai/Ogos.
+- Pada checkpoint ini, satu anomali sejarah Jun masih wujud: `GROUP_ID_MULTIPLE_STAGED_HASHES` untuk `PG-2026-JUN2026-112`; disahkan tidak berkaitan dengan catch-up Julai/Ogos. Anomali ini kemudian dibaiki dan disahkan pada 2 September 2026.
 
 ### Next
 

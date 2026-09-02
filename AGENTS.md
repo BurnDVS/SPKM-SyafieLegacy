@@ -3,7 +3,7 @@
 Read [CURRENT_STATUS.md](CURRENT_STATUS.md) before changing this repository. Use [REFERENCE.md](REFERENCE.md) for architecture and deployment details, and [INTERNAL_OPERATIONS.md](INTERNAL_OPERATIONS.md) for operational procedures.
 
 - Active workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
-- Current checkpoint: `0c3a355`
+- Current checkpoint: `2add115`
 - Portal Mode: `AUTO`
 
 ## Critical Invariants
@@ -30,9 +30,9 @@ Read [CURRENT_STATUS.md](CURRENT_STATUS.md) before changing this repository. Use
 
 ## Current Safety State
 
-- Git checkpoint: `0c3a355` (`chore: remove completed Ogos backfill helper`).
+- Git checkpoint: `2add115` (`chore: remove completed June repair helper`).
 - Production Apps Script is Version 184 on the existing deployment ID; the web app executes as `USER_DEPLOYING` under the documented owner account.
 - September Native eBayar, public eSemak receipt links and Admin hybrid dashboard have been production-verified.
 - Ogos Legacy and canonical V2 are fully reconciled at 109 paid, 77 unpaid, 186 active students and RM3,760.
-- Historical anomaly `PG-2026-JUN2026-112` remains a separate audit item and must not be altered without dedicated reconciliation.
+- Historical anomaly `PG-2026-JUN2026-112` was repaired and closed on 2 September 2026. Obsolete row 749 was cleared without structural row deletion; current-source-matching row 1571/hash `c15975677b4b9c18beb1d63a6f4c83806c77a42e59e8c1874a8e050e79b7e930` was preserved. September/Native data was not touched, and the temporary helper/test were removed in `2add115`.
 - Existing dirty files and local diff artifacts listed in [CURRENT_STATUS.md](CURRENT_STATUS.md) must be preserved unless a task explicitly places them in scope.
