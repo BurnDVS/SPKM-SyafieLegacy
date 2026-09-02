@@ -171,7 +171,7 @@ var AUTOCRAT_CONFIG = {
 // ENTRY POINT: doPost (dipanggil oleh portal.html via fetch)
 // ============================================================
 var ALLOWED_ACTIONS = [
-  'login', 'registerKanak', 'registerDewasa',
+  'login', 'requestStaffLoginOtp', 'confirmStaffLoginOtp', 'registerKanak', 'registerDewasa',
   'sendOTPKanak', 'sendOTPDewasa', 'confirmRegisterKanak', 'confirmRegisterDewasa',
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
@@ -209,6 +209,68 @@ var AUTH_REQUIRED_ACTIONS = [
   'getMuridTanpaGuru', 'assignGuruMurid'
 ];
 
+var PUBLIC_ACTIONS = [
+  'login', 'requestStaffLoginOtp', 'confirmStaffLoginOtp',
+  'registerKanak', 'registerDewasa', 'sendOTPKanak', 'sendOTPDewasa',
+  'confirmRegisterKanak', 'confirmRegisterDewasa',
+  'getEbayarStats', 'getYuranParent',
+  'getNativeEbayarStudentLookup', 'preflightNativeEbayarSubmission',
+  'submitNativeEbayarPayment', 'getEbayarPortalMode', 'searchSijilKhatam',
+  'renewSession', 'logout'
+];
+
+// Phase 2 FIX NOW: public eSemak privacy/authentication remains intentionally
+// unchanged in Phase 1 and requires a separate reviewed design.
+
+// Central backend policy. Bulk WA actions are Admin-only because they expose
+// contact data, consume messaging quota and can message many recipients.
+var ADMIN_REQUIRED_ACTIONS = [
+  'recordCash', 'syncForms', 'syncFormBulanIni',
+  'hantarWAYuran', 'queueWABlast', 'getBlastStatus',
+  'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
+  'compareYuranLegacyVsV2', 'getEbayarV2MaintenanceStatus',
+  'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
+  'syncCurrentMonthEbayarV2', 'auditEbayarSourceTabsV2', 'setEbayarPortalMode',
+  'getMuridByGuruUntukTukar', 'tukarGuruMurid',
+  'getMuridTanpaGuru', 'assignGuruMurid'
+];
+
+function authorizeAction_(action, payload) {
+  if (ALLOWED_ACTIONS.indexOf(action) === -1) {
+    return { valid: false, message: 'Tindakan tidak dibenarkan.' };
+  }
+
+  payload = payload || {};
+  payload._authActor = null;
+  var isAdminAction = ADMIN_REQUIRED_ACTIONS.indexOf(action) !== -1;
+  var isAuthenticatedAction = AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1;
+  var isPublicAction = PUBLIC_ACTIONS.indexOf(action) !== -1;
+  if ((isPublicAction && (isAuthenticatedAction || isAdminAction)) ||
+      (isAdminAction && !isAuthenticatedAction)) {
+    Logger.log('Action policy configuration rejected for action: ' + action);
+    return { valid: false, message: 'Tindakan tidak dibenarkan.' };
+  }
+  if (!isAdminAction && !isAuthenticatedAction && !isPublicAction) {
+    return { valid: false, message: 'Tindakan tidak dibenarkan.' };
+  }
+  if (isPublicAction) return { valid: true, actor: null };
+
+  var authCheck = validateToken(payload.token, { revalidateStaff: true });
+  if (!authCheck.valid || !authCheck.user) {
+    return { valid: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' };
+  }
+  if (isAdminAction && authCheck.user.role !== 'ADMIN') {
+    return { valid: false, message: 'Akses Admin diperlukan.' };
+  }
+
+  payload._authActor = {
+    email: authCheck.user.email,
+    nama: authCheck.user.nama,
+    role: authCheck.user.role
+  };
+  return { valid: true, actor: payload._authActor };
+}
+
 function doPost(e) {
   try {
     // Sokong dua format: URLSearchParams (application/x-www-form-urlencoded)
@@ -232,74 +294,10 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
-      var authCheck = validateToken(body.token);
-      if (!authCheck.valid) {
-        return ContentService
-          .createTextOutput(JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-
     // Cleanup automatik ~10% request — elak Properties penuh
     if (Math.random() < 0.1) { try { cleanupExpiredProperties(); } catch(e) {} }
 
-    var result;
-    if      (action === 'login')                  result = loginGuru(body);
-    else if (action === 'registerKanak')          result = registerKanak(body);
-    else if (action === 'registerDewasa')         result = registerDewasa(body);
-    else if (action === 'sendOTPKanak')           result = sendOTPKanak(body);
-    else if (action === 'sendOTPDewasa')          result = sendOTPDewasa(body);
-    else if (action === 'confirmRegisterKanak')   result = confirmRegisterKanak(body);
-    else if (action === 'confirmRegisterDewasa')  result = confirmRegisterDewasa(body);
-    else if (action === 'attendance')             result = attendance(body);
-    else if (action === 'getDashboardStats')      result = getDashboardStats();
-    else if (action === 'getKehadiranHariIni')    result = getKehadiranHariIni();
-    else if (action === 'getMuridList')           result = getMuridList();
-    else if (action === 'getGuru')                result = getGuru();
-    else if (action === 'getYuranStats')          result = getYuranStatsForDashboard_(body);
-    else if (action === 'getEbayarStats')         result = getEbayarStats();
-    else if (action === 'getYuranParent')         result = getYuranParent(body);
-    else if (action === 'getNativeEbayarStudentLookup') result = getNativeEbayarStudentLookup(body);
-    else if (action === 'preflightNativeEbayarSubmission') result = preflightNativeEbayarSubmission(body);
-    else if (action === 'submitNativeEbayarPayment') result = submitNativeEbayarPayment(body);
-    else if (action === 'getEbayarPortalMode')     result = getEbayarPortalMode(body);
-    else if (action === 'setEbayarPortalMode')     result = setEbayarPortalMode(body);
-    else if (action === 'recordCash')             result = recordCash(body);
-    else if (action === 'syncForms')              result = syncNamaMuridToAllForms();
-    else if (action === 'syncFormBulanIni')       result = syncFormMinusBayar(body);
-    else if (action === 'updateStatusMurid')      result = updateStatusMurid(body);
-    else if (action === 'getMuridListAll')        result = getMuridListAll();
-    else if (action === 'getKehadiranStats')      result = getKehadiranStats(body);
-    else if (action === 'getKehadiranRekod')      result = getKehadiranRekod(body);
-    else if (action === 'getMuridByGuru')         result = getMuridByGuru(body);
-    else if (action === 'simpanKehadiran')        result = simpanKehadiran(body);
-    else if (action === 'uploadGuruGambar')       result = uploadGuruGambar(body);
-    else if (action === 'updateGuru')             result = updateGuru(body);
-    else if (action === 'getOrgChart')            result = getOrgChart();
-    else if (action === 'hantarWAYuran')          result = hantarWAYuran(body);
-    else if (action === 'queueWABlast')           result = queueWABlast(body);
-    else if (action === 'getBlastStatus')         result = getBlastStatus(body);
-    else if (action === 'logout')                 result = logout(body);
-    else if (action === 'simpanDeviceToken')      result = simpanDeviceToken(body);
-    else if (action === 'getNotifikasi')          result = getNotifikasi(body);
-    else if (action === 'searchSijilKhatam')           result = searchSijilKhatam(body);
-    else if (action === 'renewSession')                result = renewSession(body);
-    else if (action === 'ensureEbayarMasterSchemaV2')  result = ensureEbayarMasterSchemaV2(body);
-    else if (action === 'listEbayarYears')             result = listEbayarYears(body);
-    else if (action === 'getMonthlyPaymentSummaryV2')  result = getMonthlyPaymentSummaryV2(body);
-    else if (action === 'getYuranStatsV2')             result = getYuranStatsV2(body);
-    else if (action === 'getYuranParentV2')            result = getYuranParentV2(body);
-    else if (action === 'compareYuranLegacyVsV2')      result = compareYuranLegacyVsV2(body);
-    else if (action === 'getEbayarV2MaintenanceStatus') result = getEbayarV2MaintenanceStatus(body);
-    else if (action === 'previewCurrentMonthEbayarV2')  result = previewCurrentMonthEbayarV2(body);
-    else if (action === 'verifyCurrentMonthLegacyVsV2') result = verifyCurrentMonthLegacyVsV2(body);
-    else if (action === 'syncCurrentMonthEbayarV2')      result = syncCurrentMonthEbayarV2(body);
-    else if (action === 'auditEbayarSourceTabsV2')     result = auditEbayarSourceTabsV2(body);
-    else if (action === 'getMuridByGuruUntukTukar')    result = getMuridByGuruUntukTukar(body);
-    else if (action === 'tukarGuruMurid')              result = tukarGuruMurid(body);
-    else if (action === 'getMuridTanpaGuru')           result = getMuridTanpaGuru();
-    else if (action === 'assignGuruMurid')             result = assignGuruMurid(body);
+    var result = doAction(action, body);
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -344,16 +342,6 @@ function doGet(e) {
           .createTextOutput(callback ? callback + '(' + errJson + ')' : errJson)
           .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
       }
-      if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
-        var authCheck = validateToken(payload.token);
-        if (!authCheck.valid) {
-          var authErr = JSON.stringify({ success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' });
-          return ContentService
-            .createTextOutput(callback ? callback + '(' + authErr + ')' : authErr)
-            .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
-        }
-      }
-
       var result  = JSON.stringify(doAction(action, payload));
       return ContentService
         .createTextOutput(callback ? callback + '(' + result + ')' : result)
@@ -387,18 +375,12 @@ function doAction(action, payload) {
   payload = payload || {};
   action  = (action || '').toString().trim();
 
-  if (ALLOWED_ACTIONS.indexOf(action) === -1) {
-    return { success: false, message: 'Tindakan tidak dibenarkan.' };
-  }
-
-  if (AUTH_REQUIRED_ACTIONS.indexOf(action) !== -1) {
-    var authCheck = validateToken(payload.token);
-    if (!authCheck.valid) {
-      return { success: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' };
-    }
-  }
+  var authorization = authorizeAction_(action, payload);
+  if (!authorization.valid) return { success: false, message: authorization.message };
 
   if      (action === 'login')                 return loginGuru(payload);
+  else if (action === 'requestStaffLoginOtp')  return requestStaffLoginOtp(payload);
+  else if (action === 'confirmStaffLoginOtp')  return confirmStaffLoginOtp(payload);
   else if (action === 'registerKanak')         return registerKanak(payload);
   else if (action === 'registerDewasa')        return registerDewasa(payload);
   else if (action === 'sendOTPKanak')          return sendOTPKanak(payload);
@@ -433,6 +415,7 @@ function doAction(action, payload) {
   else if (action === 'hantarWAYuran')         return hantarWAYuran(payload);
   else if (action === 'queueWABlast')          return queueWABlast(payload);
   else if (action === 'getBlastStatus')        return getBlastStatus(payload);
+  else if (action === 'logout')                return logout(payload);
   else if (action === 'simpanDeviceToken')     return simpanDeviceToken(payload);
   else if (action === 'getNotifikasi')         return getNotifikasi(payload);
   else if (action === 'searchSijilKhatam')            return searchSijilKhatam(payload);
@@ -454,72 +437,269 @@ function doAction(action, payload) {
   else if (action === 'assignGuruMurid')              return assignGuruMurid(payload);
 }
 
-// ============================================================
-// 1. loginGuru
-// Semak email + telefon dari tab Maklumat Guru
-// Input:  { email, phone }
-// Output: { success, user } atau { success: false, message }
-// ============================================================
-function loginGuru(params) {
+var STAFF_AUTH_V2_OTP_TTL_MS_ = 5 * 60 * 1000;
+var STAFF_AUTH_V2_OTP_COOLDOWN_MS_ = 60 * 1000;
+var STAFF_AUTH_V2_ACCOUNT_SEND_LIMIT_ = 5;
+var STAFF_AUTH_V2_GLOBAL_SEND_LIMIT_ = 100;
+var STAFF_AUTH_V2_RATE_WINDOW_MS_ = 60 * 60 * 1000;
+var STAFF_AUTH_V2_IDLE_MS_ = 30 * 60 * 1000;
+var STAFF_AUTH_V2_ABSOLUTE_MS_ = 8 * 60 * 60 * 1000;
+var STAFF_AUTH_V2_OTP_PREFIX_ = 'STAFF_LOGIN_OTP_V2_';
+var STAFF_AUTH_V2_RATE_PREFIX_ = 'STAFF_LOGIN_RATE_V2_';
+var STAFF_AUTH_V2_SESSION_PREFIX_ = 'STAFF_SESSION_V2_';
+var STAFF_AUTH_V2_GLOBAL_RATE_KEY_ = 'STAFF_LOGIN_RATE_V2_GLOBAL';
+var STAFF_AUTH_V2_SECRET_KEY_ = 'STAFF_AUTH_V2_HMAC_SECRET';
+var STAFF_AUTH_V2_REQUEST_MESSAGE_ = 'Jika e-mel layak, kod log masuk akan dihantar.';
+var STAFF_AUTH_V2_CONFIRM_MESSAGE_ = 'Kod log masuk tidak sah atau telah tamat tempoh.';
+
+// Legacy e-mail + last-six-phone login is intentionally disabled fail-closed.
+function loginGuru() {
+  return { success: false, message: 'Kaedah log masuk ini tidak lagi tersedia. Sila gunakan OTP e-mel.' };
+}
+
+function normalizeStaffEmail_(value) {
+  return (value || '').toString().trim().toLowerCase();
+}
+
+function escapeStaffAuthHtml_(value) {
+  return (value || '').toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\x22/g, '&quot;')
+    .replace(/\x27/g, '&#39;');
+}
+
+function getStaffAuthHmacSecret_() {
+  var props = PropertiesService.getScriptProperties();
+  var secret = props.getProperty(STAFF_AUTH_V2_SECRET_KEY_);
+  if (secret) return secret;
+  secret = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid();
+  props.setProperty(STAFF_AUTH_V2_SECRET_KEY_, secret);
+  return secret;
+}
+
+function staffAuthHmac_(value) {
+  var bytes = Utilities.computeHmacSha256Signature(
+    (value || '').toString(),
+    getStaffAuthHmacSecret_(),
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, '');
+}
+
+function staffAuthDigest_(value) {
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    (value || '').toString(),
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, '');
+}
+
+function generateStaffLoginOtp_() {
+  var entropy = Utilities.getUuid() + ':' + Utilities.getUuid() + ':' + new Date().getTime();
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, entropy, Utilities.Charset.UTF_8);
+  var value = (((bytes[0] & 255) * 16777216) + ((bytes[1] & 255) * 65536) +
+    ((bytes[2] & 255) * 256) + (bytes[3] & 255)) % 1000000;
+  return ('000000' + value).slice(-6);
+}
+
+function generateStaffSessionToken_() {
+  return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '') +
+    Utilities.getUuid().replace(/-/g, '');
+}
+
+function getStaffLoginOtpKey_(email) {
+  return STAFF_AUTH_V2_OTP_PREFIX_ + staffAuthHmac_('account:' + normalizeStaffEmail_(email));
+}
+
+function getStaffLoginRateKey_(email) {
+  return STAFF_AUTH_V2_RATE_PREFIX_ + staffAuthHmac_('rate:' + normalizeStaffEmail_(email));
+}
+
+function getStaffSessionKey_(token) {
+  return STAFF_AUTH_V2_SESSION_PREFIX_ + staffAuthDigest_(token);
+}
+
+function getCurrentStaffIdentity_(email) {
+  email = normalizeStaffEmail_(email);
+  if (!email) return null;
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(TAB.GURU);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    var rowEmail = normalizeStaffEmail_(rows[i][COL_GURU.EMAIL]);
+    var rowRole = (rows[i][COL_GURU.ROLE] || '').toString().trim().toUpperCase();
+    var rowName = (rows[i][COL_GURU.NAMA] || '').toString().trim();
+    if (rowEmail === email && (rowRole === 'GURU' || rowRole === 'ADMIN') && rowName) {
+      return { email: rowEmail, nama: rowName, role: rowRole };
+    }
+  }
+  return null;
+}
+
+function readStaffAuthRecord_(props, key) {
+  var raw = props.getProperty(key);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (err) { props.deleteProperty(key); return null; }
+}
+
+function consumeStaffLoginSendLimit_(props, rateKey, now) {
+  var account = readStaffAuthRecord_(props, rateKey) || {};
+  if (account.lastSentAt && now - account.lastSentAt < STAFF_AUTH_V2_OTP_COOLDOWN_MS_) {
+    return { allowed: false, account: account };
+  }
+  if (!account.windowStartedAt || now - account.windowStartedAt >= STAFF_AUTH_V2_RATE_WINDOW_MS_) {
+    account.windowStartedAt = now;
+    account.sendCount = 0;
+  }
+  if ((account.sendCount || 0) >= STAFF_AUTH_V2_ACCOUNT_SEND_LIMIT_) {
+    return { allowed: false, account: account };
+  }
+
+  var globalRate = readStaffAuthRecord_(props, STAFF_AUTH_V2_GLOBAL_RATE_KEY_) || {};
+  if (!globalRate.windowStartedAt || now - globalRate.windowStartedAt >= STAFF_AUTH_V2_RATE_WINDOW_MS_) {
+    globalRate = { windowStartedAt: now, sendCount: 0 };
+  }
+  if ((globalRate.sendCount || 0) >= STAFF_AUTH_V2_GLOBAL_SEND_LIMIT_) {
+    return { allowed: false, account: account };
+  }
+
+  account.sendCount = (account.sendCount || 0) + 1;
+  account.lastSentAt = now;
+  globalRate.sendCount = (globalRate.sendCount || 0) + 1;
+  props.setProperty(rateKey, JSON.stringify(account));
+  props.setProperty(STAFF_AUTH_V2_GLOBAL_RATE_KEY_, JSON.stringify(globalRate));
+  return { allowed: true };
+}
+
+function sendStaffLoginOtpEmail_(staff, otp) {
+  var safeName = escapeStaffAuthHtml_(staff.nama);
+  var htmlBody =
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">' +
+    '<h2>SPKM — Kod Log Masuk Staf</h2>' +
+    '<p>Assalamualaikum <strong>' + safeName + '</strong>,</p>' +
+    '<p>Kod log masuk anda:</p>' +
+    '<p style="font-size:32px;font-weight:bold;letter-spacing:8px">' + otp + '</p>' +
+    '<p>Kod ini sah selama 5 minit dan hanya boleh digunakan sekali.</p>' +
+    '<p>Jangan kongsikan kod ini kepada sesiapa.</p>' +
+    '</div>';
+  MailApp.sendEmail({
+    to: staff.email,
+    subject: '[SPKM] Kod Log Masuk Staf',
+    htmlBody: htmlBody
+  });
+}
+
+function requestStaffLoginOtp(params) {
   params = params || {};
+  var generic = { success: true, message: STAFF_AUTH_V2_REQUEST_MESSAGE_ };
+  var email = normalizeStaffEmail_(params.email);
+  if (!email) return generic;
+
+  var lock = LockService.getScriptLock();
   try {
-    var email = sanitizeInput((params.email || '').trim().toLowerCase());
-    var phone = normalizePhone(params.phone || '').slice(-6);
+    lock.waitLock(10000);
+    var staff = getCurrentStaffIdentity_(email);
+    if (!staff) return generic;
 
-    if (!email || !phone) {
-      return { success: false, message: 'E-mel dan nombor telefon diperlukan.' };
+    var props = PropertiesService.getScriptProperties();
+    var now = new Date().getTime();
+    var otpKey = getStaffLoginOtpKey_(email);
+    var rateKey = getStaffLoginRateKey_(email);
+    var rate = consumeStaffLoginSendLimit_(props, rateKey, now);
+    if (!rate.allowed) return generic;
+
+    var otp = generateStaffLoginOtp_();
+    var otpRecord = {
+      version: 2,
+      otpDigest: staffAuthHmac_('otp:' + otpKey + ':' + otp),
+      issuedAt: now,
+      expiresAt: now + STAFF_AUTH_V2_OTP_TTL_MS_,
+      attempts: 0
+    };
+    props.setProperty(otpKey, JSON.stringify(otpRecord));
+    try {
+      sendStaffLoginOtpEmail_(staff, otp);
+    } catch (mailErr) {
+      // Keep the separate account/global rate records, but make this undelivered
+      // OTP impossible to confirm.
+      props.deleteProperty(otpKey);
+      Logger.log('Staff OTP delivery failed.');
     }
-
-    var props    = PropertiesService.getScriptProperties();
-    var attKey   = 'login_attempts_' + email.replace(/[^a-z0-9]/g, '_');
-    var tsKey    = 'login_ts_'       + email.replace(/[^a-z0-9]/g, '_');
-    var now      = new Date().getTime();
-    var attempts = parseInt(props.getProperty(attKey) || '0', 10);
-    var firstTs  = parseInt(props.getProperty(tsKey)  || '0', 10);
-
-    if (attempts >= 5) {
-      if (now - firstTs < 15 * 60 * 1000) {
-        return { success: false, message: 'Akaun disekat 15 minit. Sila cuba selepas 15 minit.' };
-      }
-      props.deleteProperty(attKey);
-      props.deleteProperty(tsKey);
-      attempts = 0;
-    }
-
-    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.GURU);
-    if (!sheet) return { success: false, message: 'Tab Maklumat Guru tidak dijumpai.' };
-
-    var data = sheet.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      var rowEmail = (data[i][COL_GURU.EMAIL]   || '').toString().trim().toLowerCase();
-      var rowPhone = normalizePhone((data[i][COL_GURU.TELEFON] || '').toString()).slice(-6);
-      var rowNama  = (data[i][COL_GURU.NAMA]    || '').toString().trim();
-
-      Logger.log('Baris ' + i + ': rowPhone="' + rowPhone + '" vs input phone="' + phone + '" | rowEmail="' + rowEmail + '" vs input email="' + email + '"');
-
-      if (rowEmail === email && rowPhone === phone) {
-        var rowRole = (data[i][COL_GURU.ROLE] || '').toString().trim().toUpperCase() || 'GURU';
-        props.deleteProperty(attKey);
-        props.deleteProperty(tsKey);
-
-        var token  = Utilities.getUuid();
-        var expiry = now + 30 * 60 * 1000;
-        props.setProperty('session_' + token, JSON.stringify({ email: email, nama: rowNama, expiry: expiry }));
-
-        var tabKehadiran = cariTabGuru(rowNama);
-        Logger.log('Login berjaya: ' + rowNama + ' (' + rowRole + ') tabKehadiran=' + tabKehadiran);
-        return { success: true, user: rowNama, role: rowRole, token: token, tabKehadiran: tabKehadiran };
-      }
-    }
-
-    if (attempts === 0) props.setProperty(tsKey, now.toString());
-    props.setProperty(attKey, String(attempts + 1));
-    return { success: false, message: 'E-mel atau nombor WhatsApp tidak sepadan.' };
-
   } catch (err) {
-    Logger.log('loginGuru error: ' + err.message);
-    return { success: false, message: 'Ralat semasa log masuk.' };
+    Logger.log('Staff OTP request failed.');
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
+  }
+  return generic;
+}
+
+function issueStaffSessionV2_(staff, now) {
+  var token = generateStaffSessionToken_();
+  var absoluteExpiry = now + STAFF_AUTH_V2_ABSOLUTE_MS_;
+  var record = {
+    version: 2,
+    email: staff.email,
+    nama: staff.nama,
+    role: staff.role,
+    issuedAt: now,
+    lastSeen: now,
+    idleExpiry: Math.min(now + STAFF_AUTH_V2_IDLE_MS_, absoluteExpiry),
+    absoluteExpiry: absoluteExpiry
+  };
+  PropertiesService.getScriptProperties().setProperty(getStaffSessionKey_(token), JSON.stringify(record));
+  return { token: token, record: record };
+}
+
+function confirmStaffLoginOtp(params) {
+  params = params || {};
+  var email = normalizeStaffEmail_(params.email);
+  var otp = (params.otp || '').toString().trim();
+  var failure = { success: false, message: STAFF_AUTH_V2_CONFIRM_MESSAGE_ };
+  if (!email || !/^\d{6}$/.test(otp)) return failure;
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    var props = PropertiesService.getScriptProperties();
+    var otpKey = getStaffLoginOtpKey_(email);
+    var record = readStaffAuthRecord_(props, otpKey);
+    var now = new Date().getTime();
+    if (!record || record.version !== 2 || !record.otpDigest || now > record.expiresAt || record.attempts >= 3) {
+      if (record && now > record.expiresAt) props.deleteProperty(otpKey);
+      return failure;
+    }
+
+    var suppliedDigest = staffAuthHmac_('otp:' + otpKey + ':' + otp);
+    if (suppliedDigest !== record.otpDigest) {
+      record.attempts = (record.attempts || 0) + 1;
+      props.setProperty(otpKey, JSON.stringify(record));
+      return failure;
+    }
+
+    var staff = getCurrentStaffIdentity_(email);
+    if (!staff) {
+      props.deleteProperty(otpKey);
+      return failure;
+    }
+
+    props.deleteProperty(otpKey);
+    var session = issueStaffSessionV2_(staff, now);
+    return {
+      success: true,
+      user: staff.nama,
+      email: staff.email,
+      role: staff.role,
+      token: session.token,
+      tabKehadiran: cariTabGuru(staff.nama)
+    };
+  } catch (err) {
+    Logger.log('Staff OTP confirmation failed.');
+    return failure;
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
   }
 }
 
@@ -1029,23 +1209,36 @@ function duplicateDewasaMessage_(mykad, existing) {
 // ============================================================
 // HELPER: Validate session token
 // ============================================================
-function validateToken(token) {
+function validateToken(token, options) {
+  token = (token || '').toString().trim();
   if (!token) return { valid: false };
   var props = PropertiesService.getScriptProperties();
-  var key   = 'session_' + token;
-  var raw   = props.getProperty(key);
-  if (!raw) return { valid: false };
-  try {
-    var data = JSON.parse(raw);
-    if (new Date().getTime() > data.expiry) {
-      props.deleteProperty(key);
-      return { valid: false };
-    }
-    return { valid: true, user: data };
-  } catch (e) {
+  var key = getStaffSessionKey_(token);
+  var data = readStaffAuthRecord_(props, key);
+  if (!data || data.version !== 2) {
+    if (data) props.deleteProperty(key);
+    return { valid: false };
+  }
+
+  var now = new Date().getTime();
+  if (!data.email || !data.nama || !data.role || !data.issuedAt || !data.lastSeen ||
+      !data.idleExpiry || !data.absoluteExpiry || now > data.idleExpiry || now > data.absoluteExpiry) {
     props.deleteProperty(key);
     return { valid: false };
   }
+
+  if (options && options.revalidateStaff) {
+    var staff = getCurrentStaffIdentity_(data.email);
+    if (!staff) {
+      props.deleteProperty(key);
+      return { valid: false };
+    }
+    data.email = staff.email;
+    data.nama = staff.nama;
+    data.role = staff.role;
+    props.setProperty(key, JSON.stringify(data));
+  }
+  return { valid: true, user: data };
 }
 
 // ============================================================
@@ -1056,24 +1249,23 @@ function renewSession(params) {
   var token = (params.token || '').toString().trim();
   if (!token) return { success: false };
   var props = PropertiesService.getScriptProperties();
-  var key = 'session_' + token;
-  var raw = props.getProperty(key);
-  if (!raw) return { success: false, message: 'Session tidak dijumpai atau dah expire.' };
-  try {
-    var data = JSON.parse(raw);
-    var now = new Date().getTime();
-    if (now > data.expiry) {
-      props.deleteProperty(key);
-      return { success: false, message: 'Session dah expire.' };
-    }
-    data.expiry = now + 30 * 60 * 1000;
-    props.setProperty(key, JSON.stringify(data));
-    Logger.log('renewSession: token ' + token.substring(0,8) + '... diperbaharui');
-    return { success: true, user: data.nama, email: data.email };
-  } catch(e) {
-    props.deleteProperty(key);
-    return { success: false, message: 'Data session rosak.' };
-  }
+  var auth = validateToken(token, { revalidateStaff: true });
+  if (!auth.valid || !auth.user) return { success: false, message: 'Session tidak dijumpai atau dah expire.' };
+
+  var key = getStaffSessionKey_(token);
+  var data = auth.user;
+  var now = new Date().getTime();
+  data.lastSeen = now;
+  data.idleExpiry = Math.min(now + STAFF_AUTH_V2_IDLE_MS_, data.absoluteExpiry);
+  props.setProperty(key, JSON.stringify(data));
+  return {
+    success: true,
+    user: data.nama,
+    email: data.email,
+    role: data.role,
+    idleExpiry: data.idleExpiry,
+    absoluteExpiry: data.absoluteExpiry
+  };
 }
 
 // ============================================================
@@ -1083,11 +1275,8 @@ function logout(params) {
   var token = (params && params.token) ? params.token.toString().trim() : '';
   if (!token) return { success: false, message: 'Token diperlukan.' };
   var props = PropertiesService.getScriptProperties();
-  var key   = 'session_' + token;
-  if (props.getProperty(key)) {
-    props.deleteProperty(key);
-    Logger.log('Logout: session ' + token.substring(0, 8) + '... dibuang.');
-  }
+  var key = getStaffSessionKey_(token);
+  if (props.getProperty(key)) props.deleteProperty(key);
   return { success: true };
 }
 
@@ -1416,8 +1605,36 @@ function cleanupExpiredProperties() {
   var deleted = 0;
 
   for (var key in all) {
+    // Staff Session V2 — fail closed on malformed, idle-expired or absolute-expired records.
+    if (key.startsWith(STAFF_AUTH_V2_SESSION_PREFIX_)) {
+      try {
+        var sessionV2 = JSON.parse(all[key]);
+        if (sessionV2.version !== 2 || now > sessionV2.idleExpiry || now > sessionV2.absoluteExpiry) {
+          props.deleteProperty(key);
+          deleted++;
+        }
+      } catch(e) { props.deleteProperty(key); deleted++; }
+
+    // Staff Login OTP V2 — account records expire with their OTP.
+    } else if (key.startsWith(STAFF_AUTH_V2_OTP_PREFIX_) && key !== STAFF_AUTH_V2_GLOBAL_RATE_KEY_) {
+      try {
+        var otpV2 = JSON.parse(all[key]);
+        if (!otpV2.expiresAt || now > otpV2.expiresAt) { props.deleteProperty(key); deleted++; }
+      } catch(e) { props.deleteProperty(key); deleted++; }
+
+    // Staff Login rate state is separate from OTP state so OTP expiry or
+    // delivery failure cannot reset hourly throttles.
+    } else if (key.startsWith(STAFF_AUTH_V2_RATE_PREFIX_)) {
+      try {
+        var rateV2 = JSON.parse(all[key]);
+        if (!rateV2.windowStartedAt || now - rateV2.windowStartedAt >= STAFF_AUTH_V2_RATE_WINDOW_MS_) {
+          props.deleteProperty(key);
+          deleted++;
+        }
+      } catch(e) { props.deleteProperty(key); deleted++; }
+
     // Session token — expired jika now > expiry
-    if (key.startsWith('session_')) {
+    } else if (key.startsWith('session_')) {
       try {
         var data = JSON.parse(all[key]);
         if (now > data.expiry) { props.deleteProperty(key); deleted++; }
@@ -8968,13 +9185,13 @@ function getMuridByGuruUntukTukar(params) {
 // ============================================================
 // 34. tukarGuruMurid
 // Permanent reassign murid dari guruLama ke guruBaru (update kolum GURU).
-// Input:  { token, adminEmail, guruLama, guruBaru, senarai:[{bil,jenis},...] }
+// Input:  { token, guruLama, guruBaru, senarai:[{bil,jenis},...] }
 // Output: { success, jumlahDipindah, ralat:[...] }
 // ============================================================
 function tukarGuruMurid(params) {
   params = params || {};
   try {
-    var adminEmail = (params.adminEmail || '').toString().trim();
+    var adminEmail = (params._authActor && params._authActor.email || '').toString().trim();
     var guruLama   = (params.guruLama   || '').toString().trim();
     var guruBaru   = (params.guruBaru   || '').toString().trim();
     var senarai    = params.senarai || [];
@@ -9123,13 +9340,13 @@ function getMuridTanpaGuru() {
 // ============================================================
 // 36. assignGuruMurid
 // Tetapkan guru untuk murid yang kolum GURU masih kosong.
-// Input:  { token, adminEmail, namaGuru, senarai:[{bil,jenis,namaMuridExpected}] }
+// Input:  { token, namaGuru, senarai:[{bil,jenis,namaMuridExpected}] }
 // Output: { success, jumlahDitetapkan, ralat:[...] }
 // ============================================================
 function assignGuruMurid(params) {
   params = params || {};
   try {
-    var adminEmail = (params.adminEmail || '').toString().trim();
+    var adminEmail = (params._authActor && params._authActor.email || '').toString().trim();
     var namaGuru   = (params.namaGuru   || '').toString().trim();
     var senarai    = params.senarai || [];
 
@@ -9426,15 +9643,17 @@ function logHeaders() {
 }
 
 function testLogin() {
-  var result = loginGuru({ email: 'guru@example.com', phone: '0123456789' });
-  Logger.log(JSON.stringify(result));
+  return testRequestStaffLoginOtpV2();
 }
 
 function testLoginDirect() {
-  // Test dengan telefon sebenar dari Sheets: kolum E = "0196929415", last 6 = "929415"
-  // Ganti email di bawah dengan email guru yang ada dalam Sheets
-  var result = loginGuru({ email: 'burn.kajang@gmail.com', phone: '929415' });
-  Logger.log('testLoginDirect result: ' + JSON.stringify(result));
+  return testRequestStaffLoginOtpV2();
+}
+
+function testRequestStaffLoginOtpV2() {
+  var email = PropertiesService.getScriptProperties().getProperty('TEST_STAFF_EMAIL');
+  if (!email) throw new Error('TEST_STAFF_EMAIL Script Property diperlukan untuk ujian editor.');
+  return requestStaffLoginOtp({ email: email });
 }
 
 function testRegisterKanak() {
