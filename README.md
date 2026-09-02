@@ -4,19 +4,21 @@ SPKM ialah portal pengurusan kelas mengaji untuk pendaftaran murid, kehadiran, y
 
 ## Status Semasa
 
-Setakat checkpoint production 1 September 2026:
+Setakat checkpoint production 2 September 2026:
 
-- PWA awam beroperasi seperti biasa dan telah disahkan secara visual.
+- PWA production: [SPKM](https://shafielegacy.github.io/SPKM/).
+- **Staff Auth V2 LIVE** — login Guru/Admin melalui e-mail OTP pada desktop/header dan mobile; login lama email + enam digit akhir telefon telah dinyahaktifkan.
 - eBayar legacy kekal digunakan untuk Januari hingga Ogos 2026.
 - Native eBayar bermula September 2026 dan dibenamkan terus dalam PWA; bulan akan datang kekal tertakluk kepada sempadan bulan semasa.
 - Ibu bapa tidak perlu log masuk. Semakan bayaran dan resit dibuat melalui eSemak awam, manakala login Guru/Admin kekal berasingan.
 - eSemak dan Dashboard Yuran menggunakan sumber hybrid: Januari–Ogos daripada sumber legacy, September–Disember daripada canonical `Payments` dengan status tepat `SELESAI`.
 - Ogos Legacy dan V2 telah direconcile sepenuhnya: 109 sudah bayar, 77 belum bayar, 186 murid dan RM3,760.
 - September Native telah production-verified: 15 sudah bayar, 171 belum bayar, 186 murid dan kutipan RM600; nama serta pautan resit dipaparkan dengan betul.
-- Existing active Apps Script Web App ialah production **Version 184** pada deployment/URL sedia ada.
+- Existing active Apps Script Web App ialah production **Version 185 (@185)** pada deployment/URL sedia ada. Backend dan PWA auth diterbitkan secara berasingan; production smoke test PASS.
+- Privacy/authentication eSemak **Phase 2 masih pending**; public eSemak kekal tanpa perubahan dalam rollout Staff Auth V2.
 - Portal Mode kekal `AUTO`: legacy sebelum 1 September 2026 dan Native mulai tarikh tersebut.
 
-Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md) sebelum memulakan kerja atau deployment seterusnya.
+Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md) untuk checkpoint dan validation, [INTERNAL_OPERATIONS.md](INTERNAL_OPERATIONS.md#login-guruadmin--staff-auth-v2) untuk panduan OTP, dan [REFERENCE.md](REFERENCE.md#staff-auth-v2--technical-reference-2-september-2026) untuk model keselamatan.
 
 ## Modul Utama
 

@@ -6,20 +6,37 @@
 
 This file is the primary continuity handoff. Historical plans and staging logs remain useful, but this checkpoint controls whenever they conflict with an older note.
 
+## Production Checkpoint — 2 September 2026: Staff Auth V2 LIVE
+
+- Source feature `98e585c` (`feat: harden staff auth with OTP v2`) merged through PR #1 with the same title. Current `main` merge commit: `1d07e8f` (`Merge pull request #1 from BurnDVS/security/auth-v2`).
+- Backend rollout complete in the existing SPKM production Apps Script project: **Version 185 (@185)**, description `SPKM Staff Auth V2 - Email OTP Security Hardening`. Deployment ID and production URL are unchanged; see section 2.
+- PWA rollout complete at [SPKM](https://shafielegacy.github.io/SPKM/) through `shafielegacy/SPKM`, commit `de0d608` (`feat: publish staff auth otp v2 to pwa`). Only `index.html` auth frontend was published in that Pages commit. Backend and PWA rollout were intentionally separate.
+- Staff email OTP replaces legacy email + last-six-phone login, which now fails closed. Session V2, live staff/role revalidation, backend logout and central authorization are live. Desktop/header and mobile login store canonical backend identity/role; session restore uses renewed canonical state. Timing and technical details: [REFERENCE.md](REFERENCE.md#staff-auth-v2--technical-reference-2-september-2026); operator flow: [INTERNAL_OPERATIONS.md](INTERNAL_OPERATIONS.md#login-guruadmin--staff-auth-v2).
+- Existing Native eBayar guards remain protected; Portal Mode remains `AUTO`. Public eSemak privacy/authentication was explicitly deferred to **security Phase 2** and remains unchanged.
+
+Completed validation from the rollout handoff (not rerun by this documentation checkpoint):
+
+- Automated before production: focused Staff Auth V2 suite **22/22 PASS**; full Node suite **80/80 PASS**; `git diff --check` clean apart from expected Windows LF→CRLF warnings.
+- Isolated live sandbox pentest PASS: unknown-account anti-enumeration; wrong-OTP lockout; correct OTP rejected after lockout; OTP single-use; Session V2 login and renewal; live `ADMIN → GURU` role revalidation; staff role removal/revocation; backend logout invalidating the old session; desktop/header and mobile OTP end-to-end login.
+- Production smoke test **PASS**: PWA showed **Hantar OTP**; OTP request and confirmation succeeded; real production staff identity loaded correctly; portal opened successfully after authentication.
+- Pentest used a separate standalone Apps Script project with synthetic staff/attendance data. Pentest-only IDs, helpers and endpoint overrides were verified absent from the production security branch before merge. Temporary pentest/security/pages-auth worktrees and the merged local `security/auth-v2` branch were removed after rollout. The temporary pages-hotfix worktree was also removed after confirming no unique changes. Final worktree list contains only the main SPKM workspace.
+
+Next recommended security work, **pending**: define the eSemak Phase 2 privacy/authentication scope, assess public lookup/receipt exposure and parent–student access rules, then agree controlled tests before any implementation. Staff Auth V2 completion does not imply parent authentication or ownership controls are implemented.
+
 ## 1. Repository and Deployment State
 
 - Workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
 - Branch: `main`
-- HEAD: `2add115` (`chore: remove completed June repair helper`)
+- HEAD: `1d07e8f` (`Merge pull request #1 from BurnDVS/security/auth-v2`)
 - Native Slides receipt implementation: `15d7991` (`feat: generate native ebayar receipts from slides template`)
-- Previous documentation checkpoint: `fd3203c` (`docs: record native ebayar production readiness`)
+- Previous documentation checkpoint: `6f01f13` (`docs: record resolved June duplicate repair`); earlier production-readiness checkpoint: `fd3203c`.
 - Auto Sync hardening: `391f164` (`fix: harden ebayar v2 auto sync`)
 - Development/source remote: `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`
 - Production Pages remote: `pages` → `https://github.com/shafielegacy/SPKM.git`
-- Public PWA: `https://shafielegacy.github.io/SPKM`
-- `origin/main` is aligned at `0c3a355`.
-- Production `pages/main` is at `7b5476e` (`feat: route PWA eBayar to native portal`).
-- Pages was published from the separate detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` using `git push pages HEAD:main`.
+- Public PWA: `https://shafielegacy.github.io/SPKM/`
+- `origin/main` is aligned at `1d07e8f`.
+- Production `pages/main` is at `de0d608` (`feat: publish staff auth otp v2 to pwa`).
+- Earlier Native routing publication `7b5476e` used a separate detached Pages worktree. Temporary rollout worktrees are now cleaned up; only the main workspace remains.
 
 Pushing `origin` does not update GitHub Pages. Before any future Pages push, fetch both remotes and inspect the commits on each side. Use an explicit `git push pages main:main` only after confirming a safe fast-forward.
 
@@ -27,20 +44,20 @@ Pushing `origin` does not update GitHub Pages. Before any future Pages push, fet
 
 - Apps Script owner: `shafielegacykelasmengaji@gmail.com`.
 - `.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` and `TestWA.js`; `.claspignore` must continue to exclude `tests/**`.
-- Apps Script `@HEAD` is up to date with local source through the latest clasp push.
+- The completed backend rollout published Staff Auth V2 source as @185; this documentation checkpoint does not push or re-read Apps Script editor state.
 - During the first hardening source push, `tests/ebayar-v2-auto-sync.test.js` was accidentally included because `tests/**` was missing from `.claspignore`. The exclusion was added, the test file was removed manually from Apps Script, and a fresh clone confirmed that only the four intended source files remained. This deployment-hygiene incident is resolved.
-- The existing production Web App deployment is now **Version 184**.
+- The existing production Web App deployment is now **Version 185 (@185)**, description `SPKM Staff Auth V2 - Email OTP Security Hardening`, in the same SPKM production project.
 - Deployment ID remains `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1`; its `/exec` URL and deployment identity were preserved.
 - The Web App executes as `USER_DEPLOYING`; deployment owner is `shafielegacykelasmengaji@gmail.com`.
 - Production progression on 1 September: Version 180 eSemak hybrid, Version 181 legacy Form readiness hardening, Version 182 Admin Yuran hybrid dashboard, Version 183 Form sync observability/verification, and Version 184 Google Forms OAuth scope.
 
 ## 3. Public Safety State
 
-- Production GitHub Pages is published at `7b5476e` from the separate Pages worktree.
-- Apps Script production is Version 184 and includes Native eBayar, hybrid readers, Form sync hardening and the Slides-template receipt implementation.
+- Production GitHub Pages auth is published at `de0d608`; temporary Pages worktrees have been removed.
+- Apps Script production is Version 185 and includes Staff Auth V2 alongside Native eBayar, hybrid readers, Form sync hardening and the Slides-template receipt implementation.
 - Portal Mode is `AUTO`.
 - `AUTO` resolves to `LEGACY` before 1 September 2026 and to `NATIVE` from 1 September 2026 onward in Malaysia time.
-- Production Version 184 is active on the preserved `/exec` URL. Portal Mode is `AUTO`; it resolves to `NATIVE` from 1 September in Malaysia time.
+- Production Version 185 is active on the preserved `/exec` URL. Portal Mode is `AUTO`; it resolves to `NATIVE` from 1 September in Malaysia time.
 - Native eBayar is live and embedded in the PWA. Parents use public eSemak without login; Guru/Admin login remains separate.
 - September production verification: 15 paid, 171 unpaid, 186 active students and RM600 collection. Names and HTTPS receipt links display correctly.
 - Ogos production status is fully reconciled: 70 response/payment groups, 109 distinct paid students, 77 unpaid, 186 active students and RM3,760 collection.
@@ -165,7 +182,7 @@ The submission endpoint preserves these guarantees:
 - `NOTE` stores compact structured JSON for group context.
 - `AMOUNT_TOTAL` may repeat on child rows for schema compatibility, but all reports must deduplicate totals by `PAYMENT_GROUP_ID`.
 
-No real Native write or slip upload has been executed.
+At the original Phase 2A checkpoint, no real Native write or slip upload had been executed. This historical boundary was superseded by the verified September production payments and receipts described in sections 3 and 10.
 
 ## 10. Native Phase 2B — Receipt Generation
 
@@ -242,16 +259,20 @@ Receipt folder:
 - `ba996fa` — made Admin sync alerts visible.
 - `d363c07` — added explicit Google Forms OAuth scope.
 - `410de7e` / `ba1c1cc` — temporary guarded Ogos backfill and stable anomaly assertion.
-- `0c3a355` — removed the completed one-time backfill helper and dedicated test; current application checkpoint.
+- `0c3a355` — removed the completed one-time Ogos backfill helper and dedicated test.
+- `2add115` — removed the completed June repair helper.
+- `6f01f13` — documented the resolved June duplicate repair.
+- `98e585c` — Staff Auth V2 security feature; merged through PR #1.
+- `1d07e8f` — current `main` merge checkpoint for PR #1.
+- Pages `de0d608` — published Staff Auth V2 in PWA `index.html` only.
 
-The application commits are present on `origin`; `origin/main` is aligned at `0c3a355`. Production `pages/main` remains a separately managed deployment branch.
+The application commits are present on `origin`; `origin/main` is aligned at `1d07e8f`. Production `pages/main` remains a separately managed deployment branch at `de0d608`.
 
 ## 13. Preserved Dirty Worktree
 
-Recorded dirty/untracked state before this documentation task:
+Recorded dirty/untracked state at the start of this documentation task, 2 September 2026:
 
 ```text
- M TestWA.js
  M sw.js
 ?? .claude/
 ?? MASTER PROMPT SPDK — POST COURSE SECURITY HARDENING.txt
@@ -263,24 +284,27 @@ Recorded dirty/untracked state before this documentation task:
 ?? tmp/
 ```
 
-The three `native-ebayar-*.diff.txt` files are local audit artifacts and must not be committed. Preserve `TestWA.js`, `sw.js`, `appsscript.json`, `.claude/`, `output/`, `tmp/`, the separate Pages worktree and all unrelated changes; do not restore or clean them casually.
+The three `native-ebayar-*.diff.txt` files are local audit artifacts and must not be committed. Preserve the existing `sw.js` modification and every untracked artifact above. Earlier snapshots listed modified `TestWA.js` and a separate Pages worktree; these are not part of the current dirty/worktree state. This task changes documentation only: no code/config/tests edits, staging, commit, push or deployment.
 
 ## 14. Next Session Checklist
 
-Production Version 184, Native September routing, hybrid eSemak/dashboard readers and hardened Form sync are live. For the next operational session:
+Production Version 185 with Staff Auth V2, Native September routing, hybrid eSemak/dashboard readers and hardened Form sync is live. For the next operational session:
 
 1. Read this file, `REFERENCE.md` and `INTERNAL_OPERATIONS.md`.
-2. Verify `git status --short`, current branch and `origin/main` at `2add115`; inspect the separately managed Pages branch before any Pages push.
+2. Verify `git status --short`, current branch and `origin/main` at `1d07e8f`; inspect the separately managed Pages branch (`de0d608` checkpoint) before any Pages push.
 3. Confirm `EBAYAR_PORTAL_MODE` remains `AUTO` and resolves to `NATIVE`.
-4. Confirm production remains Version 184 on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
+4. Confirm production remains Version 185 on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
 5. Check `NATIVE_EBAYAR_SLIP_FOLDER_ID`, `NATIVE_EBAYAR_RECEIPT_FOLDER_ID` and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` in Script Properties. Verify both folders remain Restricted, slip files private, only final receipt PDFs link-view, and the configured template is approved.
 6. Monitor September dashboard/eSemak consistency and verify only exact `STATUS=SELESAI` canonical rows are counted.
 7. On uncertain writes, do not retry; refresh authoritative `Payments`/Drive state first.
 8. Preserve the resolved June anomaly audit record; no one-time June repair helper remains in source.
 9. Keep Portal Mode `AUTO` and continue using the existing production deployment URL.
+10. Use Staff Auth V2 email OTP for Guru/Admin; verify identity/role from backend renewal. Treat eSemak privacy/authentication Phase 2 as separate pending work, scoped before implementation.
 
 ## 15. Current Completion Boundary
 
-Implemented, reconciled and published: V2 historical migration, guarded maintenance Auto Sync, Portal Mode, Native Phase 2A/2B with Slides receipts, PWA Native routing, public hybrid eSemak, Admin hybrid dashboard and hardened/verified legacy Form synchronization in production Version 184.
+Implemented, reconciled and published: V2 historical migration, guarded maintenance Auto Sync, Portal Mode, Native Phase 2A/2B with Slides receipts, PWA Native routing, public hybrid eSemak, Admin hybrid dashboard and hardened/verified legacy Form synchronization; Staff Auth V2 security Phase 1 is now live in production Version 185 and the published PWA.
 
 Native September payments, names and receipt links are production-verified. Parent Google login from the original V2 plan is not part of the current public architecture: parents use unauthenticated eSemak, while Guru/Admin login remains separate. Historical anomaly `PG-2026-JUN2026-112` was repaired, reconciled and closed on 2 September 2026 without touching September/Native data.
+
+Public eSemak privacy/authentication security Phase 2 remains pending and was intentionally unchanged in the Staff Auth V2 rollout. Security Phase 1/2 labels are separate from Native payment/receipt Phase 2A/2B milestones.

@@ -12,13 +12,13 @@ Maklumat sensitif seperti credential sebenar dan token tidak boleh dimasukkan ke
 |---|---|
 | Repo utama | `BurnDVS/SPKM-SyafieLegacy` |
 | Repo GitHub Pages | `shafielegacy/SPKM` |
-| Live mobile PWA | `https://shafielegacy.github.io/SPKM` |
+| Live mobile PWA | `https://shafielegacy.github.io/SPKM/` |
 | Live GAS desktop | Simpan di dokumen private/local |
 | Deploy GAS | Push source ke Apps Script, kemudian deploy new web app version secara manual |
-| Deploy mobile | Push ke `origin` dan `pages` |
+| Deploy mobile | Publication berasingan ke `pages` selepas semakan divergence; push `origin` sahaja tidak menerbitkan PWA |
 
 Nota penting:
-- Current source checkpoint ialah `0c3a355`; `origin/main` aligned pada commit itu. Production Apps Script ialah Version 184 pada existing deployment ID dan `/exec` URL yang dikekalkan.
+- Checkpoint 2 September 2026: `main` / `origin/main` pada merge `1d07e8f` (PR #1, feature `98e585c`). Production Apps Script ialah **Version 185 (@185)**, description `SPKM Staff Auth V2 - Email OTP Security Hardening`, pada project, deployment ID dan production URL sedia ada. PWA auth diterbitkan berasingan melalui `de0d608` dalam `shafielegacy/SPKM`, hanya `index.html`. Production Staff Auth V2 smoke test PASS; rujuk `CURRENT_STATUS.md` untuk rekod validation.
 - Push ke `origin` tidak update production Pages. Fetch kedua-dua remote, semak divergence dan hanya kemudian gunakan explicit `git push pages main:main`.
 - Jangan stage semua fail secara membuta tuli; semak dirty worktree dan stage fail yang diluluskan sahaja.
 - Bila deploy GAS, pastikan deployment type ialah **Web App**, bukan Library.
@@ -40,9 +40,26 @@ Fallback jika `clasp login` gagal:
 
 | Peranan | Akses | Cara Masuk |
 |---|---|---|
-| Guru / Admin | Dashboard penuh | Email + No. WhatsApp |
+| Guru / Admin | Dashboard mengikut role backend; tindakan ADMIN terhad kepada ADMIN | Email + OTP email |
 | Ibu Bapa / Wali | Portal daftar dan eSemak awam | Tanpa login |
 | Murid Dewasa | Portal daftar sahaja | Tanpa login |
+
+### Login Guru/Admin — Staff Auth V2
+
+Berkuat kuasa 2 September 2026 pada desktop/header dan modal mobile:
+
+1. Buka **Log Masuk Guru & Admin** dan masukkan email yang berdaftar dalam `Maklumat Guru`.
+2. Tekan **Hantar OTP** dan semak peti masuk email.
+3. Masukkan OTP **6 digit** daripada email terkini, kemudian tekan **Sahkan OTP**.
+4. Selepas berjaya, portal memuatkan identiti dan role yang disahkan backend.
+
+Login lama email + enam digit akhir telefon adalah **obsolete dan dinyahaktifkan**; jangan gunakannya sebagai fallback. OTP pendaftaran murid ialah flow berasingan. Ibu bapa masih menggunakan eSemak awam tanpa login; privacy/authentication eSemak security Phase 2 belum dilaksanakan.
+
+OTP sah selama **5 minit**, sekali guna sahaja. Tunggu sekurang-kurangnya **60 saat** sebelum meminta penghantaran semula. Had penghantaran ialah **5 sejam per akaun** dan **100 sejam seluruh sistem**; permintaan baharu mungkin tidak menghantar email apabila had dicapai. Selepas **3 cubaan OTP salah**, OTP tersebut dikunci; minta OTP baharu selepas cooldown/had membenarkan. Mesej permintaan adalah umum dan tidak mengesahkan bahawa akaun wujud atau email telah dihantar.
+
+Session backend mempunyai idle expiry **30 minit** dan absolute lifetime **8 jam**. Frontend cuba renew setiap **20 minit**, tetapi renewal tidak boleh melepasi had 8 jam; sesi tamat memerlukan login OTP semula. Refresh/restore mesti mendapat identiti dan role canonical daripada backend. Perubahan `ADMIN → GURU` berkuat kuasa selepas revalidation; staf dibuang atau role tidak layak kehilangan akses privileged. **Log Keluar** menghantar invalidation ke backend selain membersihkan sesi setempat; sesi lama tidak boleh digunakan semula selepas invalidation berjaya.
+
+**OTP tidak diterima:** semak ejaan email, Inbox/Spam/Junk dan sambungan internet; tunggu cooldown sebelum meminta semula, kemudian guna OTP email terkini. Jika had sejam dicapai, tunggu window had tamat. Jika masih gagal, minta admin semak email dan kelayakan role dalam `Maklumat Guru`, kemudian semak status penghantaran/quota email melalui operasi yang dibenarkan. Jangan minta pengguna berkongsi OTP atau token sesi. Jika PWA masih menunjukkan login telefon, muat semula PWA daripada URL production dan pastikan **Hantar OTP** muncul.
 
 ---
 
@@ -89,7 +106,7 @@ Mobile CSS:
 ## Feature Inventory
 
 ### Portal & UI
-- Login Guru/Admin dengan email + nombor telefon.
+- Login Guru/Admin dengan e-mail OTP Staff Auth V2; rujuk prosedur di atas.
 - Header Navy + Gold.
 - Desktop nav: Utama, Daftar, Kehadiran, Murid, Guru, Yuran, eBayar, eSemak.
 - Mobile bottom nav sebelum login: Utama, Daftar, eBayar, eSemak.
@@ -246,8 +263,8 @@ Production checkpoint 1 September: Version 184 pada existing deployment identity
 
 #### September Production Monitoring Checklist
 
-1. Confirm repository, dirty worktree and `origin/main` at `2add115`; inspect Pages separately before any push.
-2. Confirm production Version 184 remains active on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
+1. Confirm repository, dirty worktree and `origin/main` at `1d07e8f`; inspect Pages (`de0d608` checkpoint) separately before any push.
+2. Confirm production Version 185 remains active on the existing deployment ID and `/exec` URL and executes as `USER_DEPLOYING`.
 3. Confirm Portal Mode remains `AUTO` and resolves to `NATIVE`.
 4. Verify both configured Drive folder IDs and `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID`; confirm the slip and receipt folders remain Restricted.
 5. Compare September eSemak and Admin dashboard against canonical exact-`SELESAI` rows; current verified totals are 15/171/186/RM600.
@@ -261,7 +278,7 @@ Production checkpoint 1 September: Version 184 pada existing deployment identity
 - Pre-write validation/lock/conflict failure: no payment should be assumed written; correct the cause and preview again.
 - Network or post-write verification uncertainty: assume the outcome is unknown, inspect `Payments`, group identity and Drive artifacts before any action.
 - Receipt failure after confirmed payment: payment remains valid; investigate receipt state only, never resubmit payment.
-- If a new GAS version causes a production issue, restore the previous deployment version while keeping Portal Mode `LEGACY` if necessary. Do not rewrite historical rows as rollback.
+- If a new GAS version causes a production issue, assess an authorized rollback on the existing deployment; rolling back before @185 would remove Staff Auth V2 protections. Keep Portal Mode `AUTO` unless an administrator explicitly authorizes a temporary override. Do not rewrite historical rows as rollback.
 - If Pages is wrong, identify the last verified Pages commit and perform a reviewed forward fix or authorized rollback; do not force-push casually.
 
 #### Historical eBayar V2 Shadow Workflow — Superseded
@@ -407,7 +424,7 @@ SELEPAS LOGIN:
 1. Data murid disimpan dalam Google Sheets.
 2. Slip pendaftaran dijana automatik dan dihantar ke email ibu bapa.
 3. Kehadiran boleh direkod dari portal.
-4. Kata laluan guru ialah nombor WhatsApp yang berdaftar.
+4. Login Guru/Admin menggunakan email berdaftar → **Hantar OTP** → masukkan OTP 6 digit → **Sahkan OTP**. Nombor WhatsApp bukan lagi kata laluan staff; rujuk prosedur Staff Auth V2 di atas.
 5. Mobile PWA boleh dipasang di home screen.
 6. Desktop dan mobile menggunakan data yang sama.
 7. Blast WA yuran dibuat dari panel Yuran.

@@ -1,6 +1,6 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 1 September 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Ogos Legacy/V2 kini fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Production Web App ialah Version 184; Native September, public hybrid eSemak, Admin hybrid dashboard dan receipt links telah production-verified. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+> **Status 2 September 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Staff Auth V2 / security Phase 1 **COMPLETE dan LIVE**, backend **@185** dan PWA auth `de0d608`; `main` pada merge `1d07e8f`. eSemak privacy/authentication security Phase 2 **PENDING**, berasingan dan tidak diubah dalam rollout ini. Ogos Legacy/V2 fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Native September, public hybrid eSemak, Admin hybrid dashboard dan receipt links kekal production-verified. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
 > **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar bermula September. Parents menggunakan public eSemak tanpa login, manakala Guru/Admin login kekal berasingan.
 
@@ -25,7 +25,7 @@ SPKM V1 ialah production semasa dan mesti dikekalkan stabil.
 
 - Pendaftaran murid kanak-kanak dan dewasa.
 - OTP email semasa pendaftaran.
-- Login Guru/Admin menggunakan email dan nombor WhatsApp berdaftar.
+- Login Guru/Admin asal menggunakan email dan nombor WhatsApp berdaftar (sejarah V1; digantikan oleh Staff Auth V2 email OTP pada 2 September 2026, lihat milestone 12).
 - Kehadiran guru, termasuk Guru Backup/Relief.
 - eBayar dan eSemak tanpa login parent.
 - Dashboard yuran.
@@ -469,18 +469,18 @@ Admin panel `Auto Sync` kini disambungkan kepada aliran preview-first dan explic
 
 Hardening commit `391f164` membetulkan dua defect gabungan: confirmation kini membawa immutable exact preview IDs ke backend, dan Promise frontend mempunyai settlement timeout 120 saat supaya loading sentiasa dibersihkan. Backend memerlukan 1–25 ID non-empty/unique, menolak ID stale dan memproses hanya batch yang disahkan. Full local suite selepas Native Slides receipt: 14 passed, 0 failed.
 
-Production Version 176/177 ialah checkpoint sejarah. Current production ialah Version 184 pada deployment ID dan `/exec` URL yang sama. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
+Production Version 176/177 dan Version 184 ialah checkpoint sejarah. Current production ialah Version 185 pada deployment ID dan `/exec` URL yang sama. `tests/**` wajib kekal dalam `.claspignore`; insiden test file terikut dalam source push pertama telah dibersihkan dan fresh clone mengesahkan hanya empat fail Apps Script intended kekal.
 
 Native receipt rendering source kini menyalin existing Google Slides template `1xKvt6wNlHtv71fsfsLSX6TobCOaK073pTdEQgbFfAoQ`, mengganti lima placeholders, mengeksport PDF dan trash temporary Slides copy dalam `finally`. Layout satu slide landscape 576 × 288 pt dikekalkan; multiple children menggunakan balanced wrapping dan local font reduction. `NATIVE_EBAYAR_RECEIPT_TEMPLATE_ID` menyimpan template config, manakala `NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID` digunakan oleh helper `testCreateNativeEbayarReceiptSlidesPreviewV2`.
 
 Synthetic September preview dua anak/RM100 dengan `CONTOH / TIDAK SAH` berjaya melalui real Slides-to-PDF path tanpa live payment row atau production receipt record. Privacy, idempotency, one-PDF-per-group, shared `RESIT_URL`, final-PDF permissions dan payment-independent receipt failure handling kekal.
 
-Apps Script production kini Version 184 pada existing deployment ID dan `/exec` URL; Web App executes as `USER_DEPLOYING`. Progression: V180 eSemak hybrid, V181 legacy Form readiness, V182 Admin dashboard hybrid, V183 Form sync observability/read-back verification, V184 Google Forms OAuth scope. Portal Mode `AUTO` resolve `NATIVE` mulai 1 September mengikut Malaysia time.
+Checkpoint 1 September: Apps Script production Version 184 pada existing deployment ID dan `/exec` URL; Web App executes as `USER_DEPLOYING`. Progression: V180 eSemak hybrid, V181 legacy Form readiness, V182 Admin dashboard hybrid, V183 Form sync observability/read-back verification, V184 Google Forms OAuth scope. Milestone 12 merekodkan upgrade @185 pada 2 September. Portal Mode `AUTO` resolve `NATIVE` mulai 1 September mengikut Malaysia time.
 
 PWA Native routing dan Admin shortcut publication ditandakan complete:
 
-- Historical PWA routing checkpoint ialah `076f68a` (`feat: prepare native ebayar routing and admin shortcut`); current source checkpoint ialah `0c3a355`.
-- Production `pages/main` ialah `7b5476e` (`feat: route PWA eBayar to native portal`), diterbitkan dari detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`.
+- Historical PWA routing checkpoint ialah `076f68a` (`feat: prepare native ebayar routing and admin shortcut`); source checkpoint ketika rollout Native ialah `0c3a355`.
+- Historical Pages publication `7b5476e` (`feat: route PWA eBayar to native portal`) diterbitkan dari detached worktree `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`. Current auth publication ialah `de0d608`; temporary rollout worktrees kini telah dibersihkan.
 - Januari–Ogos kekal menggunakan original Legacy Google Form routes. September–Disember menggunakan approved production `/exec` mengikut Malaysia time: September dibuka 1 September, Oktober 1 Oktober, November 1 November dan Disember 1 Disember 2026. Future months kekal disabled dan tiada public route menggunakan `/dev`.
 - PWA Dashboard Yuran menyediakan shortcut `eBayar V2 Maintenance` hanya kepada authenticated `ADMIN`, membuka production `/exec` dalam protected new tab. Backend Admin authorization kekal authoritative dan full maintenance UI kekal di Apps Script portal. Exact PWA duplicate ialah optional future scope.
 
@@ -490,9 +490,27 @@ Legacy Form sync turut selesai dihardening pada 1 September: bounded Calculation
 
 ### Nota operasi
 
-- Satu anomaly sejarah June, `GROUP_ID_MULTIPLE_STAGED_HASHES`, masih wujud sebagai audit berasingan dan tidak berkaitan Ogos.
-- Catatan “belum production deployment”, Version 176/177 dan pending first transaction dalam snapshot terdahulu ialah sejarah. Existing production Web App kini Version 184 pada URL yang sama.
+- Anomaly sejarah June `GROUP_ID_MULTIPLE_STAGED_HASHES` untuk `PG-2026-JUN2026-112` telah diselesaikan pada 2 September; audit dikekalkan dalam milestone reconciliation di atas.
+- Catatan “belum production deployment”, Version 176/177 dan pending first transaction dalam snapshot terdahulu ialah sejarah. Existing production Web App kini Version 185 pada URL yang sama.
 - Portal Mode mesti kekal `AUTO`; mulai 1 September ia resolve `NATIVE`.
+
+---
+
+## 12. Staff Auth V2 / Security Phase 1 — COMPLETE (2 September 2026)
+
+Security Phase 1/2 di sini ialah workstream keselamatan, berasingan daripada nombor fasa migration asal dan Native eBayar Phase 2A/2B.
+
+- [x] Legacy staff email + last-six-phone login disabled fail-closed; email OTP dan Session V2 menggantikannya.
+- [x] Central authorization, server-derived privileged actor identity, live staff/role revalidation dan backend logout; legacy sessions gagal tertutup.
+- [x] Desktop/header dan mobile OTP login; canonical backend identity/role semasa login dan restore.
+- [x] Focused automated tests 22/22, full Node suite 80/80, isolated live pentest dan production Staff Auth V2 smoke test PASS.
+- [x] Feature `98e585c` merged melalui PR #1 (`feat: harden staff auth with OTP v2`), `main` merge `1d07e8f`.
+- [x] Backend @185, description `SPKM Staff Auth V2 - Email OTP Security Hardening`, dalam project production sedia ada dengan deployment ID dan URL dikekalkan.
+- [x] PWA auth diterbitkan berasingan: `de0d608` (`feat: publish staff auth otp v2 to pwa`), `index.html` sahaja, melalui `shafielegacy/SPKM` di [SPKM](https://shafielegacy.github.io/SPKM/).
+- [x] Isolated sandbox artifacts tidak masuk production security branch; temporary rollout worktrees dan merged local security branch telah dibersihkan, hanya main workspace kekal.
+- [ ] **Security Phase 2 — eSemak privacy/authentication:** pending dan scope berasingan. Semak public lookup/receipt exposure serta model parent–student authorization, putuskan reka bentuk dan acceptance tests sebelum implementasi. Public eSemak kekal unchanged dalam Staff Auth V2; parent login/ownership controls belum dilaksanakan.
+
+Existing Native eBayar guards kekal protected. Timing/model auth: `REFERENCE.md`; operasi OTP: `INTERNAL_OPERATIONS.md`; bukti rollout dan next-session boundary: `CURRENT_STATUS.md`. Checklist ini tidak menandakan fasa parent login, migration atau roadmap lain selesai secara automatik.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 1 September 2026.** `origin/main` berada pada `0c3a355`; Apps Script production ialah Version 184 pada existing deployment identity dan `/exec` URL. Native September serta hybrid eSemak/dashboard telah production-verified. Ogos Legacy dan V2 fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Lihat `CURRENT_STATUS.md`; nota lama di bawah ialah sejarah dan tidak mengatasi checkpoint ini.
+> **Checkpoint berkuat kuasa: 2 September 2026.** `main` / `origin/main` pada `1d07e8f` (merge PR #1, feature `98e585c`); Staff Auth V2 LIVE pada Apps Script **Version 185 (@185)** dengan existing project, deployment identity dan production URL. PWA auth diterbitkan berasingan di `de0d608`, hanya `index.html`. Native September serta hybrid eSemak/dashboard kekal production-verified; eSemak privacy/authentication security Phase 2 masih pending dan tidak berubah. Ogos Legacy/V2 fully reconciled: 70 groups, 109 paid, 77 unpaid, 186 active students, RM3,760. Rujuk `CURRENT_STATUS.md` untuk validation dan sejarah.
 
 ---
 
@@ -62,8 +62,8 @@ Lepas tu push semula, login sebagai `BurnDVS` bila diminta.
 
 Current remote checkpoints:
 
-- `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `0c3a355`.
-- `pages`: `https://github.com/shafielegacy/SPKM.git`, production `pages/main` at `7b5476e`.
+- `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `1d07e8f`.
+- `pages`: `https://github.com/shafielegacy/SPKM.git`, production `pages/main` at `de0d608` (`feat: publish staff auth otp v2 to pwa`); PWA [SPKM](https://shafielegacy.github.io/SPKM/).
 
 ### Aliran push yang selamat
 ```powershell
@@ -76,7 +76,7 @@ git log --oneline --left-right pages/main...main
 
 Stage hanya fail yang memang berada dalam skop; jangan guna `git add .` secara automatik. Push development dengan `git push origin main`. Push ke `origin` sahaja tidak mengemas kini website live.
 
-Checkpoint Pages semasa diterbitkan melalui detached worktree berasingan di `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` menggunakan `git push pages HEAD:main`. Kekalkan worktree itu dan semak divergence sebelum publication seterusnya. Kaedah `git push pages main:main` dari workspace utama hanya sesuai jika commit yang hendak diterbitkan memang sama dengan `main` dan telah disemak.
+Historical Native Pages publication menggunakan detached worktree berasingan di `C:\Users\burnk\OneDrive\Documents-assets\SPKM-pages-publish` dengan `git push pages HEAD:main`. Selepas rollout Staff Auth V2, temporary worktrees telah dibersihkan; hanya main workspace kekal. Semak divergence sebelum publication seterusnya. Kaedah `git push pages main:main` dari workspace utama hanya sesuai jika commit yang hendak diterbitkan memang sama dengan `main` dan telah disemak.
 
 ⚠️ **Sebelum push ke `pages`, semak dulu fail apa yang akan terpush** (kalau ada kerja WIP yang belum siap dalam commit lain):
 ```powershell
@@ -136,7 +136,7 @@ Project ni sengaja diletak dalam OneDrive-synced folder (`D:\OneDrive\...` di de
 | Owner akaun | `shafielegacykelasmengaji@gmail.com` |
 | Buka editor | `clasp open` atau `https://script.google.com/d/1kYWTdqLEhGQbMZIuA2F5N-Z_VNVYGFYYROn16vVkg-6iS1ozJkllUgoW/edit` |
 
-`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Apps Script `@HEAD` telah dikemas kini melalui clasp push dan sepadan dengan source terkini. Existing production Web App ialah Version 184 pada deployment ID `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1`; deployment identity dan `/exec` URL dikekalkan. Web App executes as `USER_DEPLOYING` di bawah owner `shafielegacykelasmengaji@gmail.com`.
+`.clasp` tracks exactly `appsscript.json`, `Code.js`, `portal.html` dan `TestWA.js`; `.claspignore` mesti mengandungi `tests/**`. Rollout Staff Auth V2 selesai pada existing production Web App **Version 185 (@185)**, description `SPKM Staff Auth V2 - Email OTP Security Hardening`, deployment ID `AKfycbxd0jFmZw00kGbx4ykSwRSIsGXXbZNTqxHDJWM9ZyAimbOn9Xie_irhm2TRfn0qWEJ1`. Project production, deployment identity dan `/exec` URL dikekalkan. Web App executes as `USER_DEPLOYING` di bawah owner `shafielegacykelasmengaji@gmail.com`. Checkpoint dokumentasi ini tidak push atau memeriksa semula editor Apps Script.
 
 ### 🚨 LANGKAH WAJIB lepas `clasp push`
 `clasp push` HANYA update editor/source Apps Script — ia **TIDAK** mengubah production behavior dan **TIDAK** menukar URL Web App production.
@@ -301,12 +301,39 @@ Pattern yang digunakan:
 - Item yang gagal safety check masuk `ralat[]` — partial transfer diteruskan untuk item lain yang OK.
 - Pattern sama dipakai `assignGuruMurid` (16 Jul 2026) — safety check TAMBAHAN: kolum GURU row tu MESTI kosong dulu (tolak kalau dah ada guru — anti-overwrite), bukan check "GURU semasa === guruLama" macam tukarGuruMurid.
 
+### Staff Auth V2 — Technical Reference (2 September 2026)
+
+Staff Guru/Admin auth sahaja: legacy `login` email + last-six-phone dinyahaktifkan fail-closed, dan legacy sessions ditolak. OTP pendaftaran murid kekal flow berasingan. Public/parent eSemak `getYuranParent` kekal tanpa authentication dalam rollout ini; security Phase 2 privacy/authentication masih pending.
+
+| Action | Input / behavior |
+|---|---|
+| `requestStaffLoginOtp` | Email staff; respons anti-enumeration umum. Semak kelayakan dan had penghantaran sebelum menghantar OTP. |
+| `confirmStaffLoginOtp` | Email + OTP 6 digit; validate expiry/attempts dan consume OTP sekali sahaja. Kejayaan mengeluarkan Session V2 serta canonical `user`, `email`, `role`, session token dan tab kehadiran. |
+| `renewSession` | Session token; validate Session V2 dan re-read staff daripada `Maklumat Guru`. Return canonical `user`, `email`, `role`, `idleExpiry`, `absoluteExpiry`. |
+| `logout` | Session token; invalidate rekod backend. Frontend juga clear local session state. |
+
+| Kawalan | Nilai |
+|---|---|
+| OTP TTL | 5 minit |
+| Resend cooldown | 60 saat |
+| Send limit / window | 5 per akaun, 100 global / 1 jam |
+| Failed OTP attempts | 3 mengunci OTP tersebut |
+| Session idle expiry | 30 minit |
+| Session absolute lifetime | 8 jam dari issuance |
+| Frontend renewal cadence | 20 minit |
+
+OTP disimpan sebagai **HMAC digest**, bukan plaintext, dan consumed selepas pengesahan berjaya. Session V2 disimpan di Script Properties menggunakan **digest-derived key** daripada token; rekod versi lama atau invalid gagal tertutup. Renewal menetapkan idle expiry kepada `min(now + 30 minit, absoluteExpiry)` dan tidak memanjangkan absolute lifetime.
+
+Identiti dan role semasa dibaca semula daripada `Maklumat Guru` semasa staff revalidation, termasuk renewal dan authorization tindakan protected. Perubahan `ADMIN → GURU` menggugurkan kuasa ADMIN selepas revalidation; removal/role tidak layak membatalkan akses privileged. Privileged actor identity ditentukan server-side daripada session yang disahkan, bukan `adminEmail` yang dipercayai daripada browser.
+
+Central authorization policy mengelaskan actions sebagai **PUBLIC**, **authenticated** atau **ADMIN-only**; policy overlap tidak sah gagal tertutup. Label PUBLIC bagi permintaan OTP tidak memberi akses privileged; confirmation tetap memerlukan OTP sah. Existing Native eBayar month/student/duplicate/lock/bulk-write/post-write/no-retry guards kekal. Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md#production-checkpoint--2-september-2026-staff-auth-v2-live) untuk 22/22 focused tests, 80/80 full tests, isolated pentest dan production smoke test.
+
 ### Session Persistence (localStorage + renewSession) — PENTING, pernah regress sekali
 
 **Prinsip:** `localStorage` (BUKAN `sessionStorage`) dipakai untuk SEMUA device (desktop + mobile) untuk simpan token+user+role. Bila page refresh, `tryAutoLogin()` MESTI:
 1. Baca token dari localStorage. Takde token → terus papar login, jangan call API.
 2. Ada token → panggil `renewSession()` (backend) untuk **validate dengan server dulu** sebelum restore UI.
-3. `success:true` → restore penuh (guru/role dari localStorage yang dah tersimpan, backend tak perlu hantar balik).
+3. `success:true` → restore dan simpan canonical `user`, `email`, `role` yang dipulangkan backend. Arahan lama untuk mempercayai guru/role tersimpan sahaja telah digantikan oleh Staff Auth V2; kedua-dua desktop/header dan mobile menggunakan identiti canonical.
 4. `success:false` (token invalid/expired) → clear localStorage, papar login + mesej sesi tamat.
 5. **Network/exception error** (BUKAN success:false) → **JANGAN clear localStorage**, papar retry state ("Cuba Semula"). Ni yang paling kerap disalah — treat network failure sama macam invalid token punca "asyik logout" bila internet naik-turun.
 
@@ -320,7 +347,7 @@ Pattern yang digunakan:
 |---|---|---|
 | 1 | Clay UI | ✅ Selesai |
 | 2 | Login Parent | KIV — pending MyDigital ID (SSM registration) |
-| 3 | Login Guru | KIV — pending MyDigital ID |
+| 3 | Login Guru/Admin — security Phase 1 | ✅ Staff Auth V2 email OTP LIVE, @185 + PWA `de0d608` (2 September 2026); cadangan MyDigital ID kekal KIV |
 | 4 | Bayaran Online (Billplz/ToyyibPay) | KIV — pending financial |
 | 5 | Migrate ke OneDrive | ✅ Selesai |
 | 6 | Pecah Code.js multi-file | QUEUE |
@@ -333,6 +360,7 @@ Pattern yang digunakan:
 | 13 | Statistik Kehadiran admin view — guru lookup gap (`getKehadiranStats` hardcode `guru:''` untuk admin branch) | QUEUE — prompt dah dihantar, belum verify/deploy |
 | 14 | Normalize double-whitespace nama murid (`KEHADIRAN_SS_ID`) | QUEUE |
 | 15 | Update Available Popup (PWA) — `version.json`+`APP_VERSION`+`sw.js` | IN PROGRESS — uncommitted, rujuk pattern SPDK |
+| 16 | eSemak privacy/authentication — security Phase 2 | PENDING — scope berasingan; public eSemak tidak diubah oleh Staff Auth V2 |
 | — | FCM Push Notification | KIV |
 
 ---
@@ -389,7 +417,7 @@ Pattern yang digunakan:
 
 ---
 
-*Last updated: 1 September 2026 (production Version 184, Native September verified, Ogos 70-group full reconciliation; older queue logs below are historical)*
+*Last updated: 2 September 2026 (Staff Auth V2 LIVE @185 + PWA `de0d608`; eSemak security Phase 2 pending; older queue logs below are historical)*
 ## Historical Archive — Queue #9 Staging Logs
 
 Semua seksyen di bawah ialah log progres 1–2 Julai 2026. Ia dikekalkan untuk audit tetapi telah digantikan oleh status migrasi/reconciliation Januari–Ogos dalam `CURRENT_STATUS.md`.

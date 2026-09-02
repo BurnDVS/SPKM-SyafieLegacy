@@ -4,6 +4,29 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+## [2 September 2026] — Staff Auth V2 LIVE: Email OTP Security Hardening
+
+### Security model dan frontend
+
+- Legacy staff email + last-six-phone login dinyahaktifkan fail-closed. Staff email OTP menggunakan HMAC digest, single-use, TTL 5 minit, resend cooldown 60 saat, had 5/account/hour dan 100/global/hour; 3 cubaan salah mengunci OTP tersebut.
+- Session V2 menggunakan digest-derived Script Property key, idle expiry 30 minit dan absolute lifetime 8 jam. Frontend renew setiap 20 minit tanpa memanjangkan absolute expiry; legacy sessions gagal tertutup.
+- Identiti dan role staff dibaca semula daripada `Maklumat Guru`; `ADMIN → GURU` dan removal/ineligible role berkuat kuasa selepas revalidation. Logout invalidate backend session. Privileged actor identity ditentukan server-side, bukan browser-supplied `adminEmail`.
+- Central authorization policy mengelaskan PUBLIC/authenticated/ADMIN-only actions dan menolak invalid overlap. Existing Native eBayar guards kekal protected.
+- Desktop/header Guru & Admin login serta mobile modal beralih kepada **Hantar OTP → Sahkan OTP**. Frontend menyimpan canonical user/email/role/session daripada backend; restore menggunakan renewed canonical identity/role dan logout juga membersihkan local state.
+- Public eSemak privacy/authentication sengaja ditangguhkan ke **security Phase 2** dan tidak diubah dalam rollout ini.
+
+### Validation dan production rollout
+
+- Before production: focused Staff Auth V2 suite **22/22 PASS**, full Node suite **80/80 PASS**, `git diff --check` clean selain expected Windows LF→CRLF warnings.
+- Isolated live pentest PASS: anti-enumeration, wrong-OTP lockout dan rejection selepas lockout, OTP single-use, Session V2 login/renewal, live role downgrade/removal, backend logout invalidation, serta desktop/header dan mobile OTP end-to-end login.
+- Production smoke test **PASS**: PWA memaparkan Hantar OTP, request/confirmation berjaya, real staff identity betul dan portal dimuatkan selepas authentication.
+- Feature `98e585c` (`feat: harden staff auth with OTP v2`) merged melalui PR #1 bertajuk sama; merge `1d07e8f` (`Merge pull request #1 from BurnDVS/security/auth-v2`).
+- Existing SPKM production Apps Script project dan deployment/URL dikekalkan. Backend **@185**, description `SPKM Staff Auth V2 - Email OTP Security Hardening`.
+- PWA [SPKM](https://shafielegacy.github.io/SPKM/) diterbitkan melalui `shafielegacy/SPKM`, commit `de0d608` (`feat: publish staff auth otp v2 to pwa`), **hanya `index.html` auth frontend**. Backend dan PWA rollout dibuat berasingan.
+- Pentest menggunakan standalone Apps Script berasingan dan synthetic staff/attendance data; pentest-only IDs/helpers/endpoint overrides disahkan tiada dalam production security branch sebelum merge. Temporary pentest/security/pages-auth worktrees dan local `security/auth-v2` branch dibersihkan. Pages-hotfix worktree juga dibuang selepas disahkan tiada unique changes; hanya main workspace kekal.
+
+Rujuk `REFERENCE.md` untuk kontrak auth dan `INTERNAL_OPERATIONS.md` untuk panduan OTP. Validation di atas ialah rekod rollout yang telah selesai, bukan ujian baharu oleh checkpoint dokumentasi.
+
 ## [2 September 2026] — Resolved historical June canonical duplicate
 
 - Repair of `PG-2026-JUN2026-112` completed successfully. The obsolete canonical record was dynamically resolved at execution time and only its `A:Z` contents were cleared; no spreadsheet row was structurally deleted.
