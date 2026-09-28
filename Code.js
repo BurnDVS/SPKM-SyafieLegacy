@@ -2117,6 +2117,27 @@ function normalizeLegacyEbayarName_(value) {
   return (value || '').toString().trim().toUpperCase();
 }
 
+function parseLegacyEbayarRegMonthIdx_(tarikhRaw, yearNo) {
+  if (!tarikhRaw) return -1;
+  var d = null;
+  if (tarikhRaw instanceof Date && !isNaN(tarikhRaw.getTime())) {
+    d = tarikhRaw;
+  } else {
+    var ts = tarikhRaw.toString().trim();
+    var m1 = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m1) d = new Date(parseInt(m1[3], 10), parseInt(m1[2], 10) - 1, parseInt(m1[1], 10));
+    if (!d) {
+      var m2 = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m2) d = new Date(parseInt(m2[1], 10), parseInt(m2[2], 10) - 1, parseInt(m2[3], 10));
+    }
+  }
+  if (!d || isNaN(d.getTime())) return -1;
+  var yr = d.getFullYear();
+  if (yr < yearNo) return -1;
+  if (yr === yearNo) return d.getMonth();
+  return 999;
+}
+
 function logLegacyEbayarFormSyncDiagnostic_(details) {
   details = details || {};
   Logger.log([
@@ -2220,6 +2241,8 @@ function syncFormMinusBayar(params) {
     var sudahBayarCount = Object.keys(dahBayarSet).length;
     diagnostic.paidCount = sudahBayarCount;
     var mainSS = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var bulanOrder = ['JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026','JULAI2026','OGOS2026','SEPT2026','OKT2026','NOV2026','DIS2026'];
+    var bulanMonthIdx = bulanOrder.indexOf(bulan);
     var kanakSheet = mainSS.getSheetByName(TAB.KANAK);
     var allNames = [];
     if (kanakSheet && kanakSheet.getLastRow() > 1) {
@@ -2227,7 +2250,8 @@ function syncFormMinusBayar(params) {
       kData.forEach(function(row) {
         var n = normalizeLegacyEbayarName_(row[COL_KANAK.NAMA]);
         var s = (row[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
-        if (n && (!s || s === 'AKTIF')) allNames.push(n);
+        var rmi = parseLegacyEbayarRegMonthIdx_(row[COL_KANAK.TIMESTAMP], 2026);
+        if (n && (!s || s === 'AKTIF') && rmi <= bulanMonthIdx) allNames.push(n);
       });
     }
     var dewasaSheet = mainSS.getSheetByName(TAB.DEWASA);
@@ -2236,7 +2260,8 @@ function syncFormMinusBayar(params) {
       dData.forEach(function(row) {
         var n = normalizeLegacyEbayarName_(row[COL_DEWASA.NAMA]);
         var s = (row[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
-        if (n && (!s || s === 'AKTIF')) allNames.push(n);
+        var rmi = parseLegacyEbayarRegMonthIdx_(row[COL_DEWASA.TIMESTAMP], 2026);
+        if (n && (!s || s === 'AKTIF') && rmi <= bulanMonthIdx) allNames.push(n);
       });
     }
     var uniqueAll = {};
