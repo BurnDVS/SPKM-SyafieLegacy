@@ -85,6 +85,8 @@ function createBackendContext() {
     { nama: 'CICI BINTI CAKAP' }
   ];
   const context = {
+    getNative2026EligibleDirectory_: () => Object.fromEntries(eligible.map((student, i) =>
+      ['KANAK:' + (i + 1), { ...student, studentType: 'KANAK' }])),
     YURAN_SS_ID: 'YURAN',
     SpreadsheetApp: {
       openById(id) {
@@ -105,6 +107,9 @@ function createBackendContext() {
     Logger: { log() {} }
   };
   vm.createContext(context);
+  canonicalRows.forEach(row => { row.STUDENT_TYPE = 'KANAK'; });
+  ['resolveNative2026PaymentStudent_', 'getNativeEbayarPaidStudentIds_'].forEach(name =>
+    vm.runInContext(extractFunction(backendSource, name), context));
   vm.runInContext(extractFunction(backendSource, 'getYuranParent'), context);
   return { context, sheetReads };
 }

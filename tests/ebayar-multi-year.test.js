@@ -60,7 +60,7 @@ test('2026 stats retain their original Legacy and Native calculation blocks', ()
   const compatibility = stats.slice(stats.indexOf('var BULAN_2026 ='));
   assert.match(compatibility, /collectNativeEligible\(kanakData, COL_KANAK, 'KANAK'\)/);
   assert.match(compatibility, /collectNativeEligible\(dewasaData, COL_DEWASA, 'DEWASA'\)/);
-  assert.match(compatibility, /if \(matches\.length === 1\) nativePaidIds\[matches\[0\]\] = true/);
+  assert.match(compatibility, /getNativeEbayarPaidStudentIds_\(nativeMonthKey, nativePaymentRows, eligibleById\)/);
   assert.doesNotMatch(compatibility, /getNativeEbayarMonthStats_/);
 });
 

@@ -92,7 +92,7 @@ test('September through December map to canonical Payments month keys', () => {
   assert.equal(setup.legacyCalls.length, 0);
 });
 
-function runV2Stats(requireExactSelesai) {
+function runV2Stats(requireExactSelesai, bulanKey = '2026-09') {
   const rows = [
     { BULAN_KEY: '2026-09', PAYMENT_GROUP_ID: 'PG-1', NAMA_MURID_NORM: 'ALI', STATUS: 'SELESAI', AMOUNT_TOTAL: 100, RESIT_URL: 'https://example.test/resit.pdf' },
     { BULAN_KEY: '2026-09', PAYMENT_GROUP_ID: 'PG-1', NAMA_MURID_NORM: 'AISYAH', STATUS: 'SELESAI', AMOUNT_TOTAL: 100, RESIT_URL: 'https://example.test/resit.pdf' },
@@ -105,13 +105,18 @@ function runV2Stats(requireExactSelesai) {
     makeBulanKeyV2_: () => '',
     normalizeYuranNameV2_: value => (value || '').toString().trim().toUpperCase(),
     getPaymentsRowsV2_: () => ({ rows }),
-    getEligibleYuranStudentsV2_: () => ['ALI', 'AISYAH', 'BUDI', 'CICI'].map(nama => ({ nama })),
+    getEligibleYuranStudentsV2_: () => ['ALI', 'AISYAH', 'BUDI', 'CICI'].map((nama, i) => ({ nama, studentKey: 'KANAK:' + (i + 1) })),
+    getNative2026EligibleDirectory_: () => Object.fromEntries(['ALI', 'AISYAH', 'BUDI', 'CICI'].map((nama, i) =>
+      ['KANAK:' + (i + 1), { nama, studentType: 'KANAK' }])),
     getTelefonMapV2_: () => ({}),
     Logger: { log() {} }
   };
   vm.createContext(context);
+  rows.forEach(row => { row.STUDENT_TYPE = 'KANAK'; if (row.BULAN_KEY === '2026-09') row.BULAN_KEY = bulanKey; });
+  ['resolveNative2026PaymentStudent_', 'getNativeEbayarPaidStudentIds_'].forEach(name =>
+    vm.runInContext(extractFunction(backendSource, name), context));
   vm.runInContext(extractFunction(backendSource, 'getYuranStatsV2'), context);
-  return context.getYuranStatsV2({ tahun: '2026', bulanKey: '2026-09', requireExactSelesai });
+  return context.getYuranStatsV2({ tahun: '2026', bulanKey, requireExactSelesai });
 }
 
 test('Native dashboard path counts only exact SELESAI rows and each group amount once', () => {
@@ -128,8 +133,8 @@ test('Native dashboard path counts only exact SELESAI rows and each group amount
   ]);
 });
 
-test('non-dashboard V2 callers retain their previous blank-status behaviour', () => {
-  const result = runV2Stats(false);
+test('Legacy V2 callers retain their previous blank-status behaviour', () => {
+  const result = runV2Stats(false, '2026-08');
   assert.equal(result.sudahBayar, 3);
   assert.equal(result.totalKutipan, 150);
   assert.equal(result.listNamaBayar.includes('BUDI'), true);

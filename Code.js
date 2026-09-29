@@ -3432,6 +3432,41 @@ function getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows) {
   return { byKey: studentsByKey, ambiguousKeys: ambiguousKeys };
 }
 
+// Compatibility only: BIL-based 2026 IDs must be corroborated by type and name.
+// No payment rows are changed. Unresolved history remains history, not roster ownership.
+function resolveNative2026PaymentStudent_(bulanKey, row, directory) {
+  if (!/^2026-(09|10|11|12)$/.test(bulanKey)) return { status: 'NOT_APPLICABLE', studentKey: '', candidates: [] };
+  var id = (row.STUDENT_ID || '').toString().trim();
+  var type = (row.STUDENT_TYPE || '').toString().trim().toUpperCase();
+  var name = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
+  if (!/^(KANAK|DEWASA)$/.test(type) || !name) return { status: 'UNMATCHED', studentKey: '', candidates: [] };
+  var matches = Object.keys(directory).filter(function(key) {
+    var student = directory[key];
+    return student.studentType === type && normalizeYuranNameV2_(student.nama) === name;
+  });
+  // Even an exact mutable ID cannot disambiguate two people with the same name.
+  if (matches.length > 1) return { status: 'AMBIGUOUS', studentKey: '', candidates: matches };
+  if (!matches.length) return { status: 'UNMATCHED', studentKey: '', candidates: [] };
+  return { status: matches[0] === id ? 'EXACT' : 'NAME_FALLBACK', studentKey: matches[0], candidates: matches };
+}
+
+function getNative2026EligibleDirectory_(bulanKey) {
+  if (!/^2026-(09|10|11|12)$/.test(bulanKey)) throw new Error('Bulan compatibility tidak sah.');
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var rowsByType = {};
+  [[TAB.KANAK, COL_KANAK, 'KANAK'], [TAB.DEWASA, COL_DEWASA, 'DEWASA']].forEach(function(entry) {
+    var sheet = ss.getSheetByName(entry[0]);
+    if (!sheet) throw new Error('Roster tidak tersedia.');
+    var rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues() : [];
+    rowsByType[entry[2]] = rows.filter(function(row) {
+      return isStudentRegisteredForEbayarMonth_(row[entry[1].TIMESTAMP], bulanKey);
+    });
+  });
+  var result = getNativeEbayarOfficialStudentsV2_(bulanKey, rowsByType);
+  if (Object.keys(result.ambiguousKeys).length) throw new Error('Identiti roster bertindih.');
+  return result.byKey;
+}
+
 function getNativeEbayarStudentLookup(params) {
   params = params || {};
   try {
@@ -3456,7 +3491,7 @@ function getNativeEbayarStudentLookup(params) {
     }
 
     var studentDirectory = bulanKey.slice(0, 4) === '2026'
-      ? getNativeEbayarOfficialStudentsV2_() : getNativeEbayarOfficialStudentsV2_(bulanKey);
+      ? { byKey: getNative2026EligibleDirectory_(bulanKey) } : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var students = studentDirectory.byKey;
     var alreadyPaidByStudentId = {};
     var alreadyPaidLegacyNames = {};
@@ -3464,6 +3499,12 @@ function getNativeEbayarStudentLookup(params) {
     (payments.rows || []).forEach(function(row) {
       var rowMonth = normalizeBulanKeyV2_(row.BULAN_KEY, row.TAHUN || row.SOURCE_YEAR, row.BULAN || row.SOURCE_SHEET);
       if (rowMonth !== bulanKey) return;
+      if (/^2026-(09|10|11|12)$/.test(bulanKey)) {
+        var match = resolveNative2026PaymentStudent_(bulanKey, row, students);
+        // Any existing payment blocks resubmission; ambiguous candidates need review.
+        match.candidates.forEach(function(key) { alreadyPaidByStudentId[key] = true; });
+        return;
+      }
       var rowStudentId = (row.STUDENT_ID || '').toString().trim();
       var rowName = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
       if (rowStudentId) alreadyPaidByStudentId[rowStudentId] = true;
@@ -3534,8 +3575,8 @@ function validateNativeEbayarSubmissionV2_(params) {
       if (!monthConfig || monthConfig.routeType !== 'NATIVE') return fail('Bulan bayaran tidak sah untuk Native eBayar.');
       if (monthConfig.state === 'UPCOMING') return fail('Bulan akan datang belum boleh dipilih.');
     }
-    var officialStudentDirectory = bulanKey.slice(0, 4) === '2026'
-      ? getNativeEbayarOfficialStudentsV2_() : getNativeEbayarOfficialStudentsV2_(bulanKey);
+    var officialStudentDirectory = /^2026-(09|10|11|12)$/.test(bulanKey)
+      ? { byKey: getNative2026EligibleDirectory_(bulanKey) } : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var officialStudents = officialStudentDirectory.byKey;
     var requestedStudentKeys = {};
     var requestedNames = {};
@@ -3618,6 +3659,7 @@ function validateNativeEbayarSubmissionV2_(params) {
     if (fileSize > NATIVE_EBAYAR_MVP_MAX_FILE_SIZE_V2) return fail('Saiz slip melebihi had 3 MB.');
 
     var duplicateByStudentKey = {};
+    var ambiguousPayment = false;
     var payments = getPaymentsRowsV2_();
     (payments.rows || []).forEach(function(row) {
       var rowName = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
@@ -3625,7 +3667,11 @@ function validateNativeEbayarSubmissionV2_(params) {
       if (rowMonth !== bulanKey) return;
       var rowStudentId = (row.STUDENT_ID || '').toString().trim();
       var matchedStudentKeys = [];
-      if (rowStudentId && requestedStudentKeys[rowStudentId]) {
+      if (/^2026-(09|10|11|12)$/.test(bulanKey)) {
+        var match = resolveNative2026PaymentStudent_(bulanKey, row, officialStudents);
+        if (match.status === 'AMBIGUOUS' && match.candidates.some(function(key) { return requestedStudentKeys[key]; })) ambiguousPayment = true;
+        if (match.studentKey && requestedStudentKeys[match.studentKey]) matchedStudentKeys.push(match.studentKey);
+      } else if (rowStudentId && requestedStudentKeys[rowStudentId]) {
         matchedStudentKeys.push(rowStudentId);
       } else if (!rowStudentId && requestedNames[rowName]) {
         resolvedStudents.forEach(function(student) {
@@ -3644,6 +3690,7 @@ function validateNativeEbayarSubmissionV2_(params) {
       });
     });
 
+    if (ambiguousPayment) return fail('Padanan bayaran lama tidak unik. Sila hubungi pentadbir untuk semakan.');
     var hasDuplicate = false;
     var studentChecks = resolvedStudents.map(function(student) {
       var existing = duplicateByStudentKey[student.studentKey];
@@ -4428,6 +4475,13 @@ function getMonthMetaV2_(bulanKey) {
 }
 
 function getEligibleYuranStudentsV2_(tahun, bulanKey) {
+  if (/^2026-(09|10|11|12)$/.test(bulanKey)) {
+    var compatibilityDirectory = getNative2026EligibleDirectory_(bulanKey);
+    return Object.keys(compatibilityDirectory).sort().map(function(key) {
+      var student = compatibilityDirectory[key];
+      return { nama: student.nama, studentKey: key, studentType: student.studentType };
+    });
+  }
   var nativeConfig = Number(tahun) > 2026 ? getEbayarMonthConfig_(bulanKey) : null;
   if (nativeConfig && nativeConfig.routeType === 'NATIVE') {
     var nativeDirectory = getNativeEbayarOfficialStudentsV2_(bulanKey).byKey;
@@ -8864,9 +8918,11 @@ function getYuranStatsV2(params) {
     });
 
     var eligible = getEligibleYuranStudentsV2_(tahun, bulanKey);
-    var nativeMonth = Number(tahun) > 2026 ? getEbayarMonthConfig_(bulanKey) : null;
+    var compatibilityMonth = /^2026-(09|10|11|12)$/.test(bulanKey);
+    var nativeMonth = compatibilityMonth ? { routeType: 'NATIVE' } : (Number(tahun) > 2026 ? getEbayarMonthConfig_(bulanKey) : null);
     var nativePaidIds = nativeMonth && nativeMonth.routeType === 'NATIVE'
-      ? getNativeEbayarPaidStudentIds_(bulanKey, data.rows, getNativeEbayarOfficialStudentsV2_(bulanKey).byKey)
+      ? getNativeEbayarPaidStudentIds_(bulanKey, data.rows, compatibilityMonth
+        ? getNative2026EligibleDirectory_(bulanKey) : getNativeEbayarOfficialStudentsV2_(bulanKey).byKey)
       : null;
     var telefonMap = getTelefonMapV2_();
     var belumBayar = eligible
@@ -8924,6 +8980,14 @@ function getYuranParentV2(params) {
     var belumBayar = {};
     EBAYAR_MONTHS_V2.forEach(function(m) {
       var bulanKey = tahun + '-' + m.key;
+      if (/^2026-(09|10|11|12)$/.test(bulanKey)) {
+        var compatibilityDirectory = getNative2026EligibleDirectory_(bulanKey);
+        var compatibilityPaid = getNativeEbayarPaidStudentIds_(bulanKey, data.rows, compatibilityDirectory);
+        belumBayar[bulanKey] = Object.keys(compatibilityDirectory)
+          .filter(function(id) { return !compatibilityPaid[id]; })
+          .map(function(id) { return compatibilityDirectory[id].nama; });
+        return;
+      }
       if (Number(tahun) > 2026) {
         var monthConfig = getEbayarMonthConfig_(bulanKey);
         if (!monthConfig || monthConfig.state === 'UPCOMING') return;
@@ -10614,7 +10678,8 @@ function confirmRegisterDewasa(params) {
 // Output: { success, stats: [{jumlahDaftar, selesai, belum, peratus}] }
 // ============================================================
 function getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory) {
-  directory = directory || getNativeEbayarOfficialStudentsV2_(bulanKey).byKey;
+  directory = directory || (/^2026-(09|10|11|12)$/.test(bulanKey)
+    ? getNative2026EligibleDirectory_(bulanKey) : getNativeEbayarOfficialStudentsV2_(bulanKey).byKey);
   var idsByName = {};
   Object.keys(directory).forEach(function(id) {
     var name = directory[id].nama;
@@ -10624,6 +10689,11 @@ function getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory) {
   var paid = {};
   paymentRows.forEach(function(row) {
     if (row.BULAN_KEY !== bulanKey || (row.STATUS || '').toString().trim().toUpperCase() !== 'SELESAI') return;
+    if (/^2026-(09|10|11|12)$/.test(bulanKey)) {
+      var match = resolveNative2026PaymentStudent_(bulanKey, row, directory);
+      if (match.studentKey) paid[match.studentKey] = true;
+      return;
+    }
     var id = (row.STUDENT_ID || '').toString().trim();
     if (id) { if (directory[id]) paid[id] = true; return; }
     var name = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
@@ -10634,7 +10704,8 @@ function getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory) {
 }
 
 function getNativeEbayarMonthStats_(bulanKey, paymentRows, rosterRows) {
-  var directory = getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows).byKey;
+  var directory = /^2026-(09|10|11|12)$/.test(bulanKey)
+    ? getNative2026EligibleDirectory_(bulanKey) : getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows).byKey;
   var paid = getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory);
   var total = Object.keys(directory).length;
   var selesai = Object.keys(paid).length;
@@ -10749,7 +10820,6 @@ function getEbayarStats(params) {
 
           var nativeMonthKey = '2026-' + ('0' + (bi + 1)).slice(-2);
           var eligibleById = {};
-          var eligibleIdsByName = {};
           function collectNativeEligible(rows, columns, type) {
             rows.forEach(function(r) {
               var nama = normalizeYuranNameV2_(r[columns.NAMA]);
@@ -10760,27 +10830,13 @@ function getEbayarStats(params) {
               if (!bil) throw new Error('Identiti murid Native tidak sah.');
               var studentId = type + ':' + bil;
               if (eligibleById[studentId]) throw new Error('Identiti murid Native bertindih.');
-              eligibleById[studentId] = nama;
-              if (!eligibleIdsByName[nama]) eligibleIdsByName[nama] = [];
-              eligibleIdsByName[nama].push(studentId);
+              eligibleById[studentId] = { studentKey: studentId, nama: nama, studentType: type };
             });
           }
           collectNativeEligible(kanakData, COL_KANAK, 'KANAK');
           collectNativeEligible(dewasaData, COL_DEWASA, 'DEWASA');
 
-          var nativePaidIds = {};
-          nativePaymentRows.forEach(function(r) {
-            if (r.BULAN_KEY !== nativeMonthKey) return;
-            if ((r.STATUS || '').toString().trim().toUpperCase() !== 'SELESAI') return;
-            var studentId = (r.STUDENT_ID || '').toString().trim();
-            if (studentId) {
-              if (eligibleById[studentId]) nativePaidIds[studentId] = true;
-              return;
-            }
-            var paidName = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
-            var matches = eligibleIdsByName[paidName] || [];
-            if (matches.length === 1) nativePaidIds[matches[0]] = true;
-          });
+          var nativePaidIds = getNativeEbayarPaidStudentIds_(nativeMonthKey, nativePaymentRows, eligibleById);
 
           var nativeTotal = Object.keys(eligibleById).length;
           var nativeSelesai = Object.keys(nativePaidIds).length;
@@ -11046,10 +11102,11 @@ function getYuranParent(params) {
       try {
         var nativeBulanKey = NATIVE_KEY_BY_LEGACY_2026[bulanKey];
         if (nativeBulanKey) {
-          var canonicalPaidSet = canonicalPaidByMonth[nativeBulanKey] || {};
-          belumBayar[bulanKey] = getEligibleYuranStudentsV2_('2026', nativeBulanKey)
-            .filter(function(student) { return !canonicalPaidSet[student.nama]; })
-            .map(function(student) { return student.nama; });
+          var compatibilityDirectory = getNative2026EligibleDirectory_(nativeBulanKey);
+          var canonicalPaidIds = getNativeEbayarPaidStudentIds_(nativeBulanKey, canonicalRows, compatibilityDirectory);
+          belumBayar[bulanKey] = Object.keys(compatibilityDirectory)
+            .filter(function(id) { return !canonicalPaidIds[id]; })
+            .map(function(id) { return compatibilityDirectory[id].nama; });
           continue;
         }
 
