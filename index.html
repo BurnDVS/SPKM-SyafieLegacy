@@ -3501,6 +3501,15 @@
     <button class="btn btn-ghost btn-sm" id="btnEbayarV2Maintenance" type="button" onclick="openEbayarV2Maintenance()" style="display:none; margin-bottom:2px;">
       ⚙ eBayar V2 Maintenance
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnEbayarYears" type="button" onclick="loadEbayarYearManagement()" style="display:none; margin-bottom:2px;">Pengurusan Tahun eBayar</button>
+  </div>
+  <div class="card" id="ebayarYearsAdmin" style="display:none; margin-bottom:18px;">
+    <div class="card-header"><div class="card-header-text"><h3>Pengurusan Tahun eBayar</h3><p>Tahun aktif tersedia pada portal bayaran awam.</p></div></div>
+    <div class="card-body">
+      <div id="ebayarYearsList"></div>
+      <button class="btn btn-primary btn-sm" type="button" onclick="createNewEbayarYear()">+ Wujudkan Tahun Baharu</button>
+      <p id="ebayarYearsMessage" role="status"></p>
+    </div>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">✓</span>
@@ -3653,7 +3662,7 @@
   <div class="mob-back-btn" onclick="showPanel('utama')">← Utama</div>
   <div class="section-heading">
     <span class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span>
-    <h2>Portal Bayaran Yuran 2026</h2>
+    <h2>Portal Bayaran Yuran</h2>
     <p>Klik butang bulan untuk membuat bayaran melalui saluran Legacy atau Native eBayar yang tersedia.</p>
     <div class="divider-ornament"><span>✦</span></div>
   </div>
@@ -3669,7 +3678,7 @@
           <p class="ebayar-bank-acc">5041 0644 1472</p>
         </div>
       </div>
-      <p class="ebayar-upload-note">&#x1F4CE; Sila muat naik resit bayaran semasa mengisi Google Form<br><span>(jpeg, jpg, png atau pdf sahaja)</span></p>
+      <p class="ebayar-upload-note">&#x1F4CE; Sila muat naik slip bayaran melalui saluran bulan yang dipilih.<br><span>(jpeg, jpg, png atau pdf sahaja)</span></p>
     </div>
     <div class="ebayar-info-right">
       <p class="ebayar-qr-label">Scan QR Maybank</p>
@@ -3677,80 +3686,11 @@
     </div>
   </div>
 
-  <div class="ebayar-grid">
-    <div class="ebayar-card" id="ecard-0">
-      <div class="ebayar-month">JANUARI</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-0"></div>
-      <a href="https://forms.gle/DuzmZnoSu1JxY95fA" target="_blank" class="ebayar-btn" id="ebtn-0">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-1">
-      <div class="ebayar-month">FEBRUARI</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-1"></div>
-      <a href="https://forms.gle/Ue9jHfgP7ZR5tvWv6" target="_blank" class="ebayar-btn" id="ebtn-1">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-2">
-      <div class="ebayar-month">MAC</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-2"></div>
-      <a href="https://forms.gle/TMYXVccPVT6ziVi8A" target="_blank" class="ebayar-btn" id="ebtn-2">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-3">
-      <div class="ebayar-month">APRIL</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-3"></div>
-      <a href="https://forms.gle/8t2uKNnp3x13ekH67" target="_blank" class="ebayar-btn" id="ebtn-3">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-4">
-      <div class="ebayar-month">MEI</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-4"></div>
-      <a href="https://forms.gle/1sfLDT5iM9DUTLaE8" target="_blank" class="ebayar-btn" id="ebtn-4">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-5">
-      <div class="ebayar-month">JUN</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-5"></div>
-      <a href="https://forms.gle/bdvhV9n8hT9PDmso6" target="_blank" class="ebayar-btn" id="ebtn-5">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-6">
-      <div class="ebayar-month">JULAI</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-6"></div>
-      <a href="https://forms.gle/sRwXkUCxKex4ak499" target="_blank" class="ebayar-btn" id="ebtn-6">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-7">
-      <div class="ebayar-month">OGOS</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-7"></div>
-      <a href="https://forms.gle/JGydXBHTj4e88QXW6" target="_blank" class="ebayar-btn" id="ebtn-7">&#x1F4B3; Bayar Yuran</a>
-    </div>
-    <div class="ebayar-card" id="ecard-8">
-      <div class="ebayar-month">SEPTEMBER</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-8"></div>
-      <a class="ebayar-btn native-route" id="ebtn-8" data-native-month="2026-09" aria-disabled="true" tabindex="-1">Akan Datang</a>
-    </div>
-    <div class="ebayar-card" id="ecard-9">
-      <div class="ebayar-month">OKTOBER</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-9"></div>
-      <a class="ebayar-btn native-route" id="ebtn-9" data-native-month="2026-10" aria-disabled="true" tabindex="-1">Akan Datang</a>
-    </div>
-    <div class="ebayar-card" id="ecard-10">
-      <div class="ebayar-month">NOVEMBER</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-10"></div>
-      <a class="ebayar-btn native-route" id="ebtn-10" data-native-month="2026-11" aria-disabled="true" tabindex="-1">Akan Datang</a>
-    </div>
-    <div class="ebayar-card" id="ecard-11">
-      <div class="ebayar-month">DISEMBER</div>
-      <div class="ebayar-year">2026</div>
-      <div class="ebayar-badge" id="ebadge-11"></div>
-      <a class="ebayar-btn native-route" id="ebtn-11" data-native-month="2026-12" aria-disabled="true" tabindex="-1">Akan Datang</a>
-    </div>
+  <div style="text-align:center; margin:0 0 18px;">
+    <label for="ebayarYearSelect">Tahun bayaran</label>
+    <select id="ebayarYearSelect" aria-label="Pilih tahun bayaran" onchange="renderEbayarYear(this.value)" style="margin-left:8px;"></select>
   </div>
+  <div class="ebayar-grid" id="ebayarCards" role="status">Memuatkan bulan bayaran...</div>
 
   <section class="native-ebayar" id="nativeEbayarSection" aria-labelledby="nativeEbayarTitle">
     <div class="native-ebayar-head">
@@ -3773,12 +3713,7 @@
 
           <div class="native-ebayar-field">
             <label for="nativeEbayarMonth">Bayaran Untuk <span class="req">*</span></label>
-            <select id="nativeEbayarMonth" required>
-              <option value="2026-09">September 2026</option>
-              <option value="2026-10">Oktober 2026</option>
-              <option value="2026-11">November 2026</option>
-              <option value="2026-12">Disember 2026</option>
-            </select>
+            <select id="nativeEbayarMonth" required></select>
             <p class="native-ebayar-help">Bayaran Januari–Ogos 2026 kekal di sistem bayaran lama. Bulan akan datang tidak boleh dipilih.</p>
             <p class="native-ebayar-help" id="nativeEbayarLaunchStatus" role="status"></p>
           </div>
@@ -4000,6 +3935,7 @@
   let nativeEbayarInitialized = false;
   let nativeEbayarPendingSubmission = null;
   let nativeEbayarSubmissionBusy = false;
+  let ebayarYearConfig = null;
 
   // Load GAS_URL dynamically so URL changes only need a config.json update
   var _gasUrlReady = new Promise(function(resolve) {
@@ -4211,6 +4147,10 @@
     if (btnSyncMinus) btnSyncMinus.style.display = isAdmin ? '' : 'none';
     const btnEbayarV2Maintenance = document.getElementById('btnEbayarV2Maintenance');
     if (btnEbayarV2Maintenance) btnEbayarV2Maintenance.style.display = isAdmin ? '' : 'none';
+    const btnEbayarYears = document.getElementById('btnEbayarYears');
+    if (btnEbayarYears) btnEbayarYears.style.display = isAdmin ? '' : 'none';
+    const ebayYearsAdmin = document.getElementById('ebayarYearsAdmin');
+    if (ebayYearsAdmin && !isAdmin) ebayYearsAdmin.style.display = 'none';
     const seksyenPertukaran = document.getElementById('seksyenPertukaranGuru');
     if (seksyenPertukaran) seksyenPertukaran.style.display = isAdmin ? '' : 'none';
     const seksyenMtg = document.getElementById('seksyenMuridTanpaGuru');
@@ -5741,6 +5681,67 @@
     return true;
   }
 
+  function showEbayarYearsMessage(message) {
+    var element = document.getElementById('ebayarYearsMessage');
+    if (element) element.textContent = message || '';
+  }
+
+  async function loadEbayarYearManagement() {
+    if (currentRole !== 'ADMIN') return;
+    var panel = document.getElementById('ebayarYearsAdmin');
+    panel.style.display = '';
+    showEbayarYearsMessage('Memuatkan tahun...');
+    try {
+      var data = await callGASPromise('getEbayarYearManagement', { token: _spkm_st.getItem('spkm_token') });
+      if (!data.success) throw new Error(data.message || 'Tahun gagal dimuatkan.');
+      var list = document.getElementById('ebayarYearsList');
+      list.replaceChildren();
+      (data.years || []).forEach(function(year) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;';
+        var label = document.createElement('span');
+        label.textContent = year.year + ' · ' + year.mode + ' · ' + year.status;
+        row.appendChild(label);
+        if (year.year > getEbayarMalaysiaDateParts().year) {
+          var toggle = document.createElement('button');
+          toggle.type = 'button'; toggle.className = 'btn btn-ghost btn-sm';
+          toggle.textContent = year.status === 'ACTIVE' ? 'Nyahaktif' : 'Aktifkan';
+          toggle.onclick = function() { updateEbayarYearAdmin(year.year, year.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); };
+          row.appendChild(toggle);
+        }
+        list.appendChild(row);
+      });
+      showEbayarYearsMessage('');
+    } catch (err) { showEbayarYearsMessage(err.message || 'Tahun gagal dimuatkan.'); }
+  }
+
+  async function createNewEbayarYear() {
+    if (currentRole !== 'ADMIN') return;
+    var input = window.prompt('Masukkan tahun baharu (contoh: 2028):');
+    if (input === null) return;
+    if (!/^\d{4}$/.test(input.trim()) || Number(input) < 2028 || Number(input) <= getEbayarMalaysiaDateParts().year) {
+      showEbayarYearsMessage('Tahun baharu mesti selepas tahun semasa dan sekurang-kurangnya 2028.'); return;
+    }
+    try {
+      var data = await callGASPromise('createEbayarYear', { token: _spkm_st.getItem('spkm_token'), year: Number(input) });
+      if (!data.success) throw new Error(data.message || 'Tahun gagal diwujudkan.');
+      await loadEbayarYearManagement();
+      showEbayarYearsMessage('Tahun ' + input + ' diwujudkan sebagai Native Januari–Disember.');
+    } catch (err) { showEbayarYearsMessage(err.message || 'Tahun gagal diwujudkan.'); }
+  }
+
+  async function updateEbayarYearAdmin(year, status) {
+    if (currentRole !== 'ADMIN') return;
+    try {
+      var data = await callGASPromise('updateEbayarYear', {
+        token: _spkm_st.getItem('spkm_token'), year: year, status: status
+      });
+      if (!data.success) throw new Error(data.message || 'Tahun gagal dikemaskini.');
+      await loadEbayarYearManagement();
+      showEbayarYearsMessage('Konfigurasi tahun ' + year + ' dikemaskini.');
+    } catch (err) { showEbayarYearsMessage(err.message || 'Tahun gagal dikemaskini.'); }
+  }
+
   function getSyncFormsMessage(result) {
     const fallback = 'Sync gagal. Sila cuba semula.';
     if (!result) return fallback;
@@ -6833,11 +6834,12 @@
     var form = document.getElementById('nativeEbayarForm');
     if (!form) return;
     var malaysia = getEbayarMalaysiaDateParts();
-    var malaysiaMonthKey = malaysia.dateKey.slice(0, 7);
+    var serverDate = ebayarYearConfig && ebayarYearConfig.serverDate || malaysia.dateKey;
+    var malaysiaMonthKey = serverDate.slice(0, 7);
     var dateInput = document.getElementById('nativeEbayarDate');
     if (dateInput) {
-      dateInput.max = malaysia.dateKey;
-      if (!dateInput.value) dateInput.value = malaysia.dateKey;
+      dateInput.max = serverDate;
+      if (!dateInput.value) dateInput.value = serverDate;
     }
     var monthSelect = document.getElementById('nativeEbayarMonth');
     if (monthSelect) {
@@ -6847,17 +6849,15 @@
         if (!option.disabled) lastEnabled = option.value;
       });
       var beforeNativeEbayarLaunch = malaysiaMonthKey < '2026-09';
-      if (beforeNativeEbayarLaunch) {
-        monthSelect.value = '2026-09';
-      } else if (!nativeEbayarInitialized && malaysiaMonthKey.indexOf('2026-') === 0 && lastEnabled) {
-        monthSelect.value = malaysiaMonthKey > '2026-12' ? lastEnabled : malaysiaMonthKey;
+      if (!nativeEbayarInitialized && lastEnabled) {
+        monthSelect.value = Array.prototype.some.call(monthSelect.options, function(option) { return option.value === malaysiaMonthKey && !option.disabled; }) ? malaysiaMonthKey : lastEnabled;
       } else if (!monthSelect.value || (monthSelect.options[monthSelect.selectedIndex] && monthSelect.options[monthSelect.selectedIndex].disabled)) {
         monthSelect.value = lastEnabled;
       }
       var launchStatus = document.getElementById('nativeEbayarLaunchStatus');
       if (launchStatus) launchStatus.textContent = beforeNativeEbayarLaunch ? 'Native eBayar akan mula digunakan pada September 2026.' : '';
       var submitButton = document.getElementById('nativeEbayarSubmitBtn');
-      if (submitButton) submitButton.disabled = beforeNativeEbayarLaunch;
+      if (submitButton) submitButton.disabled = !lastEnabled;
     }
     if (nativeEbayarInitialized) return;
     nativeEbayarInitialized = true;
@@ -7170,78 +7170,95 @@
     button.textContent = 'Bayar Yuran';
   }
 
-  async function initEbayar() {
-    var malaysia     = getEbayarMalaysiaDateParts();
-    var currentMonth = malaysia.monthIndex;
-    var currentYear  = malaysia.year;
+  var legacyEbayarLinks2026 = [
+    'https://forms.gle/DuzmZnoSu1JxY95fA', 'https://forms.gle/Ue9jHfgP7ZR5tvWv6',
+    'https://forms.gle/TMYXVccPVT6ziVi8A', 'https://forms.gle/8t2uKNnp3x13ekH67',
+    'https://forms.gle/1sfLDT5iM9DUTLaE8', 'https://forms.gle/bdvhV9n8hT9PDmso6',
+    'https://forms.gle/sRwXkUCxKex4ak499', 'https://forms.gle/JGydXBHTj4e88QXW6'
+  ];
 
-    // First pass: set badges from date alone
-    for (var i = 0; i < 12; i++) {
-      var card  = document.getElementById('ecard-'  + i);
-      var badge = document.getElementById('ebadge-' + i);
-      if (!card || !badge) continue;
-      card.classList.remove('past', 'current', 'future-locked');
-      var routing = getEbayarMonthRouting(i, malaysia.dateKey);
-      applyNativeEbayarMonthRoute(i, routing);
-
-      if (routing.isCurrent) {
-        card.classList.add('current');
-        badge.textContent = '● Bulan Ini';
-        badge.className = 'ebayar-badge current-badge';
-      } else if (routing.isOpen) {
-        card.classList.add('past');
-        badge.innerHTML = '<span class="ebayar-loading">Memuatkan...</span>';
-        badge.className = 'ebayar-badge past-badge';
+  async function renderEbayarYear(yearValue) {
+    if (!ebayarYearConfig) return;
+    var year = Number(yearValue);
+    var config = (ebayarYearConfig.years || []).filter(function(item) { return item.year === year; })[0];
+    if (!config) return;
+    var grid = document.getElementById('ebayarCards');
+    if (!grid) return;
+    grid.replaceChildren();
+    config.months.forEach(function(month, index) {
+      var card = document.createElement('div');
+      card.className = 'ebayar-card ' + (month.state === 'OPEN' ? 'current' : month.state === 'CLOSED' ? 'past' : 'future-locked');
+      card.id = 'ecard-' + index;
+      var title = document.createElement('div');
+      title.className = 'ebayar-month'; title.textContent = month.label.toUpperCase();
+      var yearLabel = document.createElement('div');
+      yearLabel.className = 'ebayar-year'; yearLabel.textContent = String(year);
+      var badge = document.createElement('div');
+      badge.id = 'ebadge-' + index;
+      badge.className = 'ebayar-badge ' + (month.state === 'OPEN' ? 'current-badge' : month.state === 'CLOSED' ? 'past-badge' : 'future-badge');
+      badge.textContent = month.state === 'OPEN' ? '● Bulan Ini' : month.state === 'UPCOMING' ? 'Akan Datang' : 'Memuatkan...';
+      var button = document.createElement('a');
+      button.id = 'ebtn-' + index;
+      button.className = 'ebayar-btn' + (month.routeType === 'NATIVE' ? ' native-route' : '');
+      if (month.state === 'UPCOMING') {
+        button.textContent = 'Akan Datang'; button.setAttribute('aria-disabled', 'true'); button.tabIndex = -1;
+      } else if (month.routeType === 'LEGACY') {
+        button.href = legacyEbayarLinks2026[index]; button.target = '_blank'; button.rel = 'noopener noreferrer'; button.textContent = '💳 Bayar Yuran';
       } else {
-        card.classList.add('future-locked');
-        badge.textContent = 'Akan Datang';
-        badge.className = 'ebayar-badge future-badge';
+        button.textContent = 'Bayar Yuran'; button.setAttribute('data-native-month', month.bulanKey);
+        button.onclick = function(event) { event.preventDefault(); openNativeEbayarForm(month.bulanKey); };
       }
-    }
+      card.append(title, yearLabel, badge, button);
+      grid.appendChild(card);
+    });
+    try {
+      var result = await callGASPromise('getEbayarStats', year === 2026 ? {} : { year: year });
+      if (!result.success || !result.stats || Number(document.getElementById('ebayarYearSelect').value) !== year) return;
+      config.months.forEach(function(month, index) {
+        if (month.state === 'UPCOMING' || (year === 2026 && index < 8 && month.state === 'OPEN')) return;
+        var badge = document.getElementById('ebadge-' + index);
+        var stat = result.stats[index];
+        if (!badge) return;
+        if (!stat || stat.error) { if (month.state === 'CLOSED') badge.textContent = 'Data tidak tersedia'; return; }
+        var selesai = Number(stat.selesai) || 0;
+        var total = Number(stat.jumlahDaftar) || 0;
+        var belum = Number(stat.belum) || 0;
+        var peratus = total ? Math.round(selesai * 100 / total) : 0;
+        var color = peratus >= 80 ? '#4CAF50' : peratus >= 50 ? '#FFD700' : '#E74C3C';
+        badge.innerHTML = '<div class="ebayar-stats"><div class="ebayar-stats-row">' +
+          '<span class="stat-selesai">&#x2713; ' + selesai + ' selesai</span>' +
+          '<span class="stat-belum">&#x2717; ' + belum + ' belum</span></div>' +
+          '<div class="ebayar-progress-bar"><div class="ebayar-progress-fill" style="width:' + peratus + '%;background:' + color + ';"></div></div>' +
+          '<div class="ebayar-peratus">' + peratus + '% daripada ' + total + ' murid</div></div>';
+        badge.className = 'ebayar-badge stats-badge';
+      });
+    } catch (err) { console.error('getEbayarStats error:', err); }
+  }
 
-    // Fetch stats for past and current months
-    if (currentYear >= 2026) {
-      try {
-        var data = await callGASPromise('getEbayarStats', {});
-        if (!data.success || !data.stats) return;
-
-        for (var j = 0; j < 12; j++) {
-          var isPast    = currentYear === 2026 && j < currentMonth;
-          var isCurrent = currentYear === 2026 && j === currentMonth;
-          if (!isPast && !isCurrent) continue;
-
-          var statBadge = document.getElementById('ebadge-' + j);
-          if (!statBadge) continue;
-          if (isCurrent && j < 8) continue;
-
-          var stat = data.stats[j];
-          if (!stat || stat.error) {
-            if (isPast) statBadge.innerHTML = 'Data tidak tersedia';
-            continue;
-          }
-
-          var selesai = stat.selesai      || 0;
-          var total   = stat.jumlahDaftar || 0;
-          var belum   = stat.belum        || 0;
-          var peratus = total > 0 ? Math.round((selesai / total) * 100) : 0;
-          var progressColor = peratus >= 80 ? '#4CAF50' : peratus >= 50 ? '#FFD700' : '#E74C3C';
-
-          statBadge.innerHTML =
-            '<div class="ebayar-stats">' +
-              '<div class="ebayar-stats-row">' +
-                '<span class="stat-selesai">&#x2713; ' + selesai + ' selesai</span>' +
-                '<span class="stat-belum">&#x2717; ' + belum + ' belum</span>' +
-              '</div>' +
-              '<div class="ebayar-progress-bar">' +
-                '<div class="ebayar-progress-fill" style="width:' + peratus + '%;background:' + progressColor + ';"></div>' +
-              '</div>' +
-              '<div class="ebayar-peratus">' + peratus + '% daripada ' + total + ' murid</div>' +
-            '</div>';
-          statBadge.className = 'ebayar-badge stats-badge';
-        }
-      } catch (err) {
-        console.error('getEbayarStats error:', err);
-      }
+  async function initEbayar() {
+    try {
+      var config = await callGASPromise('getPublicEbayarYears', {});
+      if (!config.success || !config.years || !config.years.length) throw new Error(config.message || 'Konfigurasi tahun tidak tersedia.');
+      ebayarYearConfig = config;
+      var yearSelect = document.getElementById('ebayarYearSelect');
+      yearSelect.replaceChildren();
+      var nativeSelect = document.getElementById('nativeEbayarMonth');
+      nativeSelect.replaceChildren();
+      config.years.forEach(function(year) {
+        var option = document.createElement('option'); option.value = String(year.year); option.textContent = String(year.year); yearSelect.appendChild(option);
+        year.months.forEach(function(month) {
+          if (month.routeType !== 'NATIVE' || month.state === 'UPCOMING') return;
+          var nativeOption = document.createElement('option');
+          nativeOption.value = month.bulanKey; nativeOption.textContent = month.label + ' ' + year.year;
+          nativeSelect.appendChild(nativeOption);
+        });
+      });
+      yearSelect.value = String(config.defaultYear);
+      renderEbayarYear(config.defaultYear);
+    } catch (err) {
+      console.error('getPublicEbayarYears error:', err);
+      var grid = document.getElementById('ebayarCards');
+      if (grid) grid.textContent = 'Data eBayar tidak tersedia. Sila cuba lagi kemudian.';
     }
   }
 

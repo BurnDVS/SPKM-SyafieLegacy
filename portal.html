@@ -3808,12 +3808,7 @@
 
           <div class="native-ebayar-field">
             <label for="nativeEbayarMonth">Bayaran Untuk <span class="req">*</span></label>
-            <select id="nativeEbayarMonth" required>
-              <option value="2026-09">September 2026</option>
-              <option value="2026-10">Oktober 2026</option>
-              <option value="2026-11">November 2026</option>
-              <option value="2026-12">Disember 2026</option>
-            </select>
+            <select id="nativeEbayarMonth" required></select>
             <p class="native-ebayar-help">Bayaran Januari–Ogos 2026 kekal di sistem bayaran lama. Native eBayar bermula September 2026. Bulan akan datang tidak boleh dipilih.</p>
             <p class="native-ebayar-help" id="nativeEbayarLaunchStatus" role="status"></p>
           </div>
@@ -4174,6 +4169,7 @@
   let nativeEbayarInitialized = false;
   let nativeEbayarPendingSubmission = null;
   let nativeEbayarSubmissionBusy = false;
+  let nativeEbayarYearConfig = null;
 
   // Kehadiran state
   let kehadiranStatsData  = [];
@@ -7300,34 +7296,59 @@
     showNativeEbayarMessage('', false);
   }
 
+  async function loadNativeEbayarYearConfig() {
+    try {
+      var data = await callGASPromise('getPublicEbayarYears', {});
+      if (!data.success || !Array.isArray(data.years)) throw new Error('Konfigurasi tahun tidak tersedia.');
+      nativeEbayarYearConfig = data;
+      var select = document.getElementById('nativeEbayarMonth');
+      if (!select) return;
+      select.replaceChildren();
+      data.years.forEach(function(year) {
+        year.months.forEach(function(month) {
+          if (month.routeType !== 'NATIVE' || month.state === 'UPCOMING') return;
+          var option = document.createElement('option');
+          option.value = month.bulanKey;
+          option.textContent = month.label + ' ' + year.year;
+          select.appendChild(option);
+        });
+      });
+      var serverMonth = data.serverDate.slice(0, 7);
+      var preferred = Array.prototype.some.call(select.options, function(option) { return option.value === serverMonth; })
+        ? serverMonth : (select.options.length ? select.options[select.options.length - 1].value : '');
+      if (preferred) select.value = preferred;
+      initNativeEbayarForm();
+    } catch (err) { console.error('getPublicEbayarYears error:', err); }
+  }
+
   function initNativeEbayarForm() {
     var form = document.getElementById('nativeEbayarForm');
     if (!form) return;
     var malaysia = getNativeEbayarMalaysiaDateParts();
+    var serverDate = nativeEbayarYearConfig && nativeEbayarYearConfig.serverDate || malaysia.dateKey;
+    var serverMonthKey = serverDate.slice(0, 7);
     var dateInput = document.getElementById('nativeEbayarDate');
     if (dateInput) {
-      dateInput.max = malaysia.dateKey;
-      if (!dateInput.value) dateInput.value = malaysia.dateKey;
+      dateInput.max = serverDate;
+      if (!dateInput.value) dateInput.value = serverDate;
     }
     var monthSelect = document.getElementById('nativeEbayarMonth');
     if (monthSelect) {
       var lastEnabled = '';
       Array.prototype.forEach.call(monthSelect.options, function(option) {
-        option.disabled = option.value > malaysia.monthKey;
+        option.disabled = option.value > serverMonthKey;
         if (!option.disabled) lastEnabled = option.value;
       });
-      var beforeNativeEbayarLaunch = malaysia.monthKey < '2026-09';
-      if (beforeNativeEbayarLaunch) {
-        monthSelect.value = '2026-09';
-      } else if (!nativeEbayarInitialized && malaysia.monthKey.indexOf('2026-') === 0 && lastEnabled) {
-        monthSelect.value = malaysia.monthKey > '2026-12' ? lastEnabled : malaysia.monthKey;
+      var beforeNativeEbayarLaunch = serverMonthKey < '2026-09';
+      if (!nativeEbayarInitialized && lastEnabled) {
+        monthSelect.value = Array.prototype.some.call(monthSelect.options, function(option) { return option.value === serverMonthKey && !option.disabled; }) ? serverMonthKey : lastEnabled;
       } else if (!monthSelect.value || monthSelect.options[monthSelect.selectedIndex].disabled) {
         monthSelect.value = lastEnabled;
       }
       var launchStatus = document.getElementById('nativeEbayarLaunchStatus');
       if (launchStatus) launchStatus.textContent = beforeNativeEbayarLaunch ? 'Native eBayar akan mula digunakan pada September 2026.' : '';
       var submitButton = document.getElementById('nativeEbayarSubmitBtn');
-      if (submitButton) submitButton.disabled = beforeNativeEbayarLaunch;
+      if (submitButton) submitButton.disabled = !lastEnabled;
     }
     if (nativeEbayarInitialized) return;
     nativeEbayarInitialized = true;
@@ -7360,7 +7381,7 @@
     clearNativeEbayarStudentChecks();
     showNativeEbayarMessage('', false);
     var monthSelect = document.getElementById('nativeEbayarMonth');
-    if (!monthSelect || monthSelect.value < '2026-09' || monthSelect.options[monthSelect.selectedIndex].disabled) {
+    if (!monthSelect || !monthSelect.value || monthSelect.options[monthSelect.selectedIndex].disabled) {
       showNativeEbayarMessage('Bulan bayaran ini belum tersedia untuk Native eBayar.', true);
       return;
     }
@@ -7656,6 +7677,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     updateStepUI(1);
     initEbayar();
+    loadNativeEbayarYearConfig();
     setLoginState(false);
     showPanel('utama');
     const tEl = document.getElementById('hadirTarikh');

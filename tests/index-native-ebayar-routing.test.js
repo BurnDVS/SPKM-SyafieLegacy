@@ -35,12 +35,6 @@ function extractFunction(source, name) {
   throw new Error('Unterminated function: ' + name);
 }
 
-function getButtonMarkup(index) {
-  const match = new RegExp('<a[^>]+id="ebtn-' + index + '"[^>]*>[^<]*</a>').exec(indexSource);
-  assert.ok(match, 'Button not found: ebtn-' + index);
-  return match[0];
-}
-
 function makeClassList() {
   const values = new Set();
   return {
@@ -79,7 +73,7 @@ function loadFunctions(context, names) {
   return context;
 }
 
-test('January through August retain their exact Legacy Google Form routes', () => {
+test('January through August retain their exact Legacy Google Form routes in the dynamic renderer', () => {
   const expected = [
     'https://forms.gle/DuzmZnoSu1JxY95fA',
     'https://forms.gle/Ue9jHfgP7ZR5tvWv6',
@@ -90,16 +84,19 @@ test('January through August retain their exact Legacy Google Form routes', () =
     'https://forms.gle/sRwXkUCxKex4ak499',
     'https://forms.gle/JGydXBHTj4e88QXW6'
   ];
-  expected.forEach((url, index) => assert.match(getButtonMarkup(index), new RegExp('href="' + url + '"')));
+  const map = /var legacyEbayarLinks2026 = \[([\s\S]*?)\];/.exec(indexSource);
+  assert.ok(map);
+  expected.forEach(url => assert.ok(map[1].includes("'" + url + "'")));
+  assert.match(indexSource, /id="ebayarCards"/);
 });
 
-test('September through December are static fail-closed Native cards', () => {
-  [8, 9, 10, 11].forEach((index) => {
-    const markup = getButtonMarkup(index);
-    assert.doesNotMatch(markup, /forms\.gle|href=/);
-    assert.match(markup, /class="ebayar-btn native-route"/);
-    assert.match(markup, /aria-disabled="true"/);
-  });
+test('month cards come from backend year configuration and future months are locked', () => {
+  assert.match(indexSource, /id="ebayarYearSelect"/);
+  assert.doesNotMatch(indexSource, /id="ecard-0"/);
+  const renderer = extractFunction(indexSource, 'renderEbayarYear');
+  assert.match(renderer, /month\.state === 'UPCOMING'/);
+  assert.match(renderer, /month\.routeType === 'LEGACY'/);
+  assert.match(renderer, /openNativeEbayarForm\(month\.bulanKey\)/);
 });
 
 test('Malaysia-date routing opens only the applicable Native month', () => {
@@ -121,26 +118,44 @@ test('Malaysia-date routing opens only the applicable Native month', () => {
   assert.equal(context.getEbayarMonthRouting(10, '2026-10-01').isFuture, true);
 });
 
-test('current-month stats refresh preserves the Bulan Ini indicator', async () => {
+test('September 2026 current Native month renders aggregate stats from its year', async () => {
   const elements = {};
-  for (let index = 0; index < 12; index += 1) {
-    elements['ecard-' + index] = makeElement();
-    elements['ebadge-' + index] = makeElement({ innerHTML: '', className: '' });
-  }
-  const stats = Array.from({ length: 12 }, () => ({ jumlahBayar: 1, totalMurid: 2 }));
+  const createElement = () => makeElement({
+    append(...children) { this.children.push(...children); children.forEach(child => { if (child.id) elements[child.id] = child; }); },
+    appendChild(child) { this.children.push(child); if (child.id) elements[child.id] = child; },
+    replaceChildren() { this.children = []; }
+  });
+  elements.ebayarCards = createElement();
+  elements.ebayarYearSelect = makeElement({ value: '2026' });
+  const months = Array.from({ length: 12 }, (_, index) => ({
+    bulanKey: '2026-' + String(index + 1).padStart(2, '0'), label: 'Bulan ' + index,
+    routeType: index < 8 ? 'LEGACY' : 'NATIVE',
+    state: index < 8 ? 'CLOSED' : index === 8 ? 'OPEN' : 'UPCOMING'
+  }));
+  const stats = Array.from({ length: 12 }, () => ({ jumlahDaftar: 187, selesai: 105, belum: 82 }));
   const context = {
-    document: { getElementById: id => elements[id] || null },
-    getEbayarMalaysiaDateParts: () => ({ dateKey: '2026-09-01', year: 2026, monthIndex: 8 }),
-    applyNativeEbayarMonthRoute() {},
+    ebayarYearConfig: { years: [{ year: 2026, months }] },
+    legacyEbayarLinks2026: Array(8).fill('https://forms.gle/example'),
+    document: { getElementById: id => elements[id] || null, createElement },
     callGASPromise: async () => ({ success: true, stats }),
     console
   };
-  loadFunctions(context, ['getEbayarMonthRouting', 'initEbayar']);
+  loadFunctions(context, ['renderEbayarYear']);
+  await context.renderEbayarYear(2026);
+  assert.match(elements['ebadge-8'].innerHTML, /105 selesai/);
+  assert.match(elements['ebadge-8'].innerHTML, /82 belum/);
+  assert.match(elements['ebadge-8'].innerHTML, /56% daripada 187 murid/);
+  assert.equal(elements['ebtn-9'].textContent, 'Akan Datang');
+  assert.equal(elements['ebtn-0'].href, 'https://forms.gle/example');
 
-  await context.initEbayar();
-
-  assert.equal(elements['ebadge-8'].textContent, '● Bulan Ini');
-  assert.equal(elements['ebadge-8'].className, 'ebayar-badge current-badge');
+  context.ebayarYearConfig.years.push({ year: 2027, months: months.map(month => ({
+    ...month, bulanKey: month.bulanKey.replace('2026', '2027'), routeType: 'NATIVE', state: 'UPCOMING'
+  })) });
+  elements.ebayarYearSelect.value = '2027';
+  await context.renderEbayarYear(2027);
+  assert.equal(elements.ebayarCards.children.length, 12);
+  assert.equal(elements['ebtn-0'].textContent, 'Akan Datang');
+  assert.equal(elements['ebtn-0'].href, undefined);
 });
 
 test('an open Native month reveals the embedded form without creating exec navigation', () => {

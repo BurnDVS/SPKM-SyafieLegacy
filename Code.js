@@ -176,7 +176,8 @@ var ALLOWED_ACTIONS = [
   'attendance', 'getDashboardStats', 'getKehadiranHariIni', 'getMuridList',
   'getGuru', 'getYuranStats', 'getEbayarStats', 'getYuranParent',
   'getNativeEbayarStudentLookup', 'preflightNativeEbayarSubmission', 'submitNativeEbayarPayment',
-  'getEbayarPortalMode', 'setEbayarPortalMode',
+  'getEbayarPortalMode', 'setEbayarPortalMode', 'getPublicEbayarYears',
+  'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
   'recordCash', 'syncForms', 'syncFormBulanIni', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
@@ -201,6 +202,7 @@ var AUTH_REQUIRED_ACTIONS = [
   'queueWABlast', 'getBlastStatus',
   'simpanDeviceToken', 'getNotifikasi',
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
+  'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'getEbayarV2MaintenanceStatus', 'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'setEbayarPortalMode',
@@ -215,7 +217,7 @@ var PUBLIC_ACTIONS = [
   'confirmRegisterKanak', 'confirmRegisterDewasa',
   'getEbayarStats', 'getYuranParent',
   'getNativeEbayarStudentLookup', 'preflightNativeEbayarSubmission',
-  'submitNativeEbayarPayment', 'getEbayarPortalMode', 'searchSijilKhatam',
+  'submitNativeEbayarPayment', 'getEbayarPortalMode', 'getPublicEbayarYears', 'searchSijilKhatam',
   'renewSession', 'logout'
 ];
 
@@ -231,6 +233,7 @@ var ADMIN_REQUIRED_ACTIONS = [
   'compareYuranLegacyVsV2', 'getEbayarV2MaintenanceStatus',
   'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'auditEbayarSourceTabsV2', 'setEbayarPortalMode',
+  'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid',
   'getMuridTanpaGuru', 'assignGuruMurid'
 ];
@@ -393,12 +396,16 @@ function doAction(action, payload) {
   else if (action === 'getMuridList')          return getMuridList();
   else if (action === 'getGuru')               return getGuru();
   else if (action === 'getYuranStats')         return getYuranStatsForDashboard_(payload);
-  else if (action === 'getEbayarStats')        return getEbayarStats();
+  else if (action === 'getEbayarStats')        return getEbayarStats(payload);
   else if (action === 'getYuranParent')        return getYuranParent(payload);
   else if (action === 'getNativeEbayarStudentLookup') return getNativeEbayarStudentLookup(payload);
   else if (action === 'preflightNativeEbayarSubmission') return preflightNativeEbayarSubmission(payload);
   else if (action === 'submitNativeEbayarPayment') return submitNativeEbayarPayment(payload);
   else if (action === 'getEbayarPortalMode')     return getEbayarPortalMode(payload);
+  else if (action === 'getPublicEbayarYears')    return getPublicEbayarYears(payload);
+  else if (action === 'getEbayarYearManagement') return getEbayarYearManagement(payload);
+  else if (action === 'createEbayarYear')        return createEbayarYear(payload);
+  else if (action === 'updateEbayarYear')        return updateEbayarYear(payload);
   else if (action === 'setEbayarPortalMode')     return setEbayarPortalMode(payload);
   else if (action === 'recordCash')            return recordCash(payload);
   else if (action === 'syncForms')             return syncNamaMuridToAllForms();
@@ -2581,6 +2588,145 @@ var EBAYAR_MONTHS_V2 = [
   { key: '12', short: 'DIS',   label: 'Disember',  legacy: 'DIS2026' }
 ];
 
+var EBAYAR_YEAR_CONFIG_HEADERS_ = [
+  'YEAR', 'STATUS', 'MODE', 'START_MONTH', 'END_MONTH', 'CREATED_AT', 'UPDATED_AT'
+];
+
+function getEbayarYearConfigs_() {
+  // 2026 is fixed for compatibility; 2027 starts Native. Later years live in Config.
+  var years = {
+    '2026': { year: 2026, status: 'ACTIVE', mode: 'MIXED', startMonth: 1, endMonth: 12 },
+    '2027': { year: 2027, status: 'ACTIVE', mode: 'NATIVE', startMonth: 1, endMonth: 12 }
+  };
+  var sheet = getEbayarMasterSpreadsheet_().getSheetByName('Config');
+  if (!sheet || sheet.getLastRow() < 1) return years;
+  var values = sheet.getDataRange().getValues();
+  var header = values[0].map(function(value) { return (value || '').toString().trim().toUpperCase(); });
+  if (header.join('|').indexOf(EBAYAR_YEAR_CONFIG_HEADERS_.join('|')) !== 0) {
+    if (values.some(function(row) { return row.some(function(value) { return value !== ''; }); })) {
+      throw new Error('Config eBayar mengandungi skema lain. Semak sebelum mengurus tahun.');
+    }
+    return years;
+  }
+  var seenYears = {};
+  values.slice(1).forEach(function(row) {
+    if (row.every(function(value) { return value === ''; })) return;
+    var year = Number(row[0]);
+    var status = (row[1] || '').toString().trim().toUpperCase();
+    var mode = (row[2] || '').toString().trim().toUpperCase();
+    if (!Number.isInteger(year) || year < 2027 || year > 9999 ||
+        ['ACTIVE', 'INACTIVE'].indexOf(status) < 0 ||
+        mode !== 'NATIVE' || Number(row[3]) !== 1 || Number(row[4]) !== 12) {
+      throw new Error('Rekod tahun eBayar dalam Config tidak sah.');
+    }
+    if (seenYears[year]) throw new Error('Tahun eBayar bertindih dalam Config.');
+    seenYears[year] = true;
+    years[String(year)] = {
+      year: year,
+      status: status,
+      mode: mode,
+      startMonth: Number(row[3]), endMonth: Number(row[4])
+    };
+  });
+  return years;
+}
+
+function getEbayarMonthConfig_(bulanKey, years, todayKey) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(bulanKey)) return null;
+  var year = Number(bulanKey.slice(0, 4));
+  var month = Number(bulanKey.slice(5, 7));
+  if (year < 2026) return null;
+  if (year > 2026) {
+    years = years || getEbayarYearConfigs_();
+    var config = years[String(year)];
+    if (!config || config.status !== 'ACTIVE' || config.mode !== 'NATIVE' ||
+        month < config.startMonth || month > config.endMonth) return null;
+  }
+  var route = year === 2026 && month <= 8 ? 'LEGACY' : 'NATIVE';
+  var monthNow = (todayKey || Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd')).slice(0, 7);
+  return { bulanKey: bulanKey, routeType: route, state: bulanKey > monthNow ? 'UPCOMING' : (bulanKey === monthNow ? 'OPEN' : 'CLOSED') };
+}
+
+function getPublicEbayarYears() {
+  try {
+    var years = getEbayarYearConfigs_();
+    var serverDate = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd');
+    var currentYear = Number(serverDate.slice(0, 4));
+    var active = Object.keys(years).map(function(key) { return years[key]; })
+      .filter(function(config) { return config.status === 'ACTIVE'; })
+      .sort(function(a, b) { return a.year - b.year; });
+    var current = active.filter(function(config) { return config.year === currentYear; })[0];
+    var defaultYear = (current || active.filter(function(config) { return config.year <= currentYear; }).pop() || active[0] || {}).year || 0;
+    return { success: true, serverDate: serverDate, defaultYear: defaultYear, years: active.map(function(config) {
+      return { year: config.year, mode: config.mode, months: EBAYAR_MONTHS_V2.map(function(meta) {
+        var month = getEbayarMonthConfig_(config.year + '-' + meta.key, years, serverDate);
+        return month ? { bulanKey: month.bulanKey, label: meta.label, routeType: month.routeType, state: month.state } : null;
+      }).filter(function(month) { return month; }) };
+    }) };
+  } catch (err) {
+    Logger.log('getPublicEbayarYears error: ' + err.message);
+    return { success: false, message: 'Konfigurasi tahun eBayar tidak tersedia.' };
+  }
+}
+
+function getEbayarYearManagement() {
+  try {
+    var years = getEbayarYearConfigs_();
+    return { success: true, years: Object.keys(years).sort().map(function(key) { return years[key]; }) };
+  } catch (err) { return { success: false, message: err.message }; }
+}
+
+function writeEbayarYearConfig_(year, status, create) {
+  if (year === 2026) return { success: false, message: 'Tahun keserasian 2026 dilindungi.' };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { success: false, message: 'Sistem sedang sibuk. Cuba semula.' };
+  try {
+    var ss = getEbayarMasterSpreadsheet_();
+    var sheet = ss.getSheetByName('Config') || ss.insertSheet('Config');
+    if (sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, 7).setValues([EBAYAR_YEAR_CONFIG_HEADERS_]);
+    var headers = sheet.getRange(1, 1, 1, 7).getValues()[0].map(function(v) { return (v || '').toString().trim().toUpperCase(); });
+    if (headers.join('|') !== EBAYAR_YEAR_CONFIG_HEADERS_.join('|')) throw new Error('Skema Config eBayar tidak sepadan.');
+    var rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues() : [];
+    var existingIndex = rows.findIndex(function(row) { return String(row[0]) === String(year); });
+    if (create && (existingIndex !== -1 || year === 2026 || year === 2027)) return { success: false, message: 'Tahun sudah wujud.' };
+    if (!create && !getEbayarYearConfigs_()[String(year)]) return { success: false, message: 'Tahun tidak dijumpai.' };
+    var currentYear = Number(Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy'));
+    if (status === 'INACTIVE' && (year <= currentYear || getPaymentsRowsV2_().rows.some(function(row) {
+      return (row.BULAN_KEY || '').toString().indexOf(year + '-') === 0;
+    }))) return { success: false, message: 'Tahun yang mempunyai sejarah bayaran tidak boleh dinyahaktifkan.' };
+    var now = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss');
+    var mode = 'NATIVE';
+    var createdAt = existingIndex >= 0 ? rows[existingIndex][5] : now;
+    var targetRow = existingIndex >= 0 ? existingIndex + 2 : sheet.getLastRow() + 1;
+    sheet.getRange(targetRow, 1, 1, 7).setValues([[year, status, mode, 1, 12, createdAt, now]]);
+    SpreadsheetApp.flush();
+    return getEbayarYearManagement();
+  } catch (err) {
+    Logger.log('writeEbayarYearConfig_ error: ' + err.message);
+    return { success: false, message: err.message };
+  } finally { try { lock.releaseLock(); } catch (err) {} }
+}
+
+function createEbayarYear(params) {
+  var rawYear = (params && params.year !== undefined && params.year !== null ? params.year : '').toString().trim();
+  var year = Number(rawYear);
+  var currentYear = Number(Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy'));
+  if (!/^\d{4}$/.test(rawYear) || year < 2028 || year <= currentYear) {
+    return { success: false, message: 'Tahun baharu mesti selepas tahun semasa dan sekurang-kurangnya 2028.' };
+  }
+  return writeEbayarYearConfig_(year, 'ACTIVE', true);
+}
+
+function updateEbayarYear(params) {
+  var rawYear = (params && params.year !== undefined && params.year !== null ? params.year : '').toString().trim();
+  var year = Number(rawYear);
+  var status = (params && params.status || '').toString().toUpperCase();
+  if (!/^\d{4}$/.test(rawYear) || year < 2027 || ['ACTIVE', 'INACTIVE'].indexOf(status) < 0) {
+    return { success: false, message: 'Konfigurasi tahun tidak sah.' };
+  }
+  return writeEbayarYearConfig_(year, status, false);
+}
+
 var NATIVE_EBAYAR_MVP_MAX_FILE_SIZE_V2 = 3 * 1024 * 1024;
 var NATIVE_EBAYAR_SLIP_FOLDER_PROPERTY_V2_ = 'NATIVE_EBAYAR_SLIP_FOLDER_ID';
 var NATIVE_EBAYAR_RECEIPT_FOLDER_PROPERTY_V2_ = 'NATIVE_EBAYAR_RECEIPT_FOLDER_ID';
@@ -2801,16 +2947,37 @@ function getPaymentsRowsV2_() {
   return { rows: rows, headers: headers };
 }
 
-function getNativeEbayarOfficialStudentsV2_() {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+function isStudentRegisteredForEbayarMonth_(rawDate, bulanKey) {
+  if (!rawDate) return true; // Preserve historical rows without a registration date.
+  var date = null;
+  if (rawDate instanceof Date && !isNaN(rawDate.getTime())) date = rawDate;
+  else {
+    var value = rawDate.toString().trim();
+    var dmy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    var ymd = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dmy) date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+    else if (ymd) date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+  }
+  if (!date || isNaN(date.getTime())) return true;
+  return Utilities.formatDate(date, 'Asia/Kuala_Lumpur', 'yyyy-MM') <= bulanKey;
+}
+
+function getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows) {
+  var ss = rosterRows ? null : SpreadsheetApp.openById(SPREADSHEET_ID);
   var studentsByKey = {};
   var ambiguousKeys = {};
 
   function collect(sheetName, columns, studentType) {
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet || sheet.getLastRow() < 2) return;
-    var width = Math.max(columns.BIL, columns.NAMA, columns.STATUS, columns.GURU) + 1;
-    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+    var rows;
+    if (rosterRows) rows = rosterRows[studentType] || [];
+    else {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) return;
+      var width = bulanKey && Number(bulanKey.slice(0, 4)) >= 2027
+        ? Math.max(columns.BIL, columns.NAMA, columns.STATUS, columns.GURU, columns.TIMESTAMP) + 1
+        : Math.max(columns.BIL, columns.NAMA, columns.STATUS, columns.GURU) + 1;
+      rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+    }
     rows.forEach(function(row) {
       var bil = (row[columns.BIL] === null || row[columns.BIL] === undefined)
         ? ''
@@ -2818,6 +2985,8 @@ function getNativeEbayarOfficialStudentsV2_() {
       var canonicalName = normalizeYuranNameV2_(row[columns.NAMA]);
       var status = (row[columns.STATUS] || '').toString().trim().toUpperCase();
       if (!bil || !/^[A-Za-z0-9._-]{1,40}$/.test(bil) || !canonicalName || (status && status !== 'AKTIF')) return;
+      if (bulanKey && Number(bulanKey.slice(0, 4)) >= 2027 &&
+          !isStudentRegisteredForEbayarMonth_(row[columns.TIMESTAMP], bulanKey)) return;
       var studentKey = studentType + ':' + bil;
       if (studentsByKey[studentKey] || ambiguousKeys[studentKey]) {
         delete studentsByKey[studentKey];
@@ -2850,18 +3019,20 @@ function getNativeEbayarStudentLookup(params) {
       return { success: false, message: 'Kata carian terlalu panjang.', results: [] };
     }
     var bulanKey = (params.bulanKey || '').toString().trim();
-    if (!/^2026-(0[1-9]|1[0-2])$/.test(bulanKey)) {
-      return { success: false, message: 'Bulan bayaran tidak sah.', results: [] };
-    }
-    if (bulanKey < '2026-09') {
-      return { success: false, message: 'Native eBayar bermula September 2026.', results: [] };
-    }
-    var currentMonthKey = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM');
-    if (bulanKey > currentMonthKey) {
-      return { success: false, message: 'Bulan akan datang belum boleh dipilih.', results: [] };
+    if (bulanKey.slice(0, 4) === '2026') {
+      if (!/^2026-(0[1-9]|1[0-2])$/.test(bulanKey)) return { success: false, message: 'Bulan bayaran tidak sah.', results: [] };
+      if (bulanKey < '2026-09') return { success: false, message: 'Native eBayar bermula September 2026.', results: [] };
+      if (bulanKey > Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM')) {
+        return { success: false, message: 'Bulan akan datang belum boleh dipilih.', results: [] };
+      }
+    } else {
+      var monthConfig = getEbayarMonthConfig_(bulanKey);
+      if (!monthConfig || monthConfig.routeType !== 'NATIVE') return { success: false, message: 'Bulan bayaran tidak sah.', results: [] };
+      if (monthConfig.state === 'UPCOMING') return { success: false, message: 'Bulan akan datang belum boleh dipilih.', results: [] };
     }
 
-    var studentDirectory = getNativeEbayarOfficialStudentsV2_();
+    var studentDirectory = bulanKey.slice(0, 4) === '2026'
+      ? getNativeEbayarOfficialStudentsV2_() : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var students = studentDirectory.byKey;
     var alreadyPaidByStudentId = {};
     var alreadyPaidLegacyNames = {};
@@ -2933,7 +3104,14 @@ function validateNativeEbayarSubmissionV2_(params) {
     if (params.students.length < 1) return fail('Sila pilih sekurang-kurangnya seorang murid daripada senarai rasmi SPKM.');
     if (params.students.length > 5) return fail('Maksimum 5 murid dibenarkan untuk satu bayaran.');
 
-    var officialStudentDirectory = getNativeEbayarOfficialStudentsV2_();
+    var bulanKey = (params.bulanKey || '').toString().trim();
+    if (bulanKey.slice(0, 4) !== '2026') {
+      var monthConfig = getEbayarMonthConfig_(bulanKey);
+      if (!monthConfig || monthConfig.routeType !== 'NATIVE') return fail('Bulan bayaran tidak sah untuk Native eBayar.');
+      if (monthConfig.state === 'UPCOMING') return fail('Bulan akan datang belum boleh dipilih.');
+    }
+    var officialStudentDirectory = bulanKey.slice(0, 4) === '2026'
+      ? getNativeEbayarOfficialStudentsV2_() : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var officialStudents = officialStudentDirectory.byKey;
     var requestedStudentKeys = {};
     var requestedNames = {};
@@ -2960,15 +3138,15 @@ function validateNativeEbayarSubmissionV2_(params) {
       resolvedStudents.push(officialStudent);
     }
 
-    var bulanKey = (params.bulanKey || '').toString().trim();
-    if (!/^2026-(0[1-9]|1[0-2])$/.test(bulanKey)) {
-      return fail('Bulan bayaran tidak sah. Native eBayar MVP hanya menyokong tahun 2026.');
+    if (bulanKey.slice(0, 4) === '2026') {
+      if (!/^2026-(0[1-9]|1[0-2])$/.test(bulanKey)) {
+        return fail('Bulan bayaran tidak sah untuk Native eBayar.');
+      }
+      if (bulanKey < '2026-09') {
+        return fail('Native eBayar bermula September 2026. Bayaran Januari hingga Ogos 2026 kekal melalui sistem legacy.');
+      }
+      if (bulanKey > Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM')) return fail('Bulan akan datang belum boleh dipilih.');
     }
-    if (bulanKey < '2026-09') {
-      return fail('Native eBayar bermula September 2026. Bayaran Januari hingga Ogos 2026 kekal melalui sistem legacy.');
-    }
-    var currentMonthKey = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM');
-    if (bulanKey > currentMonthKey) return fail('Bulan akan datang belum boleh dipilih.');
     var monthMeta = getMonthMetaV2_(bulanKey);
     if (!monthMeta) return fail('Bulan bayaran tidak disokong.');
 
@@ -3065,7 +3243,7 @@ function validateNativeEbayarSubmissionV2_(params) {
       studentRecords: resolvedStudents,
       studentChecks: studentChecks,
       bulanKey: bulanKey,
-      bulanLabel: monthMeta.label + ' 2026',
+      bulanLabel: monthMeta.label + ' ' + bulanKey.slice(0, 4),
       tarikhBayaran: tarikhBayaran,
       jumlahKeseluruhan: jumlah,
       noRujukan: noRujukan,
@@ -3313,6 +3491,12 @@ function buildNativeEbayarReceiptTemplateDataV2_(group, options) {
 function populateNativeEbayarReceiptPresentationV2_(presentation, group, options) {
   options = options || {};
   var templateData = buildNativeEbayarReceiptTemplateDataV2_(group, options);
+  var receiptYear = group.bulanKey.slice(0, 4);
+  if (receiptYear !== '2026') {
+    // The approved Slides template has two literal 2026 labels outside placeholders.
+    var replacedYears = presentation.replaceAllText('2026', receiptYear);
+    if (replacedYears < 2) throw new Error('Tahun pada template resit tidak lengkap untuk ' + receiptYear + '.');
+  }
   var nameShapes = [];
   presentation.getSlides().forEach(function(slide) {
     slide.getShapes().forEach(function(shape) {
@@ -3424,7 +3608,9 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
       return fail('NATIVE_EBAYAR_RECEIPT_CONFIGURATION_BLOCKED', 'Folder resit Native eBayar tidak dapat diakses.');
     }
 
-    var safeFileName = sanitizeNativeEbayarFileNameV2_('SPKM_RESIT_' + group.paymentGroupId + '.pdf');
+    var receiptPrefix = group.bulanKey.slice(0, 4) === '2026' ? 'SPKM_RESIT_' :
+      'RESIT_SPKM_' + group.bulanKey.replace('-', '_') + '_';
+    var safeFileName = sanitizeNativeEbayarFileNameV2_(receiptPrefix + group.paymentGroupId + '.pdf');
     var pdfBlob = createNativeEbayarReceiptPdfBlobV2_(receiptTemplateId, group, {}).setName(safeFileName);
     pdfFile = receiptFolder.createFile(pdfBlob);
     pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -3818,6 +4004,13 @@ function getMonthMetaV2_(bulanKey) {
 }
 
 function getEligibleYuranStudentsV2_(tahun, bulanKey) {
+  var nativeConfig = Number(tahun) > 2026 ? getEbayarMonthConfig_(bulanKey) : null;
+  if (nativeConfig && nativeConfig.routeType === 'NATIVE') {
+    var nativeDirectory = getNativeEbayarOfficialStudentsV2_(bulanKey).byKey;
+    return Object.keys(nativeDirectory).sort().map(function(key) {
+      return { nama: nativeDirectory[key].nama, studentKey: key, studentType: nativeDirectory[key].studentType };
+    });
+  }
   var monthNo = (bulanKey || '').toString().split('-')[1] || '';
   var monthIdx = monthNo ? parseInt(monthNo, 10) - 1 : -1;
   var yearNo = parseInt(tahun, 10);
@@ -8183,12 +8376,13 @@ function getMonthlyPaymentSummaryV2(params) {
 
     var summaries = Object.keys(byMonth).sort().map(function(k) {
       var b = byMonth[k];
+      var nativeStats = Number(b.tahun) > 2026 ? getNativeEbayarMonthStats_(b.bulanKey, data.rows) : null;
       return {
         bulanKey: b.bulanKey,
         tahun: b.tahun,
         paymentRows: b.paymentRows,
         paymentGroups: Object.keys(b.paymentGroups).length,
-        selesai: Object.keys(b.paidStudents).length,
+        selesai: nativeStats ? nativeStats.selesai : Object.keys(b.paidStudents).length,
         totalKutipan: b.totalKutipan
       };
     });
@@ -8246,11 +8440,17 @@ function getYuranStatsV2(params) {
     });
 
     var eligible = getEligibleYuranStudentsV2_(tahun, bulanKey);
+    var nativeMonth = Number(tahun) > 2026 ? getEbayarMonthConfig_(bulanKey) : null;
+    var nativePaidIds = nativeMonth && nativeMonth.routeType === 'NATIVE'
+      ? getNativeEbayarPaidStudentIds_(bulanKey, data.rows, getNativeEbayarOfficialStudentsV2_(bulanKey).byKey)
+      : null;
     var telefonMap = getTelefonMapV2_();
     var belumBayar = eligible
-      .filter(function(m) { return !paid[m.nama]; })
+      .filter(function(m) { return nativePaidIds ? !nativePaidIds[m.studentKey] : !paid[m.nama]; })
       .map(function(m) { return { nama: m.nama, telefon: telefonMap[m.nama] || '' }; });
-    var listNamaBayar = Object.keys(paid).sort();
+    var listNamaBayar = nativePaidIds
+      ? eligible.filter(function(m) { return nativePaidIds[m.studentKey]; }).map(function(m) { return m.nama; }).sort()
+      : Object.keys(paid).sort();
 
     return {
       success: true,
@@ -8300,6 +8500,16 @@ function getYuranParentV2(params) {
     var belumBayar = {};
     EBAYAR_MONTHS_V2.forEach(function(m) {
       var bulanKey = tahun + '-' + m.key;
+      if (Number(tahun) > 2026) {
+        var monthConfig = getEbayarMonthConfig_(bulanKey);
+        if (!monthConfig || monthConfig.state === 'UPCOMING') return;
+        var directory = getNativeEbayarOfficialStudentsV2_(bulanKey).byKey;
+        var paidIds = getNativeEbayarPaidStudentIds_(bulanKey, data.rows, directory);
+        belumBayar[bulanKey] = Object.keys(directory)
+          .filter(function(id) { return !paidIds[id]; })
+          .map(function(id) { return directory[id].nama; });
+        return;
+      }
       var eligible = getEligibleYuranStudentsV2_(tahun, bulanKey);
       var paidSet = paidByMonth[bulanKey] || {};
       belumBayar[bulanKey] = eligible
@@ -9979,7 +10189,65 @@ function confirmRegisterDewasa(params) {
 // Kira stats dari live data: eligible murid AKTIF per bulan vs sudah bayar
 // Output: { success, stats: [{jumlahDaftar, selesai, belum, peratus}] }
 // ============================================================
-function getEbayarStats() {
+function getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory) {
+  directory = directory || getNativeEbayarOfficialStudentsV2_(bulanKey).byKey;
+  var idsByName = {};
+  Object.keys(directory).forEach(function(id) {
+    var name = directory[id].nama;
+    if (!idsByName[name]) idsByName[name] = [];
+    idsByName[name].push(id);
+  });
+  var paid = {};
+  paymentRows.forEach(function(row) {
+    if (row.BULAN_KEY !== bulanKey || (row.STATUS || '').toString().trim().toUpperCase() !== 'SELESAI') return;
+    var id = (row.STUDENT_ID || '').toString().trim();
+    if (id) { if (directory[id]) paid[id] = true; return; }
+    var name = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
+    var matches = idsByName[name] || [];
+    if (matches.length === 1) paid[matches[0]] = true;
+  });
+  return paid;
+}
+
+function getNativeEbayarMonthStats_(bulanKey, paymentRows, rosterRows) {
+  var directory = getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows).byKey;
+  var paid = getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory);
+  var total = Object.keys(directory).length;
+  var selesai = Object.keys(paid).length;
+  return { jumlahDaftar: total, selesai: selesai, belum: total - selesai,
+    peratus: total ? Math.round(selesai * 100 / total) : 0 };
+}
+
+function getEbayarStats(params) {
+  params = params || {};
+  var requestedYear = params.year === undefined || params.year === null || params.year === '' ? 2026 : Number(params.year);
+  if (!Number.isInteger(requestedYear) || requestedYear < 2026 || requestedYear > 9999) {
+    return { success: false, message: 'Tahun eBayar tidak sah.' };
+  }
+  if (requestedYear !== 2026) {
+    try {
+      var years = getEbayarYearConfigs_();
+      if (!years[String(requestedYear)] || years[String(requestedYear)].status !== 'ACTIVE') return { success: false, message: 'Tahun eBayar tidak aktif.' };
+      var rows = getPaymentsRowsV2_().rows;
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var rosterRows = {};
+      [['KANAK', TAB.KANAK], ['DEWASA', TAB.DEWASA]].forEach(function(pair) {
+        var sheet = ss.getSheetByName(pair[1]);
+        rosterRows[pair[0]] = sheet && sheet.getLastRow() > 1
+          ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues() : [];
+      });
+      return { success: true, year: requestedYear, stats: EBAYAR_MONTHS_V2.map(function(meta) {
+        var key = requestedYear + '-' + meta.key;
+        var config = getEbayarMonthConfig_(key, years);
+        if (!config || config.routeType !== 'NATIVE') return { error: 'Bulan tidak tersedia' };
+        if (config.state === 'UPCOMING') return { error: 'Akan Datang' };
+        return getNativeEbayarMonthStats_(key, rows, rosterRows);
+      }) };
+    } catch (err) {
+      Logger.log('getEbayarStats multi-year error: ' + err.message);
+      return { success: false, message: 'Statistik eBayar tidak tersedia.' };
+    }
+  }
   try {
     var BULAN_2026 = [
       'JAN2026','FEB2026','MAC2026','APRIL2026','MEI2026','JUN2026',
@@ -10228,6 +10496,20 @@ function getYuranParent(params) {
       '2026-11': { label: 'November 2026' },
       '2026-12': { label: 'Disember 2026' }
     };
+    var configuredYears = {};
+    try { configuredYears = getEbayarYearConfigs_(); }
+    catch (yearConfigErr) { Logger.log('getYuranParent year config error: ' + yearConfigErr.message); }
+    var currentBulanKey = typeof Utilities === 'undefined' ? '2026-12' :
+      Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM');
+    Object.keys(configuredYears).forEach(function(year) {
+      if (Number(year) <= 2026 || configuredYears[year].status !== 'ACTIVE') return;
+      EBAYAR_MONTHS_V2.forEach(function(meta) {
+        var key = year + '-' + meta.key;
+        if (key <= currentBulanKey && getEbayarMonthConfig_(key, configuredYears)) {
+          NATIVE_MONTHS_2026[key] = { label: meta.label + ' ' + year };
+        }
+      });
+    });
     var NATIVE_KEY_BY_LEGACY_2026 = {
       'SEPT2026': '2026-09',
       'OKT2026':  '2026-10',
@@ -10381,6 +10663,14 @@ function getYuranParent(params) {
         // skip bulan yang error — jangan include
       }
     }
+
+    Object.keys(NATIVE_MONTHS_2026).forEach(function(key) {
+      if (key.slice(0, 4) === '2026') return;
+      var directory = getNativeEbayarOfficialStudentsV2_(key).byKey;
+      var paidIds = getNativeEbayarPaidStudentIds_(key, canonicalRows, directory);
+      belumBayar[key] = Object.keys(directory).filter(function(id) { return !paidIds[id]; })
+        .map(function(id) { return directory[id].nama; }).sort();
+    });
 
     return { success: true, found: found, belumBayar: belumBayar };
 
