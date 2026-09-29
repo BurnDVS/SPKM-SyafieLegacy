@@ -149,6 +149,82 @@ function getStudentUidHmacSecret_() {
   return secret;
 }
 
+// Operator-only setup; deliberately private and not wired to any web action.
+// Infrastructure only. A failed/uncertain write must be inspected before rerunning.
+function setupStudentUidInfrastructure_() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { success: false, code: 'UID_SETUP_BUSY' };
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var masterId = props.getProperty(EBAYAR_MASTER_PROP_KEY_V2);
+    if (!masterId) throw new Error('Master not configured');
+    var master = SpreadsheetApp.openById(masterId);
+    var roster = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var registry = master.getSheetByName(STUDENT_UID_REGISTRY_TAB_);
+    function validRegistryHeader(sheet) {
+      if (sheet.getLastColumn() !== STUDENT_UID_REGISTRY_HEADERS_.length) return false;
+      var range = sheet.getRange(1, 1, 1, STUDENT_UID_REGISTRY_HEADERS_.length);
+      var values = range.getValues()[0];
+      var formulas = range.getFormulas()[0];
+      return values.every(function(value, i) {
+        return value === STUDENT_UID_REGISTRY_HEADERS_[i] && !formulas[i];
+      });
+    }
+    if (registry && !validRegistryHeader(registry)) throw new Error('Registry schema');
+    var sheets = [roster.getSheetByName(TAB.KANAK), roster.getSheetByName(TAB.DEWASA)];
+    var needsHeader = sheets.map(function(sheet) {
+      if (!sheet || sheet.getMaxColumns() < 19 || sheet.getLastColumn() < 19) throw new Error('Roster schema');
+      if (sheet.getMaxColumns() < 20) return true;
+      var header = sheet.getRange(1, 20);
+      if (header.getFormula()) throw new Error('Roster header formula');
+      if (header.getValue() === 'STUDENT_UID') return false;
+      if (header.getValue() !== '') throw new Error('Roster header');
+      var column = sheet.getRange(1, 20, Math.max(1, sheet.getLastRow()), 1);
+      if (column.getValues().some(function(row) { return row[0] !== ''; }) ||
+          column.getFormulas().some(function(row) { return !!row[0]; })) throw new Error('Occupied UID column');
+      return true;
+    });
+    var secret = props.getProperty(STUDENT_UID_HMAC_PROPERTY_);
+    if (secret !== null && !/^[0-9A-F]{64}$/.test(secret)) throw new Error('Invalid existing HMAC');
+    if (secret === null) {
+      // Eight independent random UUID v4 prefixes: 8 x 32 random bits, no version/variant bits.
+      secret = '';
+      for (var i = 0; i < 8; i++) {
+        var uuid = Utilities.getUuid().toUpperCase();
+        if (!/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/.test(uuid)) {
+          throw new Error('Random source invalid');
+        }
+        secret += uuid.slice(0, 8);
+      }
+    }
+    // All existing schemas/configuration have passed before the first mutation.
+    var created = !registry;
+    if (created) {
+      registry = master.insertSheet(STUDENT_UID_REGISTRY_TAB_);
+      registry.getRange(1, 1, 1, STUDENT_UID_REGISTRY_HEADERS_.length).setValues([STUDENT_UID_REGISTRY_HEADERS_.slice()]);
+    }
+    sheets.forEach(function(sheet, i) {
+      if (!needsHeader[i]) return;
+      if (sheet.getMaxColumns() < 20) sheet.insertColumnsAfter(sheet.getMaxColumns(), 20 - sheet.getMaxColumns());
+      sheet.getRange(1, 20).setValue('STUDENT_UID');
+    });
+    if (props.getProperty(STUDENT_UID_HMAC_PROPERTY_) === null) {
+      props.setProperty(STUDENT_UID_HMAC_PROPERTY_, secret);
+    }
+    SpreadsheetApp.flush();
+    if (!validRegistryHeader(registry) || sheets.some(function(sheet) {
+      return sheet.getRange(1, 20).getValue() !== 'STUDENT_UID' || !!sheet.getRange(1, 20).getFormula();
+    }) || props.getProperty(STUDENT_UID_HMAC_PROPERTY_) !== secret) throw new Error('Setup verification');
+    return { success: true, registry_created: created, registry_valid: true,
+      kanak_uid_column_ready: true, dewasa_uid_column_ready: true, hmac_configured: true };
+  } catch (err) {
+    // Never echo service exceptions, configuration values or random material.
+    return { success: false, code: 'UID_SETUP_FAILED_INSPECT_STATE' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function indexStudentUidRegistry_(records) {
   if (!Array.isArray(records)) throw new Error('Registry UID diperlukan.');
   var index = { verified: true, byUid: {}, byFingerprint: {}, byName: {} };
