@@ -122,8 +122,9 @@ var COL_DEWASA = {
 // UID foundation only. No live registration, payment or roster write calls these helpers yet.
 var STUDENT_UID_REGISTRY_TAB_ = 'StudentUidRegistry';
 var STUDENT_UID_REGISTRY_HEADERS_ = [
-  'STUDENT_UID', 'TYPE', 'NAMA', 'IDENTITY_FINGERPRINT', 'STATUS', 'CREATED_AT', 'UPDATED_AT'
+  'STUDENT_UID', 'TYPE', 'NAMA', 'IDENTITY_FINGERPRINT', 'VERIFY_METHOD', 'STATUS', 'CREATED_AT', 'UPDATED_AT'
 ];
+var STUDENT_UID_HMAC_PROPERTY_ = 'STUDENT_UID_HMAC_SECRET_V1';
 
 function isStudentUid_(uid, studentType) {
   var value = (uid || '').toString().trim();
@@ -134,12 +135,18 @@ function isStudentUid_(uid, studentType) {
 // HMAC keeps the official identifier out of the registry and preview output.
 // The secret must be supplied from a protected Script Property at cutover.
 function makeStudentUidFingerprint_(identityKey, secret) {
-  if (!/^(KANAK|DEWASA):\d{12}$/.test(identityKey || '') || !secret || secret.length < 32) {
+  if (!/^(KANAK|DEWASA):\d{12}$/.test(identityKey || '') || !/^[0-9A-F]{64}$/.test(secret || '')) {
     throw new Error('Bukti identiti atau rahsia UID tidak sah.');
   }
   var bytes = Utilities.computeHmacSha256Signature(identityKey, secret);
   if (!bytes || bytes.length !== 32) throw new Error('HMAC UID tidak sah.');
   return 'H1:' + bytes.map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('').toUpperCase();
+}
+
+function getStudentUidHmacSecret_() {
+  var secret = PropertiesService.getScriptProperties().getProperty(STUDENT_UID_HMAC_PROPERTY_);
+  if (!/^[0-9A-F]{64}$/.test(secret || '')) throw new Error('Konfigurasi HMAC UID belum tersedia.');
+  return secret;
 }
 
 function indexStudentUidRegistry_(records) {
@@ -149,19 +156,22 @@ function indexStudentUidRegistry_(records) {
     var uid = (record.STUDENT_UID || '').toString().trim();
     var type = (record.TYPE || '').toString().trim();
     var fingerprint = (record.IDENTITY_FINGERPRINT || '').toString().trim();
+    var method = (record.VERIFY_METHOD || '').toString().trim();
     var name = normalizeYuranNameV2_(record.NAMA);
     var status = (record.STATUS || '').toString().trim();
     if (!isStudentUid_(uid, type) || !/^(KANAK|DEWASA)$/.test(type) ||
-        !/^H1:[0-9A-F]{64}$/.test(fingerprint) || !name ||
+        !/^(OFFICIAL_ID|MANUAL_ROSTER)$/.test(method) ||
+        (method === 'OFFICIAL_ID' && !/^H1:[0-9A-F]{64}$/.test(fingerprint)) ||
+        (method === 'MANUAL_ROSTER' && fingerprint !== '') || !name ||
         !/^(ACTIVE|INACTIVE|REMOVED)$/.test(status)) {
       throw new Error('Rekod registry UID tidak sah.');
     }
     if (Object.prototype.hasOwnProperty.call(index.byUid, uid) ||
-        Object.prototype.hasOwnProperty.call(index.byFingerprint, fingerprint)) {
+        (fingerprint && Object.prototype.hasOwnProperty.call(index.byFingerprint, fingerprint))) {
       throw new Error('Registry UID atau identiti berganda.');
     }
     index.byUid[uid] = record;
-    index.byFingerprint[fingerprint] = record;
+    if (fingerprint) index.byFingerprint[fingerprint] = record;
     var nameKey = type + ':' + name;
     (index.byName[nameKey] = index.byName[nameKey] || []).push(record);
   });
@@ -197,21 +207,35 @@ function generateStudentUid_(studentType, registry) {
   throw new Error('UID unik tidak dapat dijana.');
 }
 
-// A deleted or inactive record stays indexed. An uncertain new identity needs human review.
-function resolveStudentUidOwnership_(registry, studentType, fingerprint, name, confirmedNewIdentity) {
+// A deleted or inactive record stays indexed. Manual identities require an approval manifest.
+function resolveStudentUidOwnership_(registry, studentType, verifyMethod, fingerprint, name, approval) {
   if (!registry || !registry.verified || !registry.byUid || !registry.byFingerprint || !registry.byName) {
     throw new Error('Registry UID yang disahkan diperlukan.');
   }
-  if (!/^(KANAK|DEWASA)$/.test(studentType) || !/^H1:[0-9A-F]{64}$/.test(fingerprint || '')) {
+  if (!/^(KANAK|DEWASA)$/.test(studentType) ||
+      !/^(OFFICIAL_ID|MANUAL_ROSTER)$/.test(verifyMethod) ||
+      (verifyMethod === 'OFFICIAL_ID' && !/^H1:[0-9A-F]{64}$/.test(fingerprint || '')) ||
+      (verifyMethod === 'MANUAL_ROSTER' && fingerprint)) {
     throw new Error('Identiti UID tidak sah.');
   }
-  var existing = registry.byFingerprint[fingerprint];
-  if (existing) return { decision: existing.TYPE === studentType ? 'REUSE' : 'CONFLICT', uid: existing.STUDENT_UID };
+  approval = approval || {};
+  if (verifyMethod === 'OFFICIAL_ID') {
+    var existing = registry.byFingerprint[fingerprint];
+    if (existing) return { decision: existing.TYPE === studentType ? 'REUSE' : 'CONFLICT', uid: existing.STUDENT_UID };
+  } else if (approval.verifiedHistoricalUid && approval.approvalId) {
+    var historical = registry.byUid[approval.verifiedHistoricalUid];
+    if (!historical || historical.TYPE !== studentType || historical.VERIFY_METHOD !== 'MANUAL_ROSTER') {
+      return { decision: 'CONFLICT', reason: 'HISTORICAL_UID_OWNER_MISMATCH' };
+    }
+    return { decision: 'REUSE', uid: historical.STUDENT_UID };
+  }
   var nameKey = studentType + ':' + normalizeYuranNameV2_(name);
   if (registry.byName[nameKey] && registry.byName[nameKey].length) {
     return { decision: 'REVIEW', reason: 'POSSIBLE_RETURNING_STUDENT' };
   }
-  if (!confirmedNewIdentity) return { decision: 'REVIEW', reason: 'NEW_IDENTITY_UNCONFIRMED' };
+  if (!approval.confirmedNewIdentity || !approval.approvalId) {
+    return { decision: 'REVIEW', reason: 'NEW_IDENTITY_UNCONFIRMED' };
+  }
   return { decision: 'NEW' };
 }
 
@@ -224,7 +248,7 @@ function getStudentUidIdentityKey_(row, columns, studentType) {
 }
 
 // Registry is the permanent ownership anchor; active roster alone is insufficient.
-function validateStudentUidRoster_(records, registry) {
+function validateStudentUidRoster_(records, registry, manualBindings) {
   if (!registry || !registry.verified || !registry.byUid) throw new Error('Registry UID yang disahkan diperlukan.');
   var seenUid = {};
   (records || []).forEach(function(record) {
@@ -233,8 +257,12 @@ function validateStudentUidRoster_(records, registry) {
     if (!isStudentUid_(uid, record.studentType)) throw new Error('STUDENT_UID format atau jenis tidak sah.');
     if (seenUid[uid]) throw new Error('STUDENT_UID berganda.');
     var owner = registry.byUid[uid];
-    if (!owner || owner.TYPE !== record.studentType ||
-        !record.fingerprint || owner.IDENTITY_FINGERPRINT !== record.fingerprint) {
+    if (!owner || owner.TYPE !== record.studentType || owner.VERIFY_METHOD !== record.verifyMethod ||
+        (owner.VERIFY_METHOD === 'OFFICIAL_ID' &&
+         (!record.fingerprint || owner.IDENTITY_FINGERPRINT !== record.fingerprint)) ||
+        (owner.VERIFY_METHOD === 'MANUAL_ROSTER' &&
+         (record.fingerprint || !manualBindings || !record.manualApprovalId ||
+          manualBindings[uid] !== record.manualApprovalId))) {
       throw new Error('STUDENT_UID dikaitkan dengan identiti bercanggah.');
     }
     seenUid[uid] = true;
@@ -243,20 +271,20 @@ function validateStudentUidRoster_(records, registry) {
 }
 
 // Prepared for a later cutover. The existing Native payment path does not call this yet.
-function validateStudentUidForNativeMonth_(bulanKey, records, registry) {
+function validateStudentUidForNativeMonth_(bulanKey, records, registry, manualBindings) {
   if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(bulanKey)) throw new Error('BULAN_KEY tidak sah.');
   if (bulanKey.slice(0, 4) === '2026') return true;
-  return validateStudentUidRoster_(records, registry);
+  return validateStudentUidRoster_(records, registry, manualBindings);
 }
 
 // Future registration wiring: prepare a 20-column row only after column T exists,
 // then validate all roster UIDs under a lock before one append. Not invoked by live paths.
-function prepareStudentUidRegistrationRow_(row, studentType, registry, fingerprint, confirmedNewIdentity) {
+function prepareStudentUidRegistrationRow_(row, studentType, registry, verifyMethod, fingerprint, approval) {
   var columns = studentType === 'KANAK' ? COL_KANAK : COL_DEWASA;
   if (!Array.isArray(row) || row.length !== columns.STUDENT_UID + 1 || row[columns.STUDENT_UID]) {
     throw new Error('Baris pendaftaran UID tidak sah.');
   }
-  var decision = resolveStudentUidOwnership_(registry, studentType, fingerprint, row[columns.NAMA], confirmedNewIdentity);
+  var decision = resolveStudentUidOwnership_(registry, studentType, verifyMethod, fingerprint, row[columns.NAMA], approval);
   if (decision.decision !== 'REUSE' && decision.decision !== 'NEW') throw new Error('Identiti murid perlu semakan.');
   var prepared = row.slice();
   prepared[columns.STUDENT_UID] = decision.decision === 'REUSE'
@@ -284,6 +312,8 @@ function previewStudentUidMigration_(rosterRows) {
   var candidates = [];
   var byUid = {};
   var byIdentity = {};
+  var byName = {};
+  var byInvalidIdentity = {};
   ['KANAK', 'DEWASA'].forEach(function(type) {
     var columns = type === 'KANAK' ? COL_KANAK : COL_DEWASA;
     (rosterRows[type] || []).forEach(function(row, index) {
@@ -295,12 +325,20 @@ function previewStudentUidMigration_(rosterRows) {
         studentType: type, rowNumber: index + 2, name: name,
         status: (row[columns.STATUS] || '').toString().trim(),
         existingUid: uid, hasOfficialIdentity: !!identityKey,
+        verificationMethod: identityKey ? 'OFFICIAL_ID' : 'MANUAL_ROSTER',
         classification: '', reasons: []
       };
       candidate._hasRawIdentity = !!(rawIdentity || '').toString().trim();
       candidate._identityKey = identityKey; // private, removed before return
+      var invalidDigits = (rawIdentity || '').toString().replace(/[^0-9]/g, '');
+      candidate._invalidIdentityKey = !identityKey && invalidDigits.length >= 6
+        ? type + ':' + invalidDigits : '';
       if (uid) (byUid[uid] = byUid[uid] || []).push(candidate);
       if (identityKey) (byIdentity[identityKey] = byIdentity[identityKey] || []).push(candidate);
+      if (name) (byName[type + ':' + name] = byName[type + ':' + name] || []).push(candidate);
+      if (candidate._invalidIdentityKey) {
+        (byInvalidIdentity[candidate._invalidIdentityKey] = byInvalidIdentity[candidate._invalidIdentityKey] || []).push(candidate);
+      }
       candidates.push(candidate);
     });
   });
@@ -312,22 +350,119 @@ function previewStudentUidMigration_(rosterRows) {
     if (identityKey && byIdentity[identityKey].length > 1) candidate.reasons.push('DUPLICATE_OFFICIAL_IDENTITY');
     if (!candidate.name) candidate.reasons.push('MISSING_NAME');
     if (candidate.reasons.length) candidate.classification = 'CONFLICT';
-    else if (!identityKey) {
-      candidate.classification = 'REVIEW';
-      candidate.reasons.push(candidate._hasRawIdentity ? 'INVALID_OFFICIAL_IDENTITY' : 'MISSING_OFFICIAL_IDENTITY');
-    } else if (uid) {
+    else if (uid) {
       candidate.classification = 'REVIEW';
       candidate.reasons.push('EXISTING_UID_NEEDS_BINDING_VERIFICATION');
+    } else if (!identityKey && byName[candidate.studentType + ':' + candidate.name].length > 1) {
+      candidate.classification = 'REVIEW';
+      candidate.reasons.push('AMBIGUOUS_MANUAL_ROSTER_NAME');
+    } else if (candidate._invalidIdentityKey && byInvalidIdentity[candidate._invalidIdentityKey].length > 1) {
+      candidate.classification = 'REVIEW';
+      candidate.reasons.push('DUPLICATE_UNUSABLE_IDENTITY');
     } else {
       candidate.classification = 'AUTO_MATCH';
-      candidate.reasons.push('UNIQUE_OFFICIAL_IDENTITY');
+      candidate.reasons.push(identityKey ? 'UNIQUE_OFFICIAL_IDENTITY' :
+        (candidate._hasRawIdentity ? 'MANUAL_ROSTER_INVALID_OFFICIAL_ID' : 'MANUAL_ROSTER_NO_OFFICIAL_ID'));
     }
     delete candidate._identityKey;
     delete candidate._hasRawIdentity;
+    delete candidate._invalidIdentityKey;
   });
-  var totals = { AUTO_MATCH: 0, REVIEW: 0, CONFLICT: 0 };
-  candidates.forEach(function(candidate) { totals[candidate.classification]++; });
+  var totals = { AUTO_MATCH: 0, REVIEW: 0, CONFLICT: 0, OFFICIAL_ID: 0, MANUAL_ROSTER: 0 };
+  candidates.forEach(function(candidate) {
+    totals[candidate.classification]++;
+    if (candidate.classification === 'AUTO_MATCH') totals[candidate.verificationMethod]++;
+  });
   return { total: candidates.length, totals: totals, candidates: candidates };
+}
+
+// Read-only cutover preflight. No allocation or Sheet/Script Property write is possible here.
+function getStudentUidMigrationPreflight_(expected) {
+  expected = expected || {};
+  var blockers = [];
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var rosterRows = {};
+  ['KANAK', 'DEWASA'].forEach(function(type) {
+    var sheet = ss.getSheetByName(type === 'KANAK' ? TAB.KANAK : TAB.DEWASA);
+    if (!sheet || sheet.getLastColumn() < 19) {
+      blockers.push(type + '_ROSTER_SCHEMA');
+      rosterRows[type] = [];
+      return;
+    }
+    if (sheet.getLastColumn() < 20 ||
+        sheet.getRange(1, 20).getValue().toString().trim() !== 'STUDENT_UID') {
+      blockers.push(type + '_UID_COLUMN_MISSING');
+    }
+    rosterRows[type] = sheet.getLastRow() > 1
+      ? sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(sheet.getLastColumn(), 20)).getValues()
+      : [];
+  });
+  var preview = previewStudentUidMigration_(rosterRows);
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(rosterRows));
+  var snapshotHash = bytes.map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('').toUpperCase();
+  if (!expected.snapshotHash || expected.snapshotHash !== snapshotHash) blockers.push('ROSTER_SNAPSHOT_CHANGED_OR_UNAPPROVED');
+  if (expected.kanakRows !== rosterRows.KANAK.length || expected.dewasaRows !== rosterRows.DEWASA.length ||
+      expected.AUTO_MATCH !== preview.totals.AUTO_MATCH || expected.REVIEW !== preview.totals.REVIEW ||
+      expected.CONFLICT !== preview.totals.CONFLICT ||
+      expected.OFFICIAL_ID !== preview.totals.OFFICIAL_ID ||
+      expected.MANUAL_ROSTER !== preview.totals.MANUAL_ROSTER) blockers.push('COUNTS_CHANGED_OR_UNAPPROVED');
+  if (preview.totals.CONFLICT) blockers.push('ROSTER_IDENTITY_CONFLICT');
+  if (preview.totals.REVIEW) blockers.push('MANUAL_REVIEW_PENDING');
+  // Row number locates an approved snapshot record; it never generates the UID.
+  // The caller must load this manifest from a restricted, trusted source before cutover.
+  var manualCandidates = preview.candidates.filter(function(candidate) {
+    return candidate.classification === 'AUTO_MATCH' && candidate.verificationMethod === 'MANUAL_ROSTER';
+  });
+  var approvals = Array.isArray(expected.manualApprovals) ? expected.manualApprovals : [];
+  var approvalIds = {};
+  var approvalsValid = approvals.length === manualCandidates.length;
+  manualCandidates.forEach(function(candidate) {
+    var matches = approvals.filter(function(approval) {
+      return approval && approval.snapshotHash === snapshotHash &&
+        approval.studentType === candidate.studentType && approval.rowNumber === candidate.rowNumber &&
+        approval.name === candidate.name && approval.decision === 'APPROVE_UID';
+    });
+    if (matches.length !== 1 || !matches[0].approvalId || !matches[0].reviewer ||
+        !matches[0].approvedAt || !matches[0].evidenceRef || approvalIds[matches[0].approvalId]) {
+      approvalsValid = false;
+    } else approvalIds[matches[0].approvalId] = true;
+  });
+  if (!approvalsValid) blockers.push('MANUAL_ROSTER_APPROVALS_REQUIRED');
+  var registry = null;
+  try { registry = readStudentUidRegistry_(); }
+  catch (err) { blockers.push('REGISTRY_MISSING_OR_INVALID'); }
+  var secret = null;
+  try { secret = getStudentUidHmacSecret_(); }
+  catch (err) { blockers.push('HMAC_MISSING_OR_INVALID'); }
+  if (registry) {
+    var seen = {};
+    ['KANAK', 'DEWASA'].forEach(function(type) {
+      var columns = type === 'KANAK' ? COL_KANAK : COL_DEWASA;
+      rosterRows[type].forEach(function(row) {
+        var uid = (row[columns.STUDENT_UID] || '').toString().trim();
+        if (!uid) return;
+        if (!isStudentUid_(uid, type) || seen[uid] || !registry.byUid[uid]) {
+          blockers.push('ROSTER_UID_NOT_UNIQUE_OR_UNOWNED');
+        } else if (registry.byUid[uid].VERIFY_METHOD === 'MANUAL_ROSTER') {
+          blockers.push('MANUAL_UID_REQUIRES_APPROVAL_MANIFEST');
+        } else if (registry.byUid[uid].VERIFY_METHOD !== 'OFFICIAL_ID') {
+          blockers.push('ROSTER_UID_OWNER_MISMATCH');
+        } else if (secret) {
+          var identityKey = getStudentUidIdentityKey_(row, columns, type);
+          if (!identityKey || registry.byUid[uid].IDENTITY_FINGERPRINT !==
+              makeStudentUidFingerprint_(identityKey, secret)) blockers.push('ROSTER_UID_OWNER_MISMATCH');
+        }
+        seen[uid] = true;
+      });
+    });
+  }
+  return {
+    status: blockers.length ? 'BLOCKED' : 'PASS', blockers: blockers,
+    counts: { KANAK: rosterRows.KANAK.length, DEWASA: rosterRows.DEWASA.length,
+      AUTO_MATCH: preview.totals.AUTO_MATCH, REVIEW: preview.totals.REVIEW, CONFLICT: preview.totals.CONFLICT,
+      OFFICIAL_ID: preview.totals.OFFICIAL_ID, MANUAL_ROSTER: preview.totals.MANUAL_ROSTER },
+    snapshotHash: snapshotHash, registryCount: registry ? Object.keys(registry.byUid).length : null
+  };
 }
 
 // Kolum tab Maklumat Guru (0-indexed)
