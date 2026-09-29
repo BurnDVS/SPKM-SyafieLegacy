@@ -10036,12 +10036,71 @@ function getEbayarStats() {
       : [];
 
     var results = [];
+    var nativePaymentRows = [];
+    var nativePaymentReadError = false;
 
     for (var bi = 0; bi < BULAN_2026.length; bi++) {
       var bulan         = BULAN_2026[bi];
       var bulanMonthIdx = bi;
 
       try {
+        if (bi >= 8) {
+          if (bi === 8) {
+            try {
+              nativePaymentRows = getPaymentsRowsV2_().rows;
+            } catch (nativeErr) {
+              nativePaymentReadError = true;
+              Logger.log('getEbayarStats Native payment read error: ' + nativeErr.message);
+            }
+          }
+          if (nativePaymentReadError) throw new Error('Data Native tidak tersedia.');
+
+          var nativeMonthKey = '2026-' + ('0' + (bi + 1)).slice(-2);
+          var eligibleById = {};
+          var eligibleIdsByName = {};
+          function collectNativeEligible(rows, columns, type) {
+            rows.forEach(function(r) {
+              var nama = normalizeYuranNameV2_(r[columns.NAMA]);
+              var status = (r[columns.STATUS] || '').toString().trim().toUpperCase();
+              if (!nama || (status && status !== 'AKTIF')) return;
+              if (parseRegMonthIdx(r[columns.TIMESTAMP]) > bulanMonthIdx) return;
+              var bil = (r[columns.BIL] || '').toString().trim();
+              if (!bil) throw new Error('Identiti murid Native tidak sah.');
+              var studentId = type + ':' + bil;
+              if (eligibleById[studentId]) throw new Error('Identiti murid Native bertindih.');
+              eligibleById[studentId] = nama;
+              if (!eligibleIdsByName[nama]) eligibleIdsByName[nama] = [];
+              eligibleIdsByName[nama].push(studentId);
+            });
+          }
+          collectNativeEligible(kanakData, COL_KANAK, 'KANAK');
+          collectNativeEligible(dewasaData, COL_DEWASA, 'DEWASA');
+
+          var nativePaidIds = {};
+          nativePaymentRows.forEach(function(r) {
+            if (r.BULAN_KEY !== nativeMonthKey) return;
+            if ((r.STATUS || '').toString().trim().toUpperCase() !== 'SELESAI') return;
+            var studentId = (r.STUDENT_ID || '').toString().trim();
+            if (studentId) {
+              if (eligibleById[studentId]) nativePaidIds[studentId] = true;
+              return;
+            }
+            var paidName = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
+            var matches = eligibleIdsByName[paidName] || [];
+            if (matches.length === 1) nativePaidIds[matches[0]] = true;
+          });
+
+          var nativeTotal = Object.keys(eligibleById).length;
+          var nativeSelesai = Object.keys(nativePaidIds).length;
+          results.push({
+            jumlahDaftar: nativeTotal,
+            selesai: nativeSelesai,
+            belum: nativeTotal - nativeSelesai,
+            peratus: nativeTotal > 0 ? Math.round((nativeSelesai / nativeTotal) * 100) : 0
+          });
+          continue;
+        }
+
         var calcSheet = yuranSS.getSheetByName(CALC_TAB_MAP[bulan]);
         if (!calcSheet) {
           results.push({ error: 'Tab tidak dijumpai' });

@@ -7212,7 +7212,7 @@
 
           var statBadge = document.getElementById('ebadge-' + j);
           if (!statBadge) continue;
-          if (isCurrent) continue;
+          if (isCurrent && j < 8) continue;
 
           var stat = data.stats[j];
           if (!stat || stat.error) {
