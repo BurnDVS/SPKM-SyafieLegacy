@@ -2114,7 +2114,7 @@ function syncNamaMuridToAllForms() {
 }
 
 function normalizeLegacyEbayarName_(value) {
-  return (value || '').toString().trim().toUpperCase();
+  return (value || '').toString().replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
 function parseLegacyEbayarRegMonthIdx_(tarikhRaw, yearNo) {
@@ -10050,7 +10050,7 @@ function getEbayarStats() {
 
         var eligibleSet = {};
         kanakData.forEach(function(r) {
-          var n = (r[COL_KANAK.NAMA]   || '').toString().trim().toUpperCase();
+          var n = normalizeLegacyEbayarName_(r[COL_KANAK.NAMA]);
           var s = (r[COL_KANAK.STATUS] || '').toString().trim().toUpperCase();
           if (!n || (s && s !== 'AKTIF')) return;
           var rmi = parseRegMonthIdx(r[COL_KANAK.TIMESTAMP]);
@@ -10058,7 +10058,7 @@ function getEbayarStats() {
           eligibleSet[n] = true;
         });
         dewasaData.forEach(function(r) {
-          var n = (r[COL_DEWASA.NAMA]   || '').toString().trim().toUpperCase();
+          var n = normalizeLegacyEbayarName_(r[COL_DEWASA.NAMA]);
           var s = (r[COL_DEWASA.STATUS] || '').toString().trim().toUpperCase();
           if (!n || (s && s !== 'AKTIF')) return;
           var rmi = parseRegMonthIdx(r[COL_DEWASA.TIMESTAMP]);
@@ -10068,16 +10068,17 @@ function getEbayarStats() {
 
         var jumlahDaftar = Object.keys(eligibleSet).length;
 
-        var selesai = 0;
+        var paidEligibleSet = {};
         if (calcSheet.getLastRow() >= 2) {
           var calcData = calcSheet.getRange(2, 4, calcSheet.getLastRow() - 1, 1).getValues();
           calcData.forEach(function(r) {
-            var nama = (r[0] || '').toString().trim().toUpperCase();
-            if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:') {
-              selesai++;
+            var nama = normalizeLegacyEbayarName_(r[0]);
+            if (nama && nama !== 'SUDAH BAYAR YURAN' && nama.indexOf('#') === -1 && nama !== ':-:' && eligibleSet[nama]) {
+              paidEligibleSet[nama] = true;
             }
           });
         }
+        var selesai = Object.keys(paidEligibleSet).length;
 
         var belum   = jumlahDaftar - selesai;
         var peratus = jumlahDaftar > 0 ? Math.round((selesai / jumlahDaftar) * 100) : 0;
