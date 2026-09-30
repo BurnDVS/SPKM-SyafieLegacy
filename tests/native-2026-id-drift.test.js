@@ -34,6 +34,7 @@ function fixture() {
     if (name.startsWith('Calculation')) return sheet([['', '', '', 'RAYFAL']]);
     return null;
   } }) };
+  ctx.getEbayarMasterSpreadsheet_ = () => ({ getSheetByName: () => null });
   ctx.getPaymentsRowsV2_ = () => ({ rows });
   ctx.getEbayarYearConfigs_ = () => ({});
   ctx.getTelefonMapV2_ = () => ({});
@@ -79,6 +80,11 @@ test('duplicate normalized name fails closed even if mutable ID matches', () => 
 test('removed student history remains readable without crediting reused ID', () => {
   const f = fixture(); const row = f.payment('KANAK:139', 'FORMER CHILD', { RESIT_URL: 'https://example.test/old.pdf' });
   f.rows.push(row);
+  // A blocked collection month must not close public history or receipt links.
+  const config = [Array.from(f.ctx.EBAYAR_MONTH_CONFIG_HEADERS_), ['2026-09', 'BLOCKED', 'Semakan bank', 1, '2026-09-30 13:00:00', 'admin@example.test']];
+  f.ctx.getEbayarMasterSpreadsheet_ = () => ({ getSheetByName: () => ({ getLastColumn: () => 6,
+    getDataRange: () => ({ getValues: () => config, getFormulas: () => [] }) }) });
+  assert.equal(f.ctx.resolveEbayarPaymentPolicy_('2026-09').canPay, false);
   assert.equal(f.resolve(row).status, 'UNMATCHED');
   assert.equal(Object.keys(f.ctx.getNativeEbayarPaidStudentIds_('2026-09', f.rows, f.directory())).length, 0);
   const result = f.ctx.getYuranParent({ keyword: 'FORMER' });

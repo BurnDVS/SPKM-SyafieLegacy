@@ -3572,6 +3572,7 @@
     <button class="btn btn-ghost btn-sm" id="btnSyncMinusBayar" onclick="syncFormMinusBayar()" style="display:none; margin-bottom:2px;">
       🧹 Kemas Form (Tolak Dah Bayar)
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnEbayarMonths" type="button" onclick="loadEbayarMonthManagement()" style="display:none">Kawalan Kutipan Bulanan</button>
     <button class="btn btn-ghost btn-sm" id="btnEbayarYears" type="button" onclick="loadEbayarYearManagement()" style="display:none; margin-bottom:2px;">Pengurusan Tahun eBayar</button>
   </div>
   <div class="card" id="ebayarYearsAdmin" style="display:none; margin-bottom:18px;">
@@ -3580,6 +3581,14 @@
       <div id="ebayarYearsList"></div>
       <button class="btn btn-primary btn-sm" id="btnCreateEbayarYear" type="button" onclick="createNewEbayarYear()" disabled>+ Wujudkan Tahun Baharu</button>
       <p id="ebayarYearsMessage" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="card" id="ebayarMonthsAdmin" style="display:none;margin-bottom:18px">
+    <div class="card-header"><div class="card-header-text"><h3>Kawalan Kutipan Bulanan</h3><p>Block hanya menghentikan kutipan Native; history dan resit tidak dipadam. AUTO kekal tertakluk kepada peraturan kalendar. Legacy Januari–Ogos 2026 tidak dikawal di sini.</p></div></div>
+    <div class="card-body">
+      <select id="ebayarMonthsYear" onchange="renderEbayarMonthRows()" aria-label="Tahun kawalan kutipan"></select>
+      <button id="btnReloadEbayarMonths" type="button" class="btn btn-ghost btn-sm" onclick="loadEbayarMonthManagement()">Muat Semula</button>
+      <div id="ebayarMonthsList"></div><p id="ebayarMonthsMessage" role="status" aria-live="polite"></p>
     </div>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
@@ -4321,6 +4330,14 @@
     if (ebayarV2Maintenance) ebayarV2Maintenance.style.display = isAdmin ? '' : 'none';
     const btnEbayarYears = document.getElementById('btnEbayarYears');
     if (btnEbayarYears) btnEbayarYears.style.display = isAdmin ? '' : 'none';
+    const monthButton = document.getElementById('btnEbayarMonths');
+    if (monthButton) monthButton.style.display = isAdmin ? '' : 'none';
+    const monthPanel = document.getElementById('ebayarMonthsAdmin');
+    if (!isAdmin && monthPanel) {
+      monthPanel.style.display = 'none'; ebayarMonthsData = null;
+      document.getElementById('ebayarMonthsList').replaceChildren();
+      document.getElementById('ebayarMonthsYear').replaceChildren();
+    }
     const ebayarYearsAdmin = document.getElementById('ebayarYearsAdmin');
     if (!isAdmin) {
       if (ebayarYearsAdmin) ebayarYearsAdmin.style.display = 'none';
@@ -6144,6 +6161,117 @@
     }
   }
 
+  function getEbayarMonthAdminToken_() {
+    var token = _spkm_st.getItem('spkm_token');
+    if (!loggedInGuru || currentRole !== 'ADMIN' || !token) {
+      showEbayarMonthsMessage('Sesi Admin tidak sah atau telah tamat. Sila log masuk semula.', true);
+      return '';
+    }
+    return token;
+  }
+
+  let ebayarMonthsBusy = false;
+  let ebayarMonthsData = null;
+
+  function showEbayarMonthsMessage(message, error) {
+    var element = document.getElementById('ebayarMonthsMessage');
+    element.textContent = message;
+    element.style.color = error ? 'var(--error)' : '';
+  }
+
+  function setEbayarMonthsBusy(busy) {
+    ebayarMonthsBusy = busy;
+    var panel = document.getElementById('ebayarMonthsAdmin');
+    panel.setAttribute('aria-busy', String(busy));
+    panel.querySelectorAll('button,select').forEach(function(control) {
+      control.disabled = busy || (control.id !== 'btnReloadEbayarMonths' && !ebayarMonthsData);
+    });
+    document.getElementById('btnEbayarMonths').disabled = busy;
+  }
+
+  function renderEbayarMonthManagement(data) {
+    if (!data || !data.success || !Array.isArray(data.years)) throw new Error(data && data.message || 'Konfigurasi bulan tidak tersedia.');
+    ebayarMonthsData = data;
+    var select = document.getElementById('ebayarMonthsYear');
+    var selected = select.value;
+    select.replaceChildren();
+    data.years.forEach(function(year) {
+      var option = document.createElement('option');
+      option.value = String(year.year); option.textContent = year.year + ' · ' + year.status;
+      select.appendChild(option);
+    });
+    if (data.years.some(function(year) { return String(year.year) === selected; })) select.value = selected;
+    renderEbayarMonthRows();
+  }
+
+  function renderEbayarMonthRows() {
+    var list = document.getElementById('ebayarMonthsList');
+    list.replaceChildren();
+    if (!ebayarMonthsData || !loggedInGuru || currentRole !== 'ADMIN') return;
+    var year = ebayarMonthsData.years.find(function(item) { return String(item.year) === document.getElementById('ebayarMonthsYear').value; });
+    if (!year) return;
+    year.months.forEach(function(month) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px';
+      var label = document.createElement('span');
+      label.textContent = month.bulanKey + ' · ' + month.state + ' · ' + month.routeType + ' · ' + month.paymentPolicy;
+      row.appendChild(label);
+      if (month.supported) {
+        var button = document.createElement('button');
+        button.type = 'button'; button.className = 'btn btn-ghost btn-sm';
+        button.textContent = month.paymentPolicy === 'BLOCKED' ? 'Buka Semula' : 'Block';
+        button.disabled = ebayarMonthsBusy;
+        button.onclick = function() { updateEbayarMonthAdmin(month); };
+        row.appendChild(button);
+      }
+      var reason = document.createElement('span');
+      reason.textContent = month.paymentBlockedReason || '';
+      row.appendChild(reason); list.appendChild(row);
+    });
+  }
+
+  async function loadEbayarMonthManagement() {
+    if (ebayarMonthsBusy) return;
+    var token = getEbayarMonthAdminToken_();
+    if (!token) return;
+    document.getElementById('ebayarMonthsAdmin').style.display = '';
+    ebayarMonthsData = null;
+    document.getElementById('ebayarMonthsList').replaceChildren();
+    setEbayarMonthsBusy(true);
+    showEbayarMonthsMessage('Memuatkan konfigurasi bulan...', false);
+    try {
+      var data = await callGASPromise('getEbayarMonthManagement', { token: _spkm_st.getItem('spkm_token') }, 30000);
+      if (!isEbayarYearAdminSessionCurrent_(token)) return;
+      renderEbayarMonthManagement(data);
+      showEbayarMonthsMessage('Konfigurasi bulan dimuatkan.', false);
+    } catch (err) {
+      if (isEbayarYearAdminSessionCurrent_(token)) showEbayarMonthsMessage(err.message, true);
+    } finally { setEbayarMonthsBusy(false); }
+  }
+
+  async function updateEbayarMonthAdmin(month) {
+    if (ebayarMonthsBusy || !ebayarMonthsData || !month.supported) return;
+    var token = getEbayarMonthAdminToken_();
+    if (!token) return;
+    var policy = month.paymentPolicy === 'BLOCKED' ? 'AUTO' : 'BLOCKED';
+    var reason = policy === 'BLOCKED' ? window.prompt('Sebab menghentikan kutipan (dipaparkan kepada pembayar; wajib, maksimum 300 aksara):') : '';
+    if (reason === null) return;
+    reason = reason.trim();
+    if ((policy === 'BLOCKED' && !reason) || reason.length > 300) { showEbayarMonthsMessage('Sebab wajib diisi apabila block (maksimum 300 aksara).', true); return; }
+    setEbayarMonthsBusy(true);
+    showEbayarMonthsMessage('Menyimpan policy kutipan...', false);
+    try {
+      var data = await callGASPromise('updateEbayarMonthPolicy', { token: _spkm_st.getItem('spkm_token'), bulanKey: month.bulanKey, paymentPolicy: policy, reason: reason, revision: month.revision }, 120000);
+      if (!isEbayarYearAdminSessionCurrent_(token)) return;
+      renderEbayarMonthManagement(data);
+      showEbayarMonthsMessage('Policy kutipan disimpan. History dan resit dikekalkan.', false);
+    } catch (err) {
+      ebayarMonthsData = null;
+      if (isEbayarYearAdminSessionCurrent_(token)) showEbayarMonthsMessage((err.message || 'Simpan gagal.') + ' Jangan ulang perubahan; muat semula untuk menyemak hasil.', true);
+    } finally { setEbayarMonthsBusy(false); }
+  }
+
+
   function showEbayarYearsMessage(message, isError) {
     var element = document.getElementById('ebayarYearsMessage');
     if (element) {
@@ -7457,7 +7585,8 @@
           if (month.routeType !== 'NATIVE' || month.state === 'UPCOMING') return;
           var option = document.createElement('option');
           option.value = month.bulanKey;
-          option.textContent = month.label + ' ' + year.year;
+          option.textContent = month.label + ' ' + year.year + (month.paymentPolicy === 'BLOCKED' ? ' · ' + month.paymentBlockedReason : '');
+          option.dataset.paymentBlocked = month.canPay === false ? 'true' : 'false';
           select.appendChild(option);
         });
       });
@@ -7484,7 +7613,7 @@
     if (monthSelect) {
       var lastEnabled = '';
       Array.prototype.forEach.call(monthSelect.options, function(option) {
-        option.disabled = option.value > serverMonthKey;
+        option.disabled = option.value > serverMonthKey || (option.dataset && option.dataset.paymentBlocked === 'true');
         if (!option.disabled) lastEnabled = option.value;
       });
       var beforeNativeEbayarLaunch = serverMonthKey < '2026-09';

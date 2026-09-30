@@ -602,6 +602,7 @@ var ALLOWED_ACTIONS = [
   'getNativeEbayarStudentLookup', 'preflightNativeEbayarSubmission', 'submitNativeEbayarPayment',
   'getEbayarPortalMode', 'setEbayarPortalMode', 'getPublicEbayarYears',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
   'recordCash', 'syncForms', 'syncFormBulanIni', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
@@ -627,6 +628,7 @@ var AUTH_REQUIRED_ACTIONS = [
   'simpanDeviceToken', 'getNotifikasi',
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'getEbayarV2MaintenanceStatus', 'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'setEbayarPortalMode',
@@ -658,6 +660,7 @@ var ADMIN_REQUIRED_ACTIONS = [
   'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'auditEbayarSourceTabsV2', 'setEbayarPortalMode',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid',
   'getMuridTanpaGuru', 'assignGuruMurid'
 ];
@@ -900,6 +903,8 @@ function doAction(action, payload) {
   else if (action === 'submitNativeEbayarPayment') return submitNativeEbayarPayment(payload);
   else if (action === 'getEbayarPortalMode')     return getEbayarPortalMode(payload);
   else if (action === 'getPublicEbayarYears')    return getPublicEbayarYears(payload);
+  else if (action === 'getEbayarMonthManagement') return getEbayarMonthManagement(payload);
+  else if (action === 'updateEbayarMonthPolicy') return updateEbayarMonthPolicy(payload);
   else if (action === 'getEbayarYearManagement') return getEbayarYearManagement(payload);
   else if (action === 'createEbayarYear')        return createEbayarYear(payload);
   else if (action === 'updateEbayarYear')        return updateEbayarYear(payload);
@@ -3517,8 +3522,114 @@ function getEbayarMonthConfig_(bulanKey, years, todayKey) {
   return { bulanKey: bulanKey, routeType: route, state: bulanKey > monthNow ? 'UPCOMING' : (bulanKey === monthNow ? 'OPEN' : 'CLOSED') };
 }
 
+// Collection policy is independent of calendar state and payment routing.
+var EBAYAR_MONTH_CONFIG_HEADERS_ = ['BULAN_KEY', 'PAYMENT_POLICY', 'REASON', 'REVISION', 'UPDATED_AT', 'UPDATED_BY'];
+
+function readEbayarMonthPolicies_() {
+  var sheet = getEbayarMasterSpreadsheet_().getSheetByName('MonthConfig');
+  var policies = {};
+  if (!sheet) return policies;
+  var range = sheet.getDataRange();
+  var rows = range.getValues();
+  if (range.getFormulas().some(function(row) { return row.some(function(formula) { return !!formula; }); })) throw new Error('Formula tidak dibenarkan dalam MonthConfig.');
+  if (sheet.getLastColumn() !== 6 || !rows.length || rows[0].join('|') !== EBAYAR_MONTH_CONFIG_HEADERS_.join('|')) throw new Error('Skema MonthConfig tidak sah. Kutipan ditutup sehingga konfigurasi disemak.');
+  rows.slice(1).forEach(function(row, index) {
+    if (row.every(function(value) { return value === ''; })) return;
+    var key = String(row[0]);
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || Number(key.slice(0, 4)) < 2026 || (key.slice(0, 4) === '2026' && key < '2026-09') || policies[key]) throw new Error('BULAN_KEY MonthConfig tidak sah atau berulang.');
+    if (['AUTO', 'BLOCKED'].indexOf(row[1]) < 0 || typeof row[2] !== 'string' || row[2].length > 300 || /[\u0000-\u001f\u007f]/.test(row[2]) || /^[=+@-]/.test(row[2]) || (row[1] === 'BLOCKED' && !row[2].trim()) || !Number.isSafeInteger(row[3]) || row[3] < 1 || !((row[4] instanceof Date && !isNaN(row[4].getTime())) || (typeof row[4] === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(row[4]))) || typeof row[5] !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[5])) throw new Error('Rekod MonthConfig tidak sah.');
+    policies[key] = { paymentPolicy: row[1], reason: row[2], revision: row[3], updatedAt: row[4], updatedBy: row[5], row: index + 2 };
+  });
+  return policies;
+}
+
+function resolveEbayarPaymentPolicy_(bulanKey, policies, month) {
+  month = month || getEbayarMonthConfig_(bulanKey);
+  if (!month || month.routeType !== 'NATIVE') throw new Error('Kawalan kutipan ini hanya menyokong bulan Native yang aktif.');
+  policies = policies || readEbayarMonthPolicies_();
+  var policy = policies[bulanKey] || { paymentPolicy: 'AUTO', reason: '', revision: 0 };
+  var reason = policy.paymentPolicy === 'BLOCKED' ? 'Kutipan dihentikan: ' + policy.reason : month.state === 'UPCOMING' ? 'Bulan akan datang belum boleh dipilih.' : '';
+  return { paymentPolicy: policy.paymentPolicy, canPay: !reason, paymentBlockedReason: reason, revision: policy.revision };
+}
+
+function requireEbayarPaymentPolicy_(bulanKey) {
+  var policy;
+  try { policy = resolveEbayarPaymentPolicy_(bulanKey); }
+  catch (err) {
+    var configError = new Error('Konfigurasi kutipan tidak sah. Sila hubungi pentadbir.');
+    configError.paymentPolicyError = true; throw configError;
+  }
+  if (!policy.canPay) {
+    var blocked = new Error(policy.paymentBlockedReason);
+    blocked.paymentPolicyError = true; throw blocked;
+  }
+  return policy;
+}
+
+function getEbayarMonthManagement(params) {
+  var auth = authorizePrivilegedHandler_(params || {}, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  try { return getEbayarMonthManagementCore_(); }
+  catch (err) { return { success: false, message: err.message }; }
+}
+
+function getEbayarMonthManagementCore_() {
+  var years = getEbayarYearConfigs_();
+  var policies = readEbayarMonthPolicies_();
+  return { success: true, years: Object.keys(years).sort().map(function(key) {
+    var config = years[key];
+    return { year: config.year, status: config.status, months: EBAYAR_MONTHS_V2.map(function(meta) {
+      var month = getEbayarMonthConfig_(key + '-' + meta.key, years);
+      if (!month) return null;
+      var supported = month.routeType === 'NATIVE';
+      var policy = supported ? resolveEbayarPaymentPolicy_(month.bulanKey, policies, month) : { paymentPolicy: 'AUTO', canPay: false, paymentBlockedReason: 'Legacy Google Forms tidak dikawal oleh MonthConfig.', revision: 0 };
+      return { bulanKey: month.bulanKey, label: meta.label, state: month.state, routeType: month.routeType, supported: supported, paymentPolicy: policy.paymentPolicy, canPay: policy.canPay, paymentBlockedReason: policy.paymentBlockedReason, revision: policy.revision };
+    }).filter(function(month) { return month; }) };
+  }) };
+}
+
+function updateEbayarMonthPolicy(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  var key = params.bulanKey;
+  var policy = params.paymentPolicy;
+  var reason = typeof params.reason === 'string' ? params.reason.trim() : '';
+  if (typeof key !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || ['AUTO', 'BLOCKED'].indexOf(policy) < 0 || !Number.isSafeInteger(params.revision) || params.revision < 0 || reason.length > 300 || /[\u0000-\u001f\u007f]/.test(reason) || /^[=+@-]/.test(reason) || (policy === 'BLOCKED' && !reason)) return { success: false, message: 'Policy, revision atau sebab tidak sah.' };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { success: false, message: 'Sistem sibuk. Muat semula sebelum mengemaskini.' };
+  var attempted = false;
+  try {
+    auth = authorizePrivilegedHandler_(params, true);
+    if (!auth.valid) return { success: false, message: auth.message };
+    var policies = readEbayarMonthPolicies_();
+    var current = resolveEbayarPaymentPolicy_(key, policies);
+    if (current.revision !== params.revision) return { success: false, message: 'Konfigurasi telah berubah. Muat semula senarai bulan.' };
+    var ss = getEbayarMasterSpreadsheet_();
+    var sheet = ss.getSheetByName('MonthConfig');
+    var revision = current.revision + 1;
+    if (!Number.isSafeInteger(revision)) throw new Error('Revision MonthConfig melebihi had.');
+    attempted = true;
+    if (!sheet) {
+      sheet = ss.insertSheet('MonthConfig');
+      sheet.getRange(1, 1, 1, 6).setValues([EBAYAR_MONTH_CONFIG_HEADERS_]);
+    }
+    var row = [key, policy, reason, revision, Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss'), auth.actor.email];
+    sheet.getRange(policies[key] ? policies[key].row : sheet.getLastRow() + 1, 1, 1, 6).setValues([row]);
+    SpreadsheetApp.flush();
+    var verified = readEbayarMonthPolicies_()[key];
+    if (!verified || verified.revision !== revision || verified.paymentPolicy !== policy || verified.reason !== reason || verified.updatedBy !== auth.actor.email || String(verified.updatedAt) !== row[4]) throw new Error('Pengesahan selepas simpan gagal.');
+    return getEbayarMonthManagementCore_();
+  } catch (err) {
+    return { success: false, uncertainOutcome: attempted, message: err.message + (attempted ? ' Jangan ulang perubahan; muat semula untuk menyemak hasil.' : '') };
+  } finally { lock.releaseLock(); }
+}
+
+
 function getPublicEbayarYears() {
   try {
+    var policies = {}, policyError = '';
+    try { policies = readEbayarMonthPolicies_(); } catch (err) { policyError = 'Konfigurasi kutipan tidak sah. Sila hubungi pentadbir.'; }
     var years = getEbayarYearConfigs_();
     var serverDate = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd');
     var currentYear = Number(serverDate.slice(0, 4));
@@ -3530,7 +3641,13 @@ function getPublicEbayarYears() {
     return { success: true, serverDate: serverDate, defaultYear: defaultYear, years: active.map(function(config) {
       return { year: config.year, mode: config.mode, months: EBAYAR_MONTHS_V2.map(function(meta) {
         var month = getEbayarMonthConfig_(config.year + '-' + meta.key, years, serverDate);
-        return month ? { bulanKey: month.bulanKey, label: meta.label, routeType: month.routeType, state: month.state } : null;
+        if (!month) return null;
+        var result = { bulanKey: month.bulanKey, label: meta.label, routeType: month.routeType, state: month.state };
+        if (month.routeType === 'NATIVE') {
+          var policy = policyError ? { paymentPolicy: 'BLOCKED', canPay: false, paymentBlockedReason: policyError } : resolveEbayarPaymentPolicy_(month.bulanKey, policies, month);
+          result.paymentPolicy = policy.paymentPolicy; result.canPay = policy.canPay; result.paymentBlockedReason = policy.paymentBlockedReason;
+        }
+        return result;
       }).filter(function(month) { return month; }) };
     }) };
   } catch (err) {
@@ -4019,6 +4136,7 @@ function getNativeEbayarStudentLookup(params) {
       if (monthConfig.state === 'UPCOMING') return { success: false, message: 'Bulan akan datang belum boleh dipilih.', results: [] };
     }
 
+    requireEbayarPaymentPolicy_(bulanKey);
     var studentDirectory = bulanKey.slice(0, 4) === '2026'
       ? { byKey: getNative2026EligibleDirectory_(bulanKey) } : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var students = studentDirectory.byKey;
@@ -4058,7 +4176,7 @@ function getNativeEbayarStudentLookup(params) {
     return { success: true, results: results, cappedAt: 20 };
   } catch (err) {
     Logger.log('getNativeEbayarStudentLookup error: ' + err.message);
-    return { success: false, message: 'Carian murid tidak dapat dijalankan.', results: [] };
+    return { success: false, message: err.paymentPolicyError ? err.message : 'Carian murid tidak dapat dijalankan.', results: [] };
   }
 }
 
@@ -4104,6 +4222,7 @@ function validateNativeEbayarSubmissionV2_(params) {
       if (!monthConfig || monthConfig.routeType !== 'NATIVE') return fail('Bulan bayaran tidak sah untuk Native eBayar.');
       if (monthConfig.state === 'UPCOMING') return fail('Bulan akan datang belum boleh dipilih.');
     }
+    requireEbayarPaymentPolicy_(bulanKey);
     var officialStudentDirectory = /^2026-(09|10|11|12)$/.test(bulanKey)
       ? { byKey: getNative2026EligibleDirectory_(bulanKey) } : getNativeEbayarOfficialStudentsV2_(bulanKey);
     var officialStudents = officialStudentDirectory.byKey;
@@ -4257,7 +4376,7 @@ function validateNativeEbayarSubmissionV2_(params) {
     };
   } catch (err) {
     Logger.log('validateNativeEbayarSubmissionV2_ error: ' + err.message);
-    return fail('Preflight bayaran tidak dapat diselesaikan. Sila cuba semula.');
+    return fail(err.paymentPolicyError ? err.message : 'Preflight bayaran tidak dapat diselesaikan. Sila cuba semula.');
   }
 }
 

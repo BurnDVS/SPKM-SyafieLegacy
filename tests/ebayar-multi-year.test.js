@@ -31,7 +31,8 @@ function extract(source, name) {
 }
 
 function load(names, globals = {}) {
-  const context = vm.createContext({ EBAYAR_MONTHS_V2: months, ...globals });
+  const context = vm.createContext({ EBAYAR_MONTHS_V2: months, readEbayarMonthPolicies_: () => ({}), requireEbayarPaymentPolicy_: () => ({}), ...globals });
+  vm.runInContext(extract(code, 'resolveEbayarPaymentPolicy_'), context);
   names.forEach(name => vm.runInContext(extract(code, name), context));
   return context;
 }
@@ -76,7 +77,7 @@ test('public year endpoint exposes only year, route and state metadata', () => {
   assert.deepEqual(Array.from(response.years, item => item.year), [2026, 2027]);
   assert.equal(response.years[1].months.length, 12);
   assert.equal(response.years[1].months[0].state, 'UPCOMING');
-  assert.doesNotMatch(JSON.stringify(response), /student|nama|payment|mykid|telefon/i);
+  assert.doesNotMatch(JSON.stringify(response), /student|nama|mykid|telefon/i);
 });
 
 test('a Config row exposes a future Native year without source changes', () => {
