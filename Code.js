@@ -255,8 +255,17 @@ function indexStudentUidRegistry_(records) {
 }
 
 // Read-only: absence or malformed schema fails closed. This never creates a Sheet.
-function readStudentUidRegistry_() {
-  var sheet = getEbayarMasterSpreadsheet_().getSheetByName(STUDENT_UID_REGISTRY_TAB_);
+function readStudentUidRegistry_(options) {
+  var master;
+  if (options && options.readOnly === true) {
+    var id = (PropertiesService.getScriptProperties().getProperty(EBAYAR_MASTER_PROP_KEY_V2) || '').toString().trim();
+    if (!id) throw new Error('Registry master configuration diperlukan untuk bacaan sahaja.');
+    // Explicit ID avoids discovery's property write and never creates infrastructure.
+    master = getEbayarMasterSpreadsheet_({ spreadsheetId: id });
+  } else {
+    master = getEbayarMasterSpreadsheet_();
+  }
+  var sheet = master.getSheetByName(STUDENT_UID_REGISTRY_TAB_);
   if (!sheet || sheet.getLastColumn() < STUDENT_UID_REGISTRY_HEADERS_.length) {
     throw new Error('Registry UID belum tersedia.');
   }
@@ -346,11 +355,162 @@ function validateStudentUidRoster_(records, registry, manualBindings) {
   return true;
 }
 
-// Prepared for a later cutover. The existing Native payment path does not call this yet.
+// Runtime wrapper supplies trusted ownership evidence for 2027+ submissions.
 function validateStudentUidForNativeMonth_(bulanKey, records, registry, manualBindings) {
-  if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(bulanKey)) throw new Error('BULAN_KEY tidak sah.');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(bulanKey) || Number(bulanKey.slice(0, 4)) < 2026) throw new Error('BULAN_KEY tidak sah.');
   if (bulanKey.slice(0, 4) === '2026') return true;
   return validateStudentUidRoster_(records, registry, manualBindings);
+}
+
+// Human-approved migration owners. This source-controlled server manifest is
+// independent of browser flags and editable spreadsheet approval columns.
+function getApprovedManualUidBindings_() {
+  return indexApprovedManualUidBindings_([
+    ['KANAK:U09B34', 'KANAK', 'ABID RIZQI SIREGAR BIN MD RAWI', 'MANUAL_ROSTER'],
+    ['KANAK:U6A60E', 'KANAK', 'AMIR ZAYAN BIN SHAIFUL AMAN', 'MANUAL_ROSTER'],
+    ['KANAK:UDCE6F', 'KANAK', 'MUHAMMAD AKID AKRAM BIN MUHAMAD AMRI', 'MANUAL_ROSTER'],
+    ['KANAK:UFC9E6', 'KANAK', 'MUHAMMAD AKIF ASFA BIN MUHAMAD AMRI', 'MANUAL_ROSTER'],
+    ['KANAK:UB7BEA', 'KANAK', 'MUHAMMAD AYREEL ADUKA', 'MANUAL_ROSTER'],
+    ['KANAK:UA4D84', 'KANAK', 'MUHAMMAD NUR IMAN BIN ABDULLAH', 'MANUAL_ROSTER'],
+    ['KANAK:U9AEB3', 'KANAK', 'MUHAMMAD QHALISH RAYYAN BIN SHAIFUL AMAN', 'MANUAL_ROSTER'],
+    ['KANAK:UF302B', 'KANAK', 'NUR AFIFAH AQILAH BINTI MUHAMAD AMRI', 'MANUAL_ROSTER'],
+    ['KANAK:U491CD', 'KANAK', 'NUR AIDA ZULAIKHA SIREGAR BT MD RAWI', 'MANUAL_ROSTER'],
+    ['KANAK:U3201A', 'KANAK', 'NUR SOFEA ADLINA', 'MANUAL_ROSTER'],
+    ['DEWASA:U2449B', 'DEWASA', 'AIDAH MD TAIB', 'MANUAL_ROSTER'],
+    ['DEWASA:U84626', 'DEWASA', 'DARAWISHAH BT HJ DERANI', 'MANUAL_ROSTER']
+  ]);
+}
+
+function indexApprovedManualUidBindings_(bindings) {
+  if (!Array.isArray(bindings)) throw new Error('Approved binding/manifest tidak sah.');
+  var byUid = {};
+  var owners = {};
+  bindings.forEach(function(binding) {
+    if (!Array.isArray(binding) || binding.length !== 4 || !isStudentUid_(binding[0], binding[1]) ||
+        !/^(KANAK|DEWASA)$/.test(binding[1]) || !binding[2] ||
+        normalizeYuranNameV2_(binding[2]) !== binding[2] || binding[3] !== 'MANUAL_ROSTER') {
+      throw new Error('Approved binding/manifest tidak sah.');
+    }
+    var ownerKey = binding[1] + ':' + binding[2];
+    if (byUid[binding[0]] || owners[ownerKey]) throw new Error('Approved UID atau canonical owner binding berganda.');
+    byUid[binding[0]] = { uid: binding[0], type: binding[1], nama: binding[2], verifyMethod: binding[3] };
+    owners[ownerKey] = true;
+  });
+  return byUid;
+}
+
+// A single read-only snapshot is shared by payment validation and whole-roster audit.
+function readNativeUidOwnershipSnapshot_() {
+  var registry = readStudentUidRegistry_({ readOnly: true });
+  var roster = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var rowsByUid = {};
+  var allRows = [];
+  ['KANAK', 'DEWASA'].forEach(function(type) {
+    var columns = type === 'KANAK' ? COL_KANAK : COL_DEWASA;
+    var sheet = roster.getSheetByName(type === 'KANAK' ? TAB.KANAK : TAB.DEWASA);
+    if (!sheet || sheet.getLastColumn() < 20 || sheet.getRange(1, 20).getValue() !== 'STUDENT_UID') {
+      throw new Error('Skema roster UID tidak tersedia.');
+    }
+    var rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 20).getValues() : [];
+    rows.forEach(function(row, index) {
+      var uid = (row[columns.STUDENT_UID] || '').toString().trim();
+      var entry = { row: row, columns: columns, type: type, sourceSheet: type === 'KANAK' ? TAB.KANAK : TAB.DEWASA, sourceRow: index + 2 };
+      allRows.push(entry);
+      if (!uid) return;
+      if (!rowsByUid[uid]) rowsByUid[uid] = [];
+      rowsByUid[uid].push(entry);
+    });
+  });
+  return { registry: registry, rowsByUid: rowsByUid, allRows: allRows,
+    approvedBindings: getApprovedManualUidBindings_(), secret: null };
+}
+
+function validateNativeUidOwnerInSnapshot_(bulanKey, student, snapshot) {
+    var registry = snapshot.registry;
+    var uid = student.studentKey;
+    var matches = snapshot.rowsByUid[uid] || [];
+    var owner = registry.byUid[uid];
+    if (matches.length !== 1 || !owner) throw new Error('Ownership UID roster/registry tidak unik atau tiada.');
+    var match = matches[0];
+    var row = match.row;
+    var name = normalizeYuranNameV2_(row[match.columns.NAMA]);
+    var status = (row[match.columns.STATUS] || '').toString().trim().toUpperCase();
+    if (match.type !== student.studentType || owner.TYPE !== match.type ||
+        name !== normalizeYuranNameV2_(student.nama) || name !== normalizeYuranNameV2_(owner.NAMA) ||
+        owner.STATUS !== 'ACTIVE' || (status && status !== 'AKTIF') ||
+        !isStudentRegisteredForEbayarMonth_(row[match.columns.TIMESTAMP], bulanKey)) {
+      throw new Error('Ownership UID tidak sepadan atau tidak aktif.');
+    }
+    var binding = snapshot.approvedBindings[uid];
+    if (binding || owner.VERIFY_METHOD === 'MANUAL_ROSTER') {
+      if (!binding || binding.type !== match.type || binding.nama !== name ||
+          binding.verifyMethod !== 'MANUAL_ROSTER' || owner.VERIFY_METHOD !== 'MANUAL_ROSTER' ||
+          owner.IDENTITY_FINGERPRINT) {
+        throw new Error('Ownership MANUAL_ROSTER tidak sepadan dengan approved binding/manifest server.');
+      }
+      return { uid: uid, studentType: match.type, verifyMethod: 'MANUAL_ROSTER',
+        fingerprint: '', manualApprovalId: 'APPROVED_MANUAL:' + uid };
+    }
+    if (owner.VERIFY_METHOD !== 'OFFICIAL_ID') throw new Error('Kaedah ownership UID tidak sah.');
+    if (!snapshot.secret) snapshot.secret = getStudentUidHmacSecret_();
+    return { uid: uid, studentType: match.type, verifyMethod: 'OFFICIAL_ID',
+      fingerprint: makeStudentUidFingerprint_(getStudentUidIdentityKey_(row, match.columns, match.type), snapshot.secret) };
+}
+
+// Browser approval flags never enter this runtime validation contract.
+function requireNativeStudentUidOwnership_(bulanKey, students) {
+  if (Number(bulanKey.slice(0, 4)) < 2027) return true;
+  var snapshot = readNativeUidOwnershipSnapshot_();
+  var records = (students || []).map(function(student) {
+    return validateNativeUidOwnerInSnapshot_(bulanKey, student, snapshot);
+  });
+  var manualBindings = {};
+  Object.keys(snapshot.approvedBindings).forEach(function(uid) { manualBindings[uid] = 'APPROVED_MANUAL:' + uid; });
+  return validateStudentUidForNativeMonth_(bulanKey, records, snapshot.registry, manualBindings);
+}
+
+// Editor-only private audit. No future-month payment guard is bypassed: no payment
+// submission, write, UID generation, or infrastructure setup is called here.
+function verifyCurrentNativeUidOwnership_(bulanKey) {
+  var summary = { bulanKey: bulanKey || '2027-01', total: 0, registryCount: 0,
+    OFFICIAL_ID: 0, MANUAL_ROSTER: 0, verified: 0, failureCount: 0, failures: [], success: false };
+  try {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(summary.bulanKey) || Number(summary.bulanKey.slice(0, 4)) < 2027) {
+      throw new Error('Bulan verification tidak sah.');
+    }
+    var snapshot = readNativeUidOwnershipSnapshot_();
+    summary.total = snapshot.allRows.length;
+    summary.registryCount = Object.keys(snapshot.registry.byUid).length;
+    var manualBindings = {};
+    Object.keys(snapshot.approvedBindings).forEach(function(uid) { manualBindings[uid] = 'APPROVED_MANUAL:' + uid; });
+    snapshot.allRows.forEach(function(entry) {
+      var uid = (entry.row[entry.columns.STUDENT_UID] || '').toString().trim();
+      var owner = snapshot.registry.byUid[uid];
+      if (owner && owner.VERIFY_METHOD === 'OFFICIAL_ID') summary.OFFICIAL_ID++;
+      if (owner && owner.VERIFY_METHOD === 'MANUAL_ROSTER') summary.MANUAL_ROSTER++;
+      try {
+        var record = validateNativeUidOwnerInSnapshot_(summary.bulanKey, {
+          studentKey: uid, studentType: entry.type, nama: normalizeYuranNameV2_(entry.row[entry.columns.NAMA])
+        }, snapshot);
+        validateStudentUidForNativeMonth_(summary.bulanKey, [record], snapshot.registry, manualBindings);
+        summary.verified++;
+      } catch (err) {
+        // Do not return raw errors, official identifiers, fingerprints or secrets.
+        summary.failures.push({ uid: uid, type: entry.type, sourceSheet: entry.sourceSheet,
+          sourceRow: entry.sourceRow, reason: 'UID_OWNERSHIP_VERIFICATION_FAILED' });
+      }
+    });
+    Object.keys(snapshot.registry.byUid).forEach(function(uid) {
+      if (!snapshot.rowsByUid[uid]) summary.failures.push({ uid: uid, reason: 'REGISTRY_OWNER_WITHOUT_ROSTER' });
+    });
+  } catch (err) {
+    summary.failures.push({ reason: 'OWNERSHIP_SNAPSHOT_OR_CONFIG_INVALID' });
+  }
+  summary.failureCount = summary.failures.length;
+  summary.success = summary.total === 185 && summary.registryCount === 185 &&
+    summary.OFFICIAL_ID === 173 && summary.MANUAL_ROSTER === 12 && summary.verified === 185 && summary.failureCount === 0;
+  Logger.log(JSON.stringify(summary));
+  return summary;
 }
 
 // Future registration wiring: prepare a 20-column row only after column T exists,
@@ -4334,6 +4494,7 @@ function getNativeEbayarStudentLookup(params) {
         guru: student.guru
       };
     });
+    if (Number(bulanKey.slice(0, 4)) >= 2027) requireNativeStudentUidOwnership_(bulanKey, results);
     return { success: true, results: results, cappedAt: 20 };
   } catch (err) {
     Logger.log('getNativeEbayarStudentLookup error: ' + err.message);
@@ -4397,6 +4558,9 @@ function validateNativeEbayarSubmissionV2_(params) {
       var studentKey = (studentParam.studentKey || '').toString().trim();
       var rawStudentName = (studentParam && typeof studentParam === 'object') ? studentParam.namaMurid : studentParam;
       var requestedName = normalizeYuranNameV2_(rawStudentName);
+      if (Number(bulanKey.slice(0, 4)) >= 2027 && !isStudentUid_(studentKey)) {
+        return fail('STUDENT_UID diperlukan untuk bayaran 2027 dan seterusnya.');
+      }
       if (!/^(KANAK|DEWASA):[A-Za-z0-9._-]{1,40}$/.test(studentKey)) {
         return fail('Identiti murid tidak sah atau telah luput. Sila pilih semula murid daripada carian rasmi SPKM.');
       }
@@ -4411,6 +4575,8 @@ function validateNativeEbayarSubmissionV2_(params) {
       canonicalStudents.push(officialStudent.nama);
       resolvedStudents.push(officialStudent);
     }
+
+    if (Number(bulanKey.slice(0, 4)) >= 2027) requireNativeStudentUidOwnership_(bulanKey, resolvedStudents);
 
     if (bulanKey.slice(0, 4) === '2026') {
       if (!/^2026-(0[1-9]|1[0-2])$/.test(bulanKey)) {
@@ -4483,9 +4649,8 @@ function validateNativeEbayarSubmissionV2_(params) {
       } else if (rowStudentId && requestedStudentKeys[rowStudentId]) {
         matchedStudentKeys.push(rowStudentId);
       } else if (!rowStudentId && requestedNames[rowName]) {
-        resolvedStudents.forEach(function(student) {
-          if (student.nama === rowName) matchedStudentKeys.push(student.studentKey);
-        });
+        // Historical name-only rows require review, never establish a new UID identity.
+        ambiguousPayment = true;
       }
       if (!matchedStudentKeys.length) return;
       var existingAmount = parseEbayarAmountV2_(row.AMOUNT_TOTAL || row.JUMLAH);
@@ -4575,10 +4740,17 @@ function makeNativeEbayarSourceHashV2_(paymentGroupId, validated) {
 function parseNativeEbayarNoteV2_(value) {
   try {
     var parsed = JSON.parse((value || '').toString());
-    return parsed && parsed.channel === 'NATIVE_EBAYAR' ? parsed : null;
+    return parsed && getNativePaymentChannelTuple_(parsed.channel) ? parsed : null;
   } catch (err) {
     return null;
   }
+}
+
+// Receipt readiness only: this allowlist does not authorize or create cash writes.
+function getNativePaymentChannelTuple_(channel) {
+  if (channel === 'NATIVE_EBAYAR') return { method: 'NATIVE_EBAYAR', source: 'NATIVE_EBAYAR' };
+  if (channel === 'NATIVE_CASH') return { method: 'CASH', source: 'NATIVE_CASH' };
+  return null;
 }
 
 function isNativeEbayarFileSignatureValidV2_(bytes, mimeType) {
@@ -4620,9 +4792,10 @@ function validateNativeEbayarReceiptGroupV2_(paymentGroupId) {
   var amountTotal = parseEbayarAmountV2_(first.AMOUNT_TOTAL || first.JUMLAH);
   var nativeNoteText = (first.NOTE || '').toString();
   var nativeNote = parseNativeEbayarNoteV2_(nativeNoteText);
+  var channelTuple = nativeNote ? getNativePaymentChannelTuple_(nativeNote.channel) : null;
   var sourceHash = (first.SOURCE_ROW_HASH || '').toString().trim();
   if (!bulanKey || typeof amountTotal !== 'number' || !isFinite(amountTotal) || amountTotal <= 0 ||
-      !nativeNote || !/^\d{4}-\d{2}-\d{2}$/.test((nativeNote.paymentDate || '').toString()) || !sourceHash) {
+      !nativeNote || !channelTuple || !/^\d{4}-\d{2}-\d{2}$/.test((nativeNote.paymentDate || '').toString()) || !sourceHash) {
     return invalid('Metadata kumpulan bayaran Native tidak lengkap atau tidak sah.');
   }
 
@@ -4638,8 +4811,8 @@ function validateNativeEbayarReceiptGroupV2_(paymentGroupId) {
     var rowAmount = parseEbayarAmountV2_(row.AMOUNT_TOTAL || row.JUMLAH);
     var rowReceiptUrl = (row.RESIT_URL || '').toString().trim();
     if ((row.PAYMENT_GROUP_ID || '').toString().trim() !== groupId ||
-        (row.SOURCE_SHEET || '').toString().trim().toUpperCase() !== 'NATIVE_EBAYAR' ||
-        (row.KAEDAH || '').toString().trim().toUpperCase() !== 'NATIVE_EBAYAR' ||
+        (row.SOURCE_SHEET || '').toString().trim().toUpperCase() !== channelTuple.source ||
+        (row.KAEDAH || '').toString().trim().toUpperCase() !== channelTuple.method ||
         (row.STATUS || '').toString().trim().toUpperCase() !== 'SELESAI' ||
         rowBulanKey !== bulanKey || rowAmount !== amountTotal ||
         (row.NOTE || '').toString() !== nativeNoteText ||
@@ -9627,8 +9800,10 @@ function getMonthlyPaymentSummaryV2(params) {
       var bucket = byMonth[bulanKey];
       var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
       var status = (r.STATUS || '').toString().trim().toUpperCase();
-      if (nama && (!status || status === 'SELESAI')) bucket.paidStudents[nama] = true;
       bucket.paymentRows++;
+      // Blank status compatibility is confined to pre-Native Legacy history.
+      if (status !== 'SELESAI' && !(bulanKey < '2026-09' && !status)) return;
+      if (nama) bucket.paidStudents[nama] = true;
 
       var groupId = (r.PAYMENT_GROUP_ID || r.PAYMENT_ID || '').toString().trim() || ('ROW-' + r._rowNumber);
       if (!bucket.paymentGroups[groupId]) {
@@ -9640,7 +9815,7 @@ function getMonthlyPaymentSummaryV2(params) {
 
     var summaries = Object.keys(byMonth).sort().map(function(k) {
       var b = byMonth[k];
-      var nativeStats = Number(b.tahun) > 2026 ? getNativeEbayarMonthStats_(b.bulanKey, data.rows) : null;
+      var nativeStats = b.bulanKey >= '2026-09' ? getNativeEbayarMonthStats_(b.bulanKey, data.rows) : null;
       return {
         bulanKey: b.bulanKey,
         tahun: b.tahun,
@@ -9660,16 +9835,16 @@ function getMonthlyPaymentSummaryV2(params) {
 
 function getYuranStatsForDashboard_(params) {
   params = params || {};
-  var bulan = (params.bulan || '').toString().trim().toUpperCase();
-  var NATIVE_MONTH_KEYS = {
-    'SEPT2026': '2026-09',
-    'OKT2026':  '2026-10',
-    'NOV2026':  '2026-11',
-    'DIS2026':  '2026-12'
-  };
-  var bulanKey = NATIVE_MONTH_KEYS[bulan];
-  if (!bulanKey) return getYuranStats(params);
-  return getYuranStatsV2({ tahun: '2026', bulanKey: bulanKey, requireExactSelesai: true });
+  var bulanKey = normalizeBulanKeyV2_(params.bulanKey || params.bulan, params.tahun || params.year, params.bulan);
+  if (!bulanKey) return { success: false, message: 'Bulan dashboard tidak sah.' };
+  if (bulanKey < '2026-09') return getYuranStats(params);
+  try {
+    var month = getEbayarMonthConfig_(bulanKey);
+    if (!month || month.routeType !== 'NATIVE') return { success: false, message: 'Tahun/bulan Native tidak aktif.' };
+    return getYuranStatsV2({ tahun: bulanKey.slice(0, 4), bulanKey: bulanKey, requireExactSelesai: true });
+  } catch (err) {
+    return { success: false, message: 'Konfigurasi dashboard Native tidak tersedia.' };
+  }
 }
 
 function getYuranStatsV2(params) {
@@ -9689,7 +9864,7 @@ function getYuranStatsV2(params) {
       var rowBulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
       if (rowBulanKey !== bulanKey) return;
       var status = (r.STATUS || '').toString().trim().toUpperCase();
-      if (params.requireExactSelesai === true ? status !== 'SELESAI' : (status && status !== 'SELESAI')) return;
+      if (status !== 'SELESAI' && !(bulanKey < '2026-09' && !status && params.requireExactSelesai !== true)) return;
       var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
       if (nama) {
         paid[nama] = true;
@@ -9742,24 +9917,36 @@ function getYuranParentV2(params) {
     var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '') || '2026';
     var data = getPaymentsRowsV2_();
     var found = [];
+    var foundByIdentity = {};
     var paidByMonth = {};
 
     data.rows.forEach(function(r) {
       var bulanKey = (r.BULAN_KEY || makeBulanKeyV2_(r.TAHUN, r.BULAN || r.SOURCE_SHEET)).toString();
       if (!bulanKey || bulanKey.indexOf(tahun + '-') !== 0) return;
       var status = (r.STATUS || '').toString().trim().toUpperCase();
-      if (status && status !== 'SELESAI') return;
+      if (status !== 'SELESAI' && !(bulanKey < '2026-09' && !status)) return;
       var nama = normalizeYuranNameV2_(r.NAMA_MURID_NORM || r.NAMA_MURID_RAW);
       if (!nama) return;
       if (!paidByMonth[bulanKey]) paidByMonth[bulanKey] = {};
       paidByMonth[bulanKey][nama] = true;
       if (keyword.length >= 2 && nama.indexOf(keyword) !== -1) {
-        found.push({
+        var identity = Number(tahun) >= 2027
+          ? ((r.STUDENT_ID || '').toString().trim() || ('HISTORY:' + (r.PAYMENT_ID || r._rowNumber))) : nama;
+        var foundKey = identity + '|' + bulanKey;
+        var entry = {
           nama: nama,
           bulan: bulanKey,
           bulanKey: bulanKey,
           resitUrl: (r.RESIT_URL || '').toString().trim()
-        });
+        };
+        if (Number(tahun) < 2027) {
+          found.push(entry);
+        } else if (!foundByIdentity[foundKey]) {
+          foundByIdentity[foundKey] = entry;
+          found.push(entry);
+        } else if (!/^https:\/\//i.test(foundByIdentity[foundKey].resitUrl) && /^https:\/\//i.test(entry.resitUrl)) {
+          foundByIdentity[foundKey].resitUrl = entry.resitUrl;
+        }
       }
     });
 
@@ -11567,6 +11754,7 @@ function getNativeEbayarPaidStudentIds_(bulanKey, paymentRows, directory) {
     var id = (row.STUDENT_ID || '').toString().trim();
     if (id) { if (directory[id]) paid[id] = true; return; }
     var name = normalizeYuranNameV2_(row.NAMA_MURID_NORM || row.NAMA_MURID_RAW);
+    // Read-only historical compatibility; never used to resolve new submissions.
     var matches = idsByName[name] || [];
     if (matches.length === 1) paid[matches[0]] = true;
   });
@@ -11884,10 +12072,12 @@ function getYuranParent(params) {
       if (keyword.length < 2 || nama.indexOf(keyword) === -1) return;
 
       var resitUrl = (r.RESIT_URL || '').toString().trim();
-      var resultKey = nama + '|' + bulanKey;
+      var identityKey = Number(bulanKey.slice(0, 4)) >= 2027
+        ? ((r.STUDENT_ID || '').toString().trim() || ('HISTORY:' + (r.PAYMENT_ID || r._rowNumber))) : nama;
+      var resultKey = identityKey + '|' + bulanKey;
       var existing = canonicalFoundByKey[resultKey];
       if (!existing) {
-        existing = { nama: nama, bulan: monthInfo.label, resitUrl: resitUrl };
+        existing = { nama: nama, bulan: monthInfo.label, resitUrl: resitUrl, _identityKey: resultKey };
         canonicalFoundByKey[resultKey] = existing;
         canonicalFound.push(existing);
       } else if (!/^https:\/\//i.test(existing.resitUrl || '') && /^https:\/\//i.test(resitUrl)) {
@@ -11902,7 +12092,7 @@ function getYuranParent(params) {
     var foundByKey = {};
     found.forEach(function(entry) {
       var namaKey = normalizeYuranNameV2_(entry.nama);
-      var resultKey = namaKey + '|' + (entry.bulan || '').toString().trim().toUpperCase();
+      var resultKey = entry._identityKey || (namaKey + '|' + (entry.bulan || '').toString().trim().toUpperCase());
       var existing = foundByKey[resultKey];
       if (!existing) {
         existing = { nama: entry.nama, bulan: entry.bulan, resitUrl: (entry.resitUrl || '').toString().trim() };

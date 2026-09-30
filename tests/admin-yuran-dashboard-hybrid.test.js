@@ -50,6 +50,9 @@ function createDispatcherContext() {
     }
   };
   vm.createContext(context);
+  vm.runInContext(backendSource.slice(backendSource.indexOf('var EBAYAR_MONTHS_V2 ='), backendSource.indexOf('var EBAYAR_YEAR_CONFIG_HEADERS_')), context);
+  ['makeBulanKeyV2_', 'normalizeBulanKeyV2_'].forEach(name => vm.runInContext(extractFunction(backendSource, name), context));
+  context.getEbayarMonthConfig_ = () => ({ routeType: 'NATIVE' });
   vm.runInContext(extractFunction(backendSource, 'getYuranStatsForDashboard_'), context);
   return { context, legacyCalls, v2Calls };
 }

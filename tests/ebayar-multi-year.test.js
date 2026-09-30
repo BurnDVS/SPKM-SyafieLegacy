@@ -213,18 +213,19 @@ test('eligibility keeps 2026 BIL identity but uses stable UID from 2027 onward',
 test('2027 Native search uses the selected month and hides paid students', () => {
   let rosterMonth = '';
   const ctx = load(['getNativeEbayarStudentLookup'], {
+    requireNativeStudentUidOwnership_: () => true,
     normalizeYuranNameV2_: value => String(value || '').trim().toUpperCase(),
     getEbayarMonthConfig_: key => ({ routeType: 'NATIVE', state: key === '2027-02' ? 'UPCOMING' : 'OPEN' }),
     getNativeEbayarOfficialStudentsV2_: key => {
       rosterMonth = key;
       return { byKey: {
-        'KANAK:1': { studentKey: 'KANAK:1', nama: 'ALI A', studentType: 'KANAK', guru: 'GURU' },
-        'KANAK:2': { studentKey: 'KANAK:2', nama: 'ALI B', studentType: 'KANAK', guru: 'GURU' }
+        'KANAK:U11111': { studentKey: 'KANAK:U11111', nama: 'ALI A', studentType: 'KANAK', guru: 'GURU' },
+        'KANAK:U22222': { studentKey: 'KANAK:U22222', nama: 'ALI B', studentType: 'KANAK', guru: 'GURU' }
       } };
     },
     getPaymentsRowsV2_: () => ({ rows: [
-      { BULAN_KEY: '2027-01', STUDENT_ID: 'KANAK:1' },
-      { BULAN_KEY: '2026-09', STUDENT_ID: 'KANAK:2' }
+      { BULAN_KEY: '2027-01', STUDENT_ID: 'KANAK:U11111' },
+      { BULAN_KEY: '2026-09', STUDENT_ID: 'KANAK:U22222' }
     ] }),
     normalizeBulanKeyV2_: value => value,
     Logger: { log() {} }
@@ -232,7 +233,7 @@ test('2027 Native search uses the selected month and hides paid students', () =>
   const january = ctx.getNativeEbayarStudentLookup({ bulanKey: '2027-01', keyword: 'ALI' });
   assert.equal(january.success, true);
   assert.equal(rosterMonth, '2027-01');
-  assert.deepEqual(Array.from(january.results, item => item.studentKey), ['KANAK:2']);
+  assert.deepEqual(Array.from(january.results, item => item.studentKey), ['KANAK:U22222']);
   assert.equal(ctx.getNativeEbayarStudentLookup({ bulanKey: '2027-02', keyword: 'ALI' }).success, false);
 });
 
@@ -266,8 +267,10 @@ test('2027 submission validation accepts configured Native month and rejects dup
   let rows = [];
   let currentMonth = '2027-01';
   const ctx = load(['validateNativeEbayarSubmissionV2_'], {
+    requireNativeStudentUidOwnership_: () => true,
+    isStudentUid_: value => /^KANAK:U[0-9A-F]{5}$/.test(value),
     getEbayarMonthConfig_: key => ({ routeType: 'NATIVE', state: key > currentMonth ? 'UPCOMING' : 'OPEN' }),
-    getNativeEbayarOfficialStudentsV2_: () => ({ byKey: { 'KANAK:1': { studentKey: 'KANAK:1', nama: 'ALI' } } }),
+    getNativeEbayarOfficialStudentsV2_: () => ({ byKey: { 'KANAK:U11111': { studentKey: 'KANAK:U11111', nama: 'ALI', studentType: 'KANAK' } } }),
     normalizeYuranNameV2_: value => String(value || '').trim().toUpperCase(),
     getMonthMetaV2_: key => ({ label: months[Number(key.slice(5, 7)) - 1].label }),
     getPaymentsRowsV2_: () => ({ rows }),
@@ -279,7 +282,7 @@ test('2027 submission validation accepts configured Native month and rejects dup
     sanitizeNativeEbayarFileNameV2_: value => value,
     Logger: { log() {} }
   });
-  const payload = { bulanKey: '2027-01', students: [{ studentKey: 'KANAK:1', namaMurid: 'ALI' }],
+  const payload = { bulanKey: '2027-01', students: [{ studentKey: 'KANAK:U11111', namaMurid: 'ALI' }],
     tarikhBayaran: '2027-01-10', jumlahKeseluruhan: '30.00', noRujukan: '',
     fileName: 'slip.pdf', mimeType: 'application/pdf', fileSize: 100 };
   assert.equal(ctx.validateNativeEbayarSubmissionV2_(payload).bulanLabel, 'Month 1 2027');
@@ -296,9 +299,9 @@ test('2027 submission validation accepts configured Native month and rejects dup
   payload.tarikhBayaran = '2027-01-10';
   assert.equal(ctx.validateNativeEbayarSubmissionV2_(payload).readyToSubmit, false);
   payload.bulanKey = '2027-01';
-  rows = [{ BULAN_KEY: '2027-01', STUDENT_ID: 'KANAK:1', STATUS: 'SELESAI' }];
+  rows = [{ BULAN_KEY: '2027-01', STUDENT_ID: 'KANAK:U11111', STATUS: 'SELESAI' }];
   assert.equal(ctx.validateNativeEbayarSubmissionV2_(payload).hasDuplicate, true);
-  rows = [{ BULAN_KEY: '2026-09', STUDENT_ID: 'KANAK:1', STATUS: 'SELESAI' }];
+  rows = [{ BULAN_KEY: '2026-09', STUDENT_ID: 'KANAK:U11111', STATUS: 'SELESAI' }];
   assert.equal(ctx.validateNativeEbayarSubmissionV2_(payload).readyToSubmit, true);
 });
 
