@@ -11,12 +11,16 @@ function harness() {
     getLastRow: () => rows.length,
     getRange: (r, c, n, w) => ({ setValues(values) { writes++; values.forEach((v, i) => { rows[r - 1 + i] = Array.from(v); }); } })
   };
-  const database = { getSheetByName(name) { reads++; return name === 'MonthConfig' && rows ? sheet : null; },
-    insertSheet(name) { assert.equal(name, 'MonthConfig'); rows = []; return sheet; } };
+  let auditRows = null;
+  const auditSheet = { getLastRow: () => auditRows.length, getLastColumn: () => 14,
+    getDataRange: () => ({ getValues: () => auditRows, getFormulas: () => [] }),
+    getRange: r => ({ setNumberFormat() {}, setValues(values) { values.forEach((row, i) => { auditRows[r - 1 + i] = Array.from(row); }); } }) };
+  const database = { getSheetByName(name) { reads++; return name === 'AdminConfigAudit' ? (auditRows ? auditSheet : null) : name === 'MonthConfig' && rows ? sheet : null; },
+    insertSheet(name) { if (name === 'AdminConfigAudit') { auditRows = []; return auditSheet; } assert.equal(name, 'MonthConfig'); rows = []; return sheet; } };
   const ctx = vm.createContext({ PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'folder' }) },
     Logger: { log() {} }, SpreadsheetApp: { flush() {} },
     LockService: { getScriptLock: () => ({ tryLock() { lockHook(); return true; }, releaseLock() { release++; } }) },
-    Utilities: { formatDate: (_d, _z, format) => format === 'yyyy-MM' ? '2026-09' : '2026-09-30 13:00:00', base64Decode: () => [1, 2, 3] } });
+    Utilities: { getUuid: require('node:crypto').randomUUID, formatDate: (_d, _z, format) => format === 'yyyy-MM' ? '2026-09' : '2026-09-30 13:00:00', base64Decode: () => [1, 2, 3] } });
   vm.runInContext(source, ctx);
   ctx.validateToken = (token, options) => {
     assert.equal(options.revalidateStaff, true);
@@ -109,7 +113,7 @@ test('Legacy update is rejected and empty reason cannot block', () => {
 
 test('read-back failure reports uncertain result without retry', () => {
   const h = harness();
-  h.ctx.SpreadsheetApp.flush = () => { h.rows()[1][3] = 99; };
+  h.ctx.SpreadsheetApp.flush = () => { if (h.rows() && h.rows()[1]) h.rows()[1][3] = 99; };
   const result = h.ctx.updateEbayarMonthPolicy(h.payload);
   assert.equal(result.success, false); assert.equal(result.uncertainOutcome, true);
   assert.equal(h.writes(), 2); assert.match(result.message, /Jangan ulang/);
@@ -166,7 +170,7 @@ function uiHarness(request, token = 'valid', role = 'ADMIN') {
     window: { prompt: () => 'Semakan bank' }, callGASPromise(action, payload) { calls.push({ action, payload }); return request(); },
     isEbayarYearAdminSessionCurrent_: t => t === token && ctx.currentRole === 'ADMIN' });
   vm.runInContext('let ebayarMonthsBusy=false; let ebayarMonthsData={years:[]};', ctx);
-  for (const name of ['getEbayarMonthAdminToken_', 'showEbayarMonthsMessage', 'setEbayarMonthsBusy', 'loadEbayarMonthManagement', 'updateEbayarMonthAdmin']) vm.runInContext(uiFunction(name), ctx);
+  for (const name of ['makeAdminConfigRequestId_', 'getEbayarMonthAdminToken_', 'showEbayarMonthsMessage', 'setEbayarMonthsBusy', 'loadEbayarMonthManagement', 'updateEbayarMonthAdmin']) vm.runInContext(uiFunction(name), ctx);
   ctx.renderEbayarMonthManagement = data => { if (!data.success) throw new Error(data.message); vm.runInContext('ebayarMonthsData={years:[]}', ctx); };
   return { ctx, ids, calls, controls };
 }

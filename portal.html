@@ -3572,6 +3572,7 @@
     <button class="btn btn-ghost btn-sm" id="btnSyncMinusBayar" onclick="syncFormMinusBayar()" style="display:none; margin-bottom:2px;">
       🧹 Kemas Form (Tolak Dah Bayar)
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnAdminConfigAudit" type="button" onclick="loadAdminConfigAudit()" style="display:none">Audit Perubahan Konfigurasi</button>
     <button class="btn btn-ghost btn-sm" id="btnEbayarMonths" type="button" onclick="loadEbayarMonthManagement()" style="display:none">Kawalan Kutipan Bulanan</button>
     <button class="btn btn-ghost btn-sm" id="btnEbayarYears" type="button" onclick="loadEbayarYearManagement()" style="display:none; margin-bottom:2px;">Pengurusan Tahun eBayar</button>
   </div>
@@ -3589,6 +3590,12 @@
       <select id="ebayarMonthsYear" onchange="renderEbayarMonthRows()" aria-label="Tahun kawalan kutipan"></select>
       <button id="btnReloadEbayarMonths" type="button" class="btn btn-ghost btn-sm" onclick="loadEbayarMonthManagement()">Muat Semula</button>
       <div id="ebayarMonthsList"></div><p id="ebayarMonthsMessage" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="card" id="adminConfigAuditPanel" style="display:none;margin-bottom:18px">
+    <div class="card-header"><div class="card-header-text"><h3>Audit Perubahan Konfigurasi</h3><p>Bacaan sahaja: 50 rekod terkini. PENDING/UNCERTAIN perlu disemak bersama konfigurasi; jangan ulang mutation.</p></div></div>
+    <div class="card-body"><button class="btn btn-ghost btn-sm" id="btnRefreshAdminConfigAudit" type="button" onclick="loadAdminConfigAudit()">Muat Semula</button>
+      <div id="adminConfigAuditList"></div><p id="adminConfigAuditMessage" role="status" aria-live="polite"></p>
     </div>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
@@ -4330,6 +4337,14 @@
     if (ebayarV2Maintenance) ebayarV2Maintenance.style.display = isAdmin ? '' : 'none';
     const btnEbayarYears = document.getElementById('btnEbayarYears');
     if (btnEbayarYears) btnEbayarYears.style.display = isAdmin ? '' : 'none';
+    const auditButton = document.getElementById('btnAdminConfigAudit');
+    if (auditButton) auditButton.style.display = isAdmin ? '' : 'none';
+    const auditPanel = document.getElementById('adminConfigAuditPanel');
+    if (!isAdmin && auditPanel) {
+      auditPanel.style.display = 'none';
+      document.getElementById('adminConfigAuditList').replaceChildren();
+      document.getElementById('adminConfigAuditMessage').textContent = '';
+    }
     const monthButton = document.getElementById('btnEbayarMonths');
     if (monthButton) monthButton.style.display = isAdmin ? '' : 'none';
     const monthPanel = document.getElementById('ebayarMonthsAdmin');
@@ -6161,6 +6176,51 @@
     }
   }
 
+  let adminConfigAuditBusy = false;
+
+  function makeAdminConfigRequestId_() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'cfg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+
+  async function loadAdminConfigAudit() {
+    if (adminConfigAuditBusy || !loggedInGuru || currentRole !== 'ADMIN') return;
+    var panel = document.getElementById('adminConfigAuditPanel');
+    var message = document.getElementById('adminConfigAuditMessage');
+    var list = document.getElementById('adminConfigAuditList');
+    var token = _spkm_st.getItem('spkm_token');
+    panel.style.display = '';
+    list.replaceChildren();
+    if (!token) { message.textContent = 'Sesi Admin tidak sah. Sila log masuk semula.'; return; }
+    adminConfigAuditBusy = true;
+    var buttons = [document.getElementById('btnAdminConfigAudit'), document.getElementById('btnRefreshAdminConfigAudit')];
+    buttons.forEach(function(button) { button.disabled = true; });
+    panel.setAttribute('aria-busy', 'true');
+    message.textContent = 'Memuatkan audit...';
+    try {
+      var data = await callGASPromise('getAdminConfigAudit', { token: _spkm_st.getItem('spkm_token'), limit: 50 }, 30000);
+      if (!isEbayarYearAdminSessionCurrent_(token)) return;
+      if (!data || !data.success || !Array.isArray(data.records)) throw new Error(data && data.message || 'Audit tidak tersedia.');
+      data.records.forEach(function(record) {
+        var row = document.createElement('div');
+        row.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border)';
+        var summary = document.createElement('div');
+        summary.textContent = record.CREATED_AT + ' · ' + record.ACTOR_NAME + ' (' + record.ACTOR_EMAIL + ') · ' + record.ACTION + ' · ' + record.TARGET_TYPE + ' ' + record.TARGET_KEY + ' · ' + record.OUTCOME;
+        var detail = document.createElement('div');
+        detail.textContent = 'Sebab: ' + (record.REASON || '—') + ' · Request: ' + record.REQUEST_ID + (record.ERROR_CODE ? ' · ' + record.ERROR_CODE : '');
+        row.appendChild(summary); row.appendChild(detail); list.appendChild(row);
+      });
+      message.textContent = data.records.length ? 'Audit terkini dimuatkan.' : 'Belum ada audit perubahan konfigurasi.';
+    } catch (err) {
+      if (isEbayarYearAdminSessionCurrent_(token)) message.textContent = err.message || 'Audit gagal dimuatkan.';
+    } finally {
+      adminConfigAuditBusy = false;
+      buttons.forEach(function(button) { button.disabled = false; });
+      panel.setAttribute('aria-busy', 'false');
+    }
+  }
+
+
   function getEbayarMonthAdminToken_() {
     var token = _spkm_st.getItem('spkm_token');
     if (!loggedInGuru || currentRole !== 'ADMIN' || !token) {
@@ -6254,14 +6314,14 @@
     var token = getEbayarMonthAdminToken_();
     if (!token) return;
     var policy = month.paymentPolicy === 'BLOCKED' ? 'AUTO' : 'BLOCKED';
-    var reason = policy === 'BLOCKED' ? window.prompt('Sebab menghentikan kutipan (dipaparkan kepada pembayar; wajib, maksimum 300 aksara):') : '';
+    var reason = policy === 'BLOCKED' ? window.prompt('Sebab menghentikan kutipan (dipaparkan kepada pembayar; wajib, maksimum 300 aksara; jangan masukkan data murid/token/OTP):') : '';
     if (reason === null) return;
     reason = reason.trim();
     if ((policy === 'BLOCKED' && !reason) || reason.length > 300) { showEbayarMonthsMessage('Sebab wajib diisi apabila block (maksimum 300 aksara).', true); return; }
     setEbayarMonthsBusy(true);
     showEbayarMonthsMessage('Menyimpan policy kutipan...', false);
     try {
-      var data = await callGASPromise('updateEbayarMonthPolicy', { token: _spkm_st.getItem('spkm_token'), bulanKey: month.bulanKey, paymentPolicy: policy, reason: reason, revision: month.revision }, 120000);
+      var data = await callGASPromise('updateEbayarMonthPolicy', { token: _spkm_st.getItem('spkm_token'), request_id: makeAdminConfigRequestId_(), bulanKey: month.bulanKey, paymentPolicy: policy, reason: reason, revision: month.revision }, 120000);
       if (!isEbayarYearAdminSessionCurrent_(token)) return;
       renderEbayarMonthManagement(data);
       showEbayarMonthsMessage('Policy kutipan disimpan. History dan resit dikekalkan.', false);
@@ -6361,6 +6421,7 @@
       showEbayarYearsMessage('Muat semula senarai tahun sebelum membuat perubahan.', true);
       return;
     }
+    payload.request_id = makeAdminConfigRequestId_();
     setEbayarYearsBusy(true);
     showEbayarYearsMessage('Menyimpan konfigurasi tahun...', false);
     try {

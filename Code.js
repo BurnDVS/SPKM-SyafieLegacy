@@ -602,7 +602,7 @@ var ALLOWED_ACTIONS = [
   'getNativeEbayarStudentLookup', 'preflightNativeEbayarSubmission', 'submitNativeEbayarPayment',
   'getEbayarPortalMode', 'setEbayarPortalMode', 'getPublicEbayarYears',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
-  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy', 'getAdminConfigAudit',
   'recordCash', 'syncForms', 'syncFormBulanIni', 'updateStatusMurid', 'getMuridListAll',
   'getKehadiranStats', 'getKehadiranRekod', 'getMuridByGuru', 'simpanKehadiran',
   'uploadGuruGambar', 'updateGuru', 'getOrgChart', 'hantarWAYuran',
@@ -628,7 +628,7 @@ var AUTH_REQUIRED_ACTIONS = [
   'simpanDeviceToken', 'getNotifikasi',
   'ensureEbayarMasterSchemaV2', 'listEbayarYears', 'getMonthlyPaymentSummaryV2',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
-  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy', 'getAdminConfigAudit',
   'getYuranStatsV2', 'getYuranParentV2', 'compareYuranLegacyVsV2',
   'getEbayarV2MaintenanceStatus', 'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'setEbayarPortalMode',
@@ -660,7 +660,7 @@ var ADMIN_REQUIRED_ACTIONS = [
   'previewCurrentMonthEbayarV2', 'verifyCurrentMonthLegacyVsV2',
   'syncCurrentMonthEbayarV2', 'auditEbayarSourceTabsV2', 'setEbayarPortalMode',
   'getEbayarYearManagement', 'createEbayarYear', 'updateEbayarYear',
-  'getEbayarMonthManagement', 'updateEbayarMonthPolicy',
+  'getEbayarMonthManagement', 'updateEbayarMonthPolicy', 'getAdminConfigAudit',
   'getMuridByGuruUntukTukar', 'tukarGuruMurid',
   'getMuridTanpaGuru', 'assignGuruMurid'
 ];
@@ -903,6 +903,7 @@ function doAction(action, payload) {
   else if (action === 'submitNativeEbayarPayment') return submitNativeEbayarPayment(payload);
   else if (action === 'getEbayarPortalMode')     return getEbayarPortalMode(payload);
   else if (action === 'getPublicEbayarYears')    return getPublicEbayarYears(payload);
+  else if (action === 'getAdminConfigAudit') return getAdminConfigAudit(payload);
   else if (action === 'getEbayarMonthManagement') return getEbayarMonthManagement(payload);
   else if (action === 'updateEbayarMonthPolicy') return updateEbayarMonthPolicy(payload);
   else if (action === 'getEbayarYearManagement') return getEbayarYearManagement(payload);
@@ -3588,43 +3589,194 @@ function getEbayarMonthManagementCore_() {
   }) };
 }
 
+var ADMIN_CONFIG_AUDIT_HEADERS_ = ['AUDIT_ID', 'REQUEST_ID', 'ACTION', 'TARGET_TYPE', 'TARGET_KEY', 'ACTOR_EMAIL', 'ACTOR_NAME', 'ACTOR_ROLE', 'BEFORE_JSON', 'AFTER_JSON', 'REASON', 'OUTCOME', 'ERROR_CODE', 'CREATED_AT'];
+
+function adminConfigRequestId_(value) {
+  if (value === undefined || value === null || value === '') return Utilities.getUuid();
+  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{7,79}$/.test(value)) throw new Error('REQUEST_ID_INVALID');
+  return value;
+}
+
+function adminConfigReason_(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string' || value.trim().length > 300 || /[\u0000-\u001f\u007f]/.test(value) || /^[=+@-]/.test(value.trim())) throw new Error('REASON_INVALID');
+  return value.trim();
+}
+
+function adminConfigSnapshot_(value, type) {
+  if (value === null) return null;
+  var fields = type === 'YEAR' ? ['year', 'status', 'mode', 'startMonth', 'endMonth'] : ['bulanKey', 'paymentPolicy', 'reason', 'revision', 'updatedAt', 'updatedBy'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(function(key) { return fields.indexOf(key) < 0; })) throw new Error('AUDIT_SNAPSHOT_INVALID');
+  var result = {};
+  fields.forEach(function(key) { if (value[key] !== undefined) result[key] = value[key]; });
+  if (type === 'YEAR') {
+    if (!Number.isSafeInteger(result.year) || result.year < 2026 || ['ACTIVE', 'INACTIVE'].indexOf(result.status) < 0 || ['NATIVE', 'MIXED'].indexOf(result.mode) < 0 || result.startMonth !== 1 || result.endMonth !== 12) throw new Error('AUDIT_SNAPSHOT_INVALID');
+  } else {
+    if (typeof result.bulanKey !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(result.bulanKey) || ['AUTO', 'BLOCKED'].indexOf(result.paymentPolicy) < 0 || !Number.isSafeInteger(result.revision) || result.revision < 0 || typeof result.reason !== 'string' || result.reason.length > 300 || (result.updatedAt !== undefined && !(typeof result.updatedAt === 'string' || result.updatedAt instanceof Date)) || (result.updatedBy !== undefined && typeof result.updatedBy !== 'string')) throw new Error('AUDIT_SNAPSHOT_INVALID');
+  }
+  return result;
+}
+
+function adminConfigMutationResponse_(spec) {
+  try {
+    var result = spec.response();
+    if (result && result.success) return result;
+  } catch (err) {}
+  return { success: true, refreshRequired: true, message: 'Perubahan disahkan. Muat semula konfigurasi untuk paparan terkini.' };
+}
+
+function readAdminConfigAudit_() {
+  var sheet = getEbayarMasterSpreadsheet_().getSheetByName('AdminConfigAudit');
+  if (!sheet) return { sheet: null, records: [] };
+  var range = sheet.getDataRange();
+  var rows = range.getValues();
+  if (sheet.getLastColumn() !== 14 || !rows.length || rows[0].join('|') !== ADMIN_CONFIG_AUDIT_HEADERS_.join('|') || range.getFormulas().some(function(row) { return row.some(function(cell) { return !!cell; }); })) throw new Error('AUDIT_SCHEMA_INVALID');
+  var requests = Object.create(null), ids = Object.create(null);
+  var records = [];
+  rows.slice(1).forEach(function(row, index) {
+    if (row.every(function(value) { return value === ''; })) return;
+    var record = {};
+    ADMIN_CONFIG_AUDIT_HEADERS_.forEach(function(key, col) { record[key] = row[col]; });
+    if (typeof record.AUDIT_ID !== 'string' || !record.AUDIT_ID || ids[record.AUDIT_ID] || typeof record.REQUEST_ID !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{7,79}$/.test(record.REQUEST_ID) || requests[record.REQUEST_ID] || ['CREATE_EBAYAR_YEAR', 'UPDATE_EBAYAR_YEAR', 'UPDATE_EBAYAR_MONTH_POLICY'].indexOf(record.ACTION) < 0 || ['YEAR', 'MONTH'].indexOf(record.TARGET_TYPE) < 0 || (record.ACTION === 'UPDATE_EBAYAR_MONTH_POLICY') !== (record.TARGET_TYPE === 'MONTH') || record.ACTOR_ROLE !== 'ADMIN' || typeof record.ACTOR_EMAIL !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.ACTOR_EMAIL) || typeof record.ACTOR_NAME !== 'string' || ['PENDING', 'SUCCESS', 'FAILED', 'UNCERTAIN'].indexOf(record.OUTCOME) < 0 || typeof record.ERROR_CODE !== 'string' || !record.CREATED_AT) throw new Error('AUDIT_RECORD_INVALID');
+    if (!(record.TARGET_TYPE === 'YEAR' ? /^\d{4}$/ : /^\d{4}-(0[1-9]|1[0-2])$/).test(record.TARGET_KEY)) throw new Error('AUDIT_TARGET_INVALID');
+    record.BEFORE_JSON = JSON.stringify(adminConfigSnapshot_(JSON.parse(record.BEFORE_JSON), record.TARGET_TYPE));
+    record.AFTER_JSON = JSON.stringify(adminConfigSnapshot_(JSON.parse(record.AFTER_JSON), record.TARGET_TYPE));
+    adminConfigReason_(record.REASON);
+    record.row = index + 2;
+    ids[record.AUDIT_ID] = true; requests[record.REQUEST_ID] = true; records.push(record);
+  });
+  return { sheet: sheet, records: records };
+}
+
+function writeAdminConfigAuditRecord_(record, row) {
+  var state = readAdminConfigAudit_();
+  var sheet = state.sheet;
+  if (!sheet) {
+    sheet = getEbayarMasterSpreadsheet_().insertSheet('AdminConfigAudit');
+    sheet.getRange(1, 1, 1, 14).setValues([ADMIN_CONFIG_AUDIT_HEADERS_]);
+  }
+  var target = row || sheet.getLastRow() + 1;
+  if (/^=/.test(record.ACTOR_NAME) || /^=/.test(record.ACTOR_EMAIL)) throw new Error('AUDIT_ACTOR_INVALID');
+  var values = ADMIN_CONFIG_AUDIT_HEADERS_.map(function(key) { return record[key]; });
+  var range = sheet.getRange(target, 1, 1, 14);
+  // Audit values are explicit strings; formula prefixes are rejected.
+  range.setNumberFormat('@');
+  range.setValues([values]);
+  SpreadsheetApp.flush();
+  var verified = readAdminConfigAudit_().records.filter(function(item) { return item.REQUEST_ID === record.REQUEST_ID; })[0];
+  if (!verified || ADMIN_CONFIG_AUDIT_HEADERS_.some(function(key) { return String(verified[key]) !== String(record[key]); })) throw new Error('AUDIT_VERIFY_FAILED');
+  return verified.row;
+}
+
+function adminConfigIntent_(snapshot, type) {
+  var keys = type === 'YEAR' ? ['year', 'status', 'mode', 'startMonth', 'endMonth'] : ['bulanKey', 'paymentPolicy', 'reason', 'revision'];
+  return JSON.stringify(keys.map(function(key) { return snapshot && snapshot[key]; }));
+}
+
+function runAuditedConfigMutation_(params, spec) {
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  var requestId, reason;
+  try { requestId = adminConfigRequestId_(params.request_id); reason = adminConfigReason_(params.reason); }
+  catch (err) { return { success: false, errorCode: err.message, message: 'Request ID atau sebab tidak sah.' }; }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { success: false, requestId: requestId, errorCode: 'LOCK_BUSY', message: 'Sistem sibuk. Muat semula sebelum membuat perubahan.' };
+  var audit = null, auditRow = null, writeAttempted = false;
+  try {
+    auth = authorizePrivilegedHandler_(params, true);
+    if (!auth.valid) return { success: false, requestId: requestId, message: auth.message };
+    var prior = readAdminConfigAudit_().records.filter(function(record) { return record.REQUEST_ID === requestId; })[0];
+    if (prior) {
+      if (prior.ACTOR_EMAIL !== auth.actor.email || prior.ACTION !== spec.action || prior.TARGET_TYPE !== spec.type || prior.TARGET_KEY !== spec.key || prior.REASON !== reason || adminConfigIntent_(JSON.parse(prior.AFTER_JSON), spec.type) !== adminConfigIntent_(spec.after, spec.type)) return { success: false, requestId: requestId, errorCode: 'REQUEST_ID_CONFLICT', message: 'Request ID telah digunakan untuk perubahan atau actor yang berbeza.' };
+      var reused = prior.OUTCOME === 'SUCCESS' ? adminConfigMutationResponse_(spec) : { success: false, message: 'Outcome sedia ada: ' + prior.OUTCOME + '. Jangan ulang mutation; semak audit dan konfigurasi.' };
+      reused.requestId = requestId; reused.auditId = prior.AUDIT_ID; reused.outcome = prior.OUTCOME; reused.reused = true;
+      reused.uncertainOutcome = prior.OUTCOME === 'PENDING' || prior.OUTCOME === 'UNCERTAIN';
+      reused.errorCode = prior.ERROR_CODE;
+      return reused;
+    }
+    audit = { AUDIT_ID: Utilities.getUuid(), REQUEST_ID: requestId, ACTION: spec.action, TARGET_TYPE: spec.type, TARGET_KEY: spec.key,
+      ACTOR_EMAIL: auth.actor.email, ACTOR_NAME: auth.actor.nama, ACTOR_ROLE: auth.actor.role,
+      BEFORE_JSON: 'null', AFTER_JSON: JSON.stringify(adminConfigSnapshot_(spec.after, spec.type)), REASON: reason,
+      OUTCOME: 'PENDING', ERROR_CODE: '', CREATED_AT: Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss') };
+    var captureError = null;
+    try { audit.BEFORE_JSON = JSON.stringify(adminConfigSnapshot_(spec.before(), spec.type)); }
+    catch (err) { captureError = err; }
+    auditRow = writeAdminConfigAuditRecord_(audit);
+    if (captureError) throw captureError;
+    var after = spec.mutate(auth.actor, function() { writeAttempted = true; });
+    audit.AFTER_JSON = JSON.stringify(adminConfigSnapshot_(after, spec.type));
+    audit.OUTCOME = 'SUCCESS';
+    writeAdminConfigAuditRecord_(audit, auditRow);
+    var result = adminConfigMutationResponse_(spec);
+    result.requestId = requestId; result.auditId = audit.AUDIT_ID; result.outcome = 'SUCCESS'; result.reused = false;
+    return result;
+  } catch (err) {
+    var outcome = writeAttempted ? 'UNCERTAIN' : 'FAILED';
+    var errorCode = writeAttempted ? 'CONFIG_WRITE_UNVERIFIED' : 'CONFIG_REJECTED';
+    if (auditRow) {
+      audit.OUTCOME = outcome; audit.ERROR_CODE = errorCode;
+      try { writeAdminConfigAuditRecord_(audit, auditRow); }
+      catch (auditErr) { outcome = 'UNCERTAIN'; errorCode = 'AUDIT_FINALIZE_UNVERIFIED'; }
+    } else { errorCode = 'AUDIT_UNAVAILABLE'; outcome = 'UNCERTAIN'; }
+    return { success: false, requestId: requestId, auditId: audit && audit.AUDIT_ID || '', outcome: outcome,
+      uncertainOutcome: outcome === 'UNCERTAIN', errorCode: errorCode,
+      message: (writeAttempted || outcome === 'UNCERTAIN') ? 'Hasil perubahan tidak dapat dipastikan. Jangan ulang mutation; semak audit dan konfigurasi.' : 'Perubahan ditolak: ' + err.message };
+  } finally { lock.releaseLock(); }
+}
+
+function getAdminConfigAudit(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  var limit = params.limit === undefined ? 50 : params.limit;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 || (params.targetType !== undefined && ['YEAR', 'MONTH'].indexOf(params.targetType) < 0) || (params.outcome !== undefined && ['PENDING', 'SUCCESS', 'FAILED', 'UNCERTAIN'].indexOf(params.outcome) < 0) || (params.targetKey !== undefined && (typeof params.targetKey !== 'string' || !/^(\d{4}|\d{4}-(0[1-9]|1[0-2]))$/.test(params.targetKey)))) return { success: false, message: 'Filter atau limit audit tidak sah.' };
+  try {
+    var records = readAdminConfigAudit_().records.filter(function(record) {
+      return (!params.targetType || record.TARGET_TYPE === params.targetType) && (!params.targetKey || record.TARGET_KEY === params.targetKey) && (!params.outcome || record.OUTCOME === params.outcome);
+    }).reverse().slice(0, limit).map(function(record) {
+      var result = {}; ADMIN_CONFIG_AUDIT_HEADERS_.forEach(function(key) { result[key] = record[key]; }); return result;
+    });
+    return { success: true, records: records };
+  } catch (err) { return { success: false, message: 'Audit tidak dapat dibaca: skema atau rekod tidak sah.' }; }
+}
+
+
 function updateEbayarMonthPolicy(params) {
   params = params || {};
   var auth = authorizePrivilegedHandler_(params, true);
   if (!auth.valid) return { success: false, message: auth.message };
-  var key = params.bulanKey;
-  var policy = params.paymentPolicy;
-  var reason = typeof params.reason === 'string' ? params.reason.trim() : '';
-  if (typeof key !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || ['AUTO', 'BLOCKED'].indexOf(policy) < 0 || !Number.isSafeInteger(params.revision) || params.revision < 0 || reason.length > 300 || /[\u0000-\u001f\u007f]/.test(reason) || /^[=+@-]/.test(reason) || (policy === 'BLOCKED' && !reason)) return { success: false, message: 'Policy, revision atau sebab tidak sah.' };
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) return { success: false, message: 'Sistem sibuk. Muat semula sebelum mengemaskini.' };
-  var attempted = false;
-  try {
-    auth = authorizePrivilegedHandler_(params, true);
-    if (!auth.valid) return { success: false, message: auth.message };
-    var policies = readEbayarMonthPolicies_();
-    var current = resolveEbayarPaymentPolicy_(key, policies);
-    if (current.revision !== params.revision) return { success: false, message: 'Konfigurasi telah berubah. Muat semula senarai bulan.' };
-    var ss = getEbayarMasterSpreadsheet_();
-    var sheet = ss.getSheetByName('MonthConfig');
-    var revision = current.revision + 1;
-    if (!Number.isSafeInteger(revision)) throw new Error('Revision MonthConfig melebihi had.');
-    attempted = true;
-    if (!sheet) {
-      sheet = ss.insertSheet('MonthConfig');
-      sheet.getRange(1, 1, 1, 6).setValues([EBAYAR_MONTH_CONFIG_HEADERS_]);
-    }
-    var row = [key, policy, reason, revision, Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss'), auth.actor.email];
-    sheet.getRange(policies[key] ? policies[key].row : sheet.getLastRow() + 1, 1, 1, 6).setValues([row]);
-    SpreadsheetApp.flush();
-    var verified = readEbayarMonthPolicies_()[key];
-    if (!verified || verified.revision !== revision || verified.paymentPolicy !== policy || verified.reason !== reason || verified.updatedBy !== auth.actor.email || String(verified.updatedAt) !== row[4]) throw new Error('Pengesahan selepas simpan gagal.');
-    return getEbayarMonthManagementCore_();
-  } catch (err) {
-    return { success: false, uncertainOutcome: attempted, message: err.message + (attempted ? ' Jangan ulang perubahan; muat semula untuk menyemak hasil.' : '') };
-  } finally { lock.releaseLock(); }
+  var key = params.bulanKey, policy = params.paymentPolicy;
+  var reason;
+  try { reason = adminConfigReason_(params.reason); } catch (err) { return { success: false, message: 'Sebab tidak sah.' }; }
+  if (typeof key !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || ['AUTO', 'BLOCKED'].indexOf(policy) < 0 || !Number.isSafeInteger(params.revision) || params.revision < 0 || !Number.isSafeInteger(params.revision + 1) || /^[=+@-]/.test(reason) || (policy === 'BLOCKED' && !reason)) return { success: false, message: 'Policy, revision atau sebab tidak sah.' };
+  return runAuditedConfigMutation_(params, {
+    action: 'UPDATE_EBAYAR_MONTH_POLICY', type: 'MONTH', key: key,
+    after: { bulanKey: key, paymentPolicy: policy, reason: reason, revision: params.revision + 1 },
+    before: function() {
+      var policies = readEbayarMonthPolicies_();
+      var effective = resolveEbayarPaymentPolicy_(key, policies);
+      var current = policies[key];
+      return current ? { bulanKey: key, paymentPolicy: current.paymentPolicy, reason: current.reason, revision: current.revision, updatedAt: current.updatedAt, updatedBy: current.updatedBy }
+        : { bulanKey: key, paymentPolicy: effective.paymentPolicy, reason: '', revision: 0 };
+    },
+    mutate: function(actor, markWrite) {
+      var policies = readEbayarMonthPolicies_();
+      var current = resolveEbayarPaymentPolicy_(key, policies);
+      if (current.revision !== params.revision) throw new Error('Konfigurasi telah berubah. Muat semula senarai bulan.');
+      var ss = getEbayarMasterSpreadsheet_();
+      var sheet = ss.getSheetByName('MonthConfig');
+      var row = [key, policy, reason, current.revision + 1, Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss'), actor.email];
+      markWrite();
+      if (!sheet) { sheet = ss.insertSheet('MonthConfig'); sheet.getRange(1, 1, 1, 6).setValues([EBAYAR_MONTH_CONFIG_HEADERS_]); }
+      sheet.getRange(policies[key] ? policies[key].row : sheet.getLastRow() + 1, 1, 1, 6).setValues([row]);
+      SpreadsheetApp.flush();
+      var verified = readEbayarMonthPolicies_()[key];
+      if (!verified || verified.revision !== row[3] || verified.paymentPolicy !== policy || verified.reason !== reason || verified.updatedBy !== actor.email || String(verified.updatedAt) !== row[4]) throw new Error('Pengesahan selepas simpan gagal.');
+      return { bulanKey: key, paymentPolicy: verified.paymentPolicy, reason: verified.reason, revision: verified.revision, updatedAt: verified.updatedAt, updatedBy: verified.updatedBy };
+    },
+    response: getEbayarMonthManagementCore_
+  });
 }
-
 
 function getPublicEbayarYears() {
   try {
@@ -3663,35 +3815,44 @@ function getEbayarYearManagementCore_() {
   } catch (err) { return { success: false, message: err.message }; }
 }
 
-function writeEbayarYearConfig_(year, status, create) {
-  if (year === 2026) return { success: false, message: 'Tahun keserasian 2026 dilindungi.' };
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) return { success: false, message: 'Sistem sedang sibuk. Cuba semula.' };
-  try {
-    var ss = getEbayarMasterSpreadsheet_();
-    var sheet = ss.getSheetByName('Config') || ss.insertSheet('Config');
-    if (sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, 7).setValues([EBAYAR_YEAR_CONFIG_HEADERS_]);
-    var headers = sheet.getRange(1, 1, 1, 7).getValues()[0].map(function(v) { return (v || '').toString().trim().toUpperCase(); });
-    if (headers.join('|') !== EBAYAR_YEAR_CONFIG_HEADERS_.join('|')) throw new Error('Skema Config eBayar tidak sepadan.');
-    var rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues() : [];
-    var existingIndex = rows.findIndex(function(row) { return String(row[0]) === String(year); });
-    if (create && (existingIndex !== -1 || year === 2026 || year === 2027)) return { success: false, message: 'Tahun sudah wujud.' };
-    if (!create && !getEbayarYearConfigs_()[String(year)]) return { success: false, message: 'Tahun tidak dijumpai.' };
-    var currentYear = Number(Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy'));
-    if (status === 'INACTIVE' && (year <= currentYear || getPaymentsRowsV2_().rows.some(function(row) {
-      return (row.BULAN_KEY || '').toString().indexOf(year + '-') === 0;
-    }))) return { success: false, message: 'Tahun yang mempunyai sejarah bayaran tidak boleh dinyahaktifkan.' };
-    var now = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss');
-    var mode = 'NATIVE';
-    var createdAt = existingIndex >= 0 ? rows[existingIndex][5] : now;
-    var targetRow = existingIndex >= 0 ? existingIndex + 2 : sheet.getLastRow() + 1;
-    sheet.getRange(targetRow, 1, 1, 7).setValues([[year, status, mode, 1, 12, createdAt, now]]);
-    SpreadsheetApp.flush();
-    return getEbayarYearManagementCore_();
-  } catch (err) {
-    Logger.log('writeEbayarYearConfig_ error: ' + err.message);
-    return { success: false, message: err.message };
-  } finally { try { lock.releaseLock(); } catch (err) {} }
+function writeEbayarYearConfig_(year, status, create, params) {
+  var desired = { year: year, status: status, mode: 'NATIVE', startMonth: 1, endMonth: 12 };
+  return runAuditedConfigMutation_(params || {}, {
+    action: create ? 'CREATE_EBAYAR_YEAR' : 'UPDATE_EBAYAR_YEAR', type: 'YEAR', key: String(year), after: desired,
+    before: function() { return getEbayarYearConfigs_()[String(year)] || null; },
+    mutate: function(actor, markWrite) {
+      if (year === 2026) throw new Error('Tahun keserasian 2026 dilindungi.');
+      var configs = getEbayarYearConfigs_();
+      var currentYear = Number(Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy'));
+      if (create && (year < 2028 || year <= currentYear)) throw new Error('Tahun baharu mesti selepas tahun semasa dan sekurang-kurangnya 2028.');
+      if (create && configs[String(year)]) throw new Error('Tahun sudah wujud.');
+      if (!create && !configs[String(year)]) throw new Error('Tahun tidak dijumpai.');
+      if (status === 'INACTIVE' && (year <= currentYear || getPaymentsRowsV2_().rows.some(function(row) { return (row.BULAN_KEY || '').toString().indexOf(year + '-') === 0; }))) throw new Error('Tahun yang mempunyai sejarah bayaran tidak boleh dinyahaktifkan.');
+      var ss = getEbayarMasterSpreadsheet_();
+      var sheet = ss.getSheetByName('Config');
+      var rows = [];
+      if (sheet && sheet.getLastRow() > 0) {
+        var headers = sheet.getRange(1, 1, 1, 7).getValues()[0].map(function(value) { return (value || '').toString().trim().toUpperCase(); });
+        if (headers.join('|') !== EBAYAR_YEAR_CONFIG_HEADERS_.join('|')) throw new Error('Skema Config eBayar tidak sepadan.');
+        rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues() : [];
+      }
+      var existingIndex = rows.findIndex(function(row) { return String(row[0]) === String(year); });
+      var now = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss');
+      var row = [year, status, 'NATIVE', 1, 12, existingIndex >= 0 ? rows[existingIndex][5] : now, now];
+      markWrite();
+      if (!sheet) sheet = ss.insertSheet('Config');
+      if (sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, 7).setValues([EBAYAR_YEAR_CONFIG_HEADERS_]);
+      var target = existingIndex >= 0 ? existingIndex + 2 : sheet.getLastRow() + 1;
+      sheet.getRange(target, 1, 1, 7).setValues([row]);
+      SpreadsheetApp.flush();
+      var verified = sheet.getRange(target, 1, 1, 7).getValues()[0];
+      if (row.some(function(value, index) { return String(value) !== String(verified[index]); })) throw new Error('Pengesahan tahun selepas simpan gagal.');
+      var after = getEbayarYearConfigs_()[String(year)];
+      if (adminConfigIntent_(after, 'YEAR') !== adminConfigIntent_(desired, 'YEAR')) throw new Error('Pengesahan konfigurasi tahun gagal.');
+      return after;
+    },
+    response: getEbayarYearManagementCore_
+  });
 }
 
 function createEbayarYear(params) {
@@ -3704,7 +3865,7 @@ function createEbayarYear(params) {
   if (!/^\d{4}$/.test(rawYear) || year < 2028 || year <= currentYear) {
     return { success: false, message: 'Tahun baharu mesti selepas tahun semasa dan sekurang-kurangnya 2028.' };
   }
-  return writeEbayarYearConfig_(year, 'ACTIVE', true);
+  return writeEbayarYearConfig_(year, 'ACTIVE', true, params);
 }
 
 function updateEbayarYear(params) {
@@ -3717,7 +3878,7 @@ function updateEbayarYear(params) {
   if (!/^\d{4}$/.test(rawYear) || year < 2027 || ['ACTIVE', 'INACTIVE'].indexOf(status) < 0) {
     return { success: false, message: 'Konfigurasi tahun tidak sah.' };
   }
-  return writeEbayarYearConfig_(year, status, false);
+  return writeEbayarYearConfig_(year, status, false, params);
 }
 
 var NATIVE_EBAYAR_MVP_MAX_FILE_SIZE_V2 = 3 * 1024 * 1024;

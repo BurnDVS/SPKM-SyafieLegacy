@@ -48,7 +48,9 @@ const configs = [
 function setup(options = {}) {
   const ids = {
     btnEbayarYears: element('button'), ebayarYearsAdmin: element(), ebayarYearsList: element(),
-    btnCreateEbayarYear: element('button'), ebayarYearsMessage: element('p')
+    btnCreateEbayarYear: element('button'), ebayarYearsMessage: element('p'),
+    btnAdminConfigAudit: element('button'), adminConfigAuditPanel: element(),
+    adminConfigAuditList: element(), adminConfigAuditMessage: element('p')
   };
   ids.btnCreateEbayarYear.disabled = true;
   ids.ebayarYearsAdmin.appendChild(ids.ebayarYearsList);
@@ -69,7 +71,7 @@ function setup(options = {}) {
     }
   });
   vm.runInContext('let ebayarYearsBusy = false; let ebayarYearsLoaded = false;', context);
-  for (const name of ['setLoginState', 'showEbayarYearsMessage', 'setEbayarYearsBusy',
+  for (const name of ['makeAdminConfigRequestId_', 'setLoginState', 'showEbayarYearsMessage', 'setEbayarYearsBusy',
     'getEbayarYearAdminToken_', 'isEbayarYearAdminSessionCurrent_', 'renderEbayarYearManagement',
     'loadEbayarYearManagement', 'saveEbayarYearAdmin_', 'createNewEbayarYear', 'updateEbayarYearAdmin']) {
     vm.runInContext(extract(name), context);
@@ -92,12 +94,18 @@ test('Admin sees entry; Guru/logout hide controls, clear list and cannot send ac
   const h = setup();
   h.context.setLoginState(true);
   assert.equal(h.ids.btnEbayarYears.style.display, '');
+  assert.equal(h.ids.btnAdminConfigAudit.style.display, '');
+  h.ids.adminConfigAuditPanel.style.display = '';
+  h.ids.adminConfigAuditList.appendChild(element());
   await h.context.loadEbayarYearManagement();
   assert.equal(h.ids.ebayarYearsAdmin.style.display, '');
   h.context.currentRole = 'GURU';
   h.context.setLoginState(true);
   assert.equal(h.ids.btnEbayarYears.style.display, 'none');
   assert.equal(h.ids.ebayarYearsAdmin.style.display, 'none');
+  assert.equal(h.ids.btnAdminConfigAudit.style.display, 'none');
+  assert.equal(h.ids.adminConfigAuditPanel.style.display, 'none');
+  assert.equal(h.ids.adminConfigAuditList.children.length, 0);
   assert.equal(h.ids.ebayarYearsList.children.length, 0);
   await h.context.loadEbayarYearManagement();
   await h.context.createNewEbayarYear();
@@ -114,7 +122,8 @@ test('list/create/update send explicit session tokens and preserve backend field
   await h.context.createNewEbayarYear();
   await h.context.updateEbayarYearAdmin(2028, 'ACTIVE');
   await h.context.updateEbayarYearAdmin(2028, 'INACTIVE');
-  assert.deepEqual(h.calls.map(call => [call.action, call.payload]), [
+  h.calls.slice(1).forEach(call => assert.match(call.payload.request_id, /^[A-Za-z0-9][A-Za-z0-9_-]{7,79}$/));
+  assert.deepEqual(h.calls.map(call => [call.action, Object.fromEntries(Object.entries(call.payload).filter(([key]) => key !== 'request_id'))]), [
     ['getEbayarYearManagement', { token: 'admin-token' }],
     ['createEbayarYear', { token: 'admin-token', year: 2029 }],
     ['updateEbayarYear', { token: 'admin-token', year: 2028, status: 'ACTIVE' }],

@@ -25,13 +25,14 @@ function harness(role = 'ADMIN') {
       rows,
       getLastRow: () => rows.length,
       getLastColumn: () => Math.max(0, ...rows.map(row => row.length)),
-      getDataRange: () => ({ getValues: () => rows }),
+      getDataRange: () => ({ getValues: () => rows, getFormulas: () => [] }),
       setFrozenRows() {},
       appendRow(row) { writes.push(name); rows.push(row); },
       getRange(row, col, count = 1, width = 1) {
         return {
           getValues: () => Array.from({ length: count }, (_, i) =>
             Array.from({ length: width }, (_, j) => (rows[row - 1 + i] || [])[col - 1 + j] || '')),
+          setNumberFormat() {},
           setValues(values) {
             writes.push(name);
             values.forEach((valuesRow, i) => {
@@ -137,10 +138,10 @@ test('valid Admin can directly create and update a year; 2026 remains protected'
   assert.equal(h.ctx.getEbayarYearManagement({ token }).years.find(y => y.year === 2028).mode, 'NATIVE');
   assert.equal(h.ctx.updateEbayarYear({ token, year: 2028, status: 'INACTIVE' }).success, true);
   assert.equal(h.ctx.updateEbayarYear({ token, year: 2028, status: 'ACTIVE' }).success, true);
-  const before = h.writes.length;
+  const configBefore = h.writes.filter(name => name === 'Config').length;
   assert.equal(h.ctx.createEbayarYear({ token, year: 2028 }).success, false);
   assert.equal(h.ctx.updateEbayarYear({ token, year: 2026, status: 'INACTIVE' }).success, false);
-  assert.equal(h.writes.length, before);
+  assert.equal(h.writes.filter(name => name === 'Config').length, configBefore);
 });
 
 test('valid Admin preserves cash, queue and master-schema writes', () => {

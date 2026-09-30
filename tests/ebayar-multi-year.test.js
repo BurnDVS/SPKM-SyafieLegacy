@@ -310,7 +310,7 @@ test('both frontends select Native months from backend and keep future months un
   }
 });
 
-test('year management writes only Config, rejects duplicates, and protects 2026', () => {
+test('year writer preserves Config shape, rejects duplicates, and protects 2026', () => {
   const rows = [];
   let writes = 0;
   const sheet = {
@@ -327,7 +327,9 @@ test('year management writes only Config, rejects duplicates, and protects 2026'
     EBAYAR_YEAR_CONFIG_HEADERS_: ['YEAR', 'STATUS', 'MODE', 'START_MONTH', 'END_MONTH', 'CREATED_AT', 'UPDATED_AT'],
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
     getEbayarMasterSpreadsheet_: () => ({ getSheetByName: () => sheet }),
-    getEbayarYearConfigs_: () => years,
+    getEbayarYearConfigs_: () => ({ ...years, ...Object.fromEntries(rows.slice(1).map(row => [row[0], { year: row[0], status: row[1], mode: row[2], startMonth: row[3], endMonth: row[4] }])) }),
+    adminConfigIntent_: (value) => JSON.stringify(value),
+    runAuditedConfigMutation_: (_params, spec) => { try { spec.before(); spec.mutate({}, () => {}); return spec.response(); } catch (err) { return { success: false }; } },
     getEbayarYearManagementCore_: () => ({ success: true }),
     authorizePrivilegedHandler_: () => ({ valid: true }),
     getPaymentsRowsV2_: () => ({ rows: [] }),
