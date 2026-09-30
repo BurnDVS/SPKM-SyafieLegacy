@@ -327,7 +327,8 @@ test('year management writes only Config, rejects duplicates, and protects 2026'
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
     getEbayarMasterSpreadsheet_: () => ({ getSheetByName: () => sheet }),
     getEbayarYearConfigs_: () => years,
-    getEbayarYearManagement: () => ({ success: true }),
+    getEbayarYearManagementCore_: () => ({ success: true }),
+    authorizePrivilegedHandler_: () => ({ valid: true }),
     getPaymentsRowsV2_: () => ({ rows: [] }),
     Utilities: { formatDate: (_date, _tz, format) => format === 'yyyy' ? '2026' : '2026-09-29 10:00:00' },
     SpreadsheetApp: { flush() {} }, Logger: { log() {} }

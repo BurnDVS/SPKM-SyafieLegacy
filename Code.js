@@ -47,13 +47,13 @@ function testGuruBackup() {
   Logger.log('TETAP: ' + tetapCount + ', BACKUP: ' + backupCount + ' (expect BACKUP > 0)');
 }
 
-function testSyncNamaMuridManual() {
-  var result = syncNamaMuridToAllForms();
+function testSyncNamaMuridManual_() {
+  var result = syncNamaMuridToAllFormsCore_();
   Logger.log(JSON.stringify(result));
 }
 
-function testSyncFormManual() {
-  var result = syncFormMinusBayar({ bulan: 'JUN2026' });
+function testSyncFormManual_() {
+  var result = syncFormMinusBayarCore_({ bulan: 'JUN2026' });
   Logger.log(JSON.stringify(result));
 }
 
@@ -662,6 +662,79 @@ var ADMIN_REQUIRED_ACTIONS = [
   'getMuridTanpaGuru', 'assignGuruMurid'
 ];
 
+// Direct RPC must revalidate server identity; browser actors are never authority.
+function authorizePrivilegedHandler_(params, adminOnly) {
+  params = params || {};
+  params._authActor = null;
+  try {
+    var auth = validateToken(params.token, { revalidateStaff: true });
+    if (!auth.valid || !auth.user || ['ADMIN', 'GURU'].indexOf(auth.user.role) < 0) {
+      return { valid: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' };
+    }
+    if (adminOnly && auth.user.role !== 'ADMIN') return { valid: false, message: 'Akses Admin diperlukan.' };
+    params._authActor = { email: auth.user.email, nama: auth.user.nama, role: auth.user.role };
+    return { valid: true, actor: params._authActor };
+  } catch (err) {
+    return { valid: false, message: 'Gagal mengesahkan akses pengguna.' };
+  }
+}
+
+function syncNamaMuridToAllForms(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  return syncNamaMuridToAllFormsCore_(params);
+}
+
+function syncFormMinusBayar(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  return syncFormMinusBayarCore_(params);
+}
+
+function getEbayarYearManagement(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  return getEbayarYearManagementCore_(params);
+}
+
+function auditEbayarSourceTabsV2(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  return auditEbayarSourceTabsV2Core_(params);
+}
+
+function compareYuranLegacyVsV2(params) {
+  params = params || {};
+  var auth = authorizePrivilegedHandler_(params, true);
+  if (!auth.valid) return { success: false, message: auth.message };
+  return compareYuranLegacyVsV2Core_(params);
+}
+
+// Keep installed handler names. Trigger IDs stay server-side; spreadsheet events
+// also require native service objects, which cannot be supplied over HTML RPC.
+function authorizeInstalledTrigger_(handler, event, spreadsheetEvent) {
+  try {
+    if (!event || !event.triggerUid || event.authMode !== ScriptApp.AuthMode.FULL) return false;
+    if (spreadsheetEvent && (!event.range || typeof event.range.getSheet !== 'function' ||
+        !event.source || typeof event.source.getId !== 'function')) return false;
+    return ScriptApp.getProjectTriggers().some(function(trigger) {
+      return String(trigger.getUniqueId()) === String(event.triggerUid) &&
+        trigger.getHandlerFunction() === handler &&
+        trigger.getEventType() === (spreadsheetEvent ? ScriptApp.EventType.ON_FORM_SUBMIT : ScriptApp.EventType.CLOCK) &&
+        (!spreadsheetEvent || trigger.getTriggerSourceId() === event.source.getId());
+    });
+  } catch (err) { return false; }
+}
+
+function cleanupExpiredProperties(e) {
+  if (!authorizeInstalledTrigger_('cleanupExpiredProperties', e, false)) return { success: false, message: 'Trigger tidak sah.' };
+  return cleanupExpiredPropertiesCore_();
+}
+
 function authorizeAction_(action, payload) {
   if (ALLOWED_ACTIONS.indexOf(action) === -1) {
     return { valid: false, message: 'Tindakan tidak dibenarkan.' };
@@ -722,7 +795,7 @@ function doPost(e) {
     }
 
     // Cleanup automatik ~10% request — elak Properties penuh
-    if (Math.random() < 0.1) { try { cleanupExpiredProperties(); } catch(e) {} }
+    if (Math.random() < 0.1) { try { cleanupExpiredPropertiesCore_(); } catch(e) {} }
 
     var result = doAction(action, body);
 
@@ -832,7 +905,7 @@ function doAction(action, payload) {
   else if (action === 'updateEbayarYear')        return updateEbayarYear(payload);
   else if (action === 'setEbayarPortalMode')     return setEbayarPortalMode(payload);
   else if (action === 'recordCash')            return recordCash(payload);
-  else if (action === 'syncForms')             return syncNamaMuridToAllForms();
+  else if (action === 'syncForms')             return syncNamaMuridToAllForms(payload);
   else if (action === 'syncFormBulanIni')      return syncFormMinusBayar(payload);
   else if (action === 'updateStatusMurid')     return updateStatusMurid(payload);
   else if (action === 'getMuridListAll')       return getMuridListAll();
@@ -864,7 +937,7 @@ function doAction(action, payload) {
   else if (action === 'auditEbayarSourceTabsV2')      return auditEbayarSourceTabsV2(payload);
   else if (action === 'getMuridByGuruUntukTukar')     return getMuridByGuruUntukTukar(payload);
   else if (action === 'tukarGuruMurid')               return tukarGuruMurid(payload);
-  else if (action === 'getMuridTanpaGuru')            return getMuridTanpaGuru();
+  else if (action === 'getMuridTanpaGuru')            return getMuridTanpaGuru(payload);
   else if (action === 'assignGuruMurid')              return assignGuruMurid(payload);
 }
 
@@ -1200,13 +1273,13 @@ function registerKanak(params) {
     );
 
     try {
-      generateSlipKanak(result.row);
+      generateSlipKanak_(result.row);
     } catch (e) {
       Logger.log('generateSlipKanak error: ' + e.message);
     }
 
     try {
-      simpanNotifikasi(
+      simpanNotifikasi_(
         'kanak',
         'Murid Baru Didaftarkan',
         (params.namaAnak || '') + ' — ' + (params.tahap || ''),
@@ -1599,7 +1672,7 @@ function registerDewasa(params) {
     );
 
     try {
-      simpanNotifikasi(
+      simpanNotifikasi_(
         'dewasa',
         'Murid Dewasa Didaftarkan',
         (params.nama || '') + ' — ' + (params.tahap || ''),
@@ -1630,6 +1703,8 @@ function registerDewasa(params) {
 // ============================================================
 function attendance(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     ['guru','murid','status','tarikh'].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
@@ -1660,7 +1735,7 @@ function attendance(params) {
     SpreadsheetApp.flush();
 
     Logger.log('Kehadiran rekod: ' + params.murid + ' — ' + params.status + ' (' + params.tarikh + ')');
-    try { simpanNotifikasi('kehadiran', '✅ Kehadiran Direkod', 'Kehadiran direkod oleh ' + params.guru.trim(), { murid: params.murid.trim(), tarikh: params.tarikh.trim() }); } catch(e) {}
+    try { simpanNotifikasi_('kehadiran', '✅ Kehadiran Direkod', 'Kehadiran direkod oleh ' + params.guru.trim(), { murid: params.murid.trim(), tarikh: params.tarikh.trim() }); } catch(e) {}
 
     return { success: true };
 
@@ -1676,7 +1751,7 @@ function attendance(params) {
 // Dipanggil terus dari registerKanak() ATAU oleh onFormSubmit()
 // Parameter: rowNum = nombor baris dalam tab PendaftaranBaru
 // ============================================================
-function generateSlipKanak(rowNum) {
+function generateSlipKanak_(rowNum) {
   try {
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.KANAK);
@@ -1740,7 +1815,7 @@ function generateSlipKanak(rowNum) {
     // Hantar e-mel ke parent dengan slip
     var emailParent = rowData[COL_KANAK.EMAIL];
     if (emailParent) {
-      hantarEmailSlip(emailParent, namaAnak, bil, fileUrl, newFile.getId());
+      hantarEmailSlip_(emailParent, namaAnak, bil, fileUrl, newFile.getId());
     }
 
     Logger.log('Slip dijana: ' + newName + ' → ' + fileUrl);
@@ -1755,7 +1830,7 @@ function generateSlipKanak(rowNum) {
 // 6. hantarEmailSlip
 // Hantar e-mel kepada ibu bapa dengan slip pendaftaran
 // ============================================================
-function hantarEmailSlip(emailTo, namaAnak, bil, slipUrl, fileId) {
+function hantarEmailSlip_(emailTo, namaAnak, bil, slipUrl, fileId) {
   try {
     var attachment = DriveApp.getFileById(fileId).getAs(MimeType.PDF);
     var subject    = '[Kelas Mengaji] Slip Pendaftaran — ' + namaAnak;
@@ -1799,11 +1874,12 @@ function hantarEmailSlip(emailTo, namaAnak, bil, slipUrl, fileId) {
 // tab PendaftaranBaru (melalui Google Form atau appendRow)
 //
 // CARA PASANG TRIGGER:
-//   Jalankan fungsi createTriggers() sekali dari editor GAS
+//   Jalankan fungsi createTriggers_() sekali dari editor GAS
 //   ATAU: Extensions > Apps Script > Triggers > + Add Trigger
 //         Function: onNewRowKanak | Event: On form submit
 // ============================================================
 function onNewRowKanak(e) {
+  if (!authorizeInstalledTrigger_('onNewRowKanak', e, true)) return { success: false, message: 'Trigger tidak sah.' };
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
@@ -1819,7 +1895,7 @@ function onNewRowKanak(e) {
       }
 
       Logger.log('onNewRowKanak: Baris baru ' + rowNum + ' dalam ' + TAB.KANAK);
-      generateSlipKanak(rowNum);
+      generateSlipKanak_(rowNum);
 
     } else {
       // Dipanggil manual — jana slip untuk baris terakhir
@@ -1827,7 +1903,7 @@ function onNewRowKanak(e) {
       if (!kanakSheet) return;
       var lastRow = kanakSheet.getLastRow();
       Logger.log('onNewRowKanak (manual): Jana slip untuk baris ' + lastRow);
-      generateSlipKanak(lastRow);
+      generateSlipKanak_(lastRow);
     }
 
   } catch (err) {
@@ -1839,7 +1915,7 @@ function onNewRowKanak(e) {
 // 8. createTriggers
 // Jalankan fungsi ini SEKALI dari editor untuk pasang trigger
 // ============================================================
-function createTriggers() {
+function createTriggers_() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
   // Semak trigger sedia ada (elak duplikasi)
@@ -1863,9 +1939,9 @@ function createTriggers() {
 }
 
 // ============================================================
-// 9. removeTriggers (utiliti — jalankan jika perlu buang trigger)
+// 9. removeTriggers_ (utiliti — jalankan jika perlu buang trigger)
 // ============================================================
-function removeTriggers() {
+function removeTriggers_() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'onNewRowKanak') {
       ScriptApp.deleteTrigger(t);
@@ -1880,7 +1956,7 @@ function removeTriggers() {
 // Script Properties (lebih selamat dari hardcode)
 // Gantikan nilai di bawah sebelum jalankan.
 // ============================================================
-function setScriptProperties() {
+function setScriptProperties_() {
   PropertiesService.getScriptProperties().setProperties({
     'SLIP_TEMPLATE_ID': 'GANTI_DENGAN_TEMPLATE_DOC_ID',
     'SLIP_FOLDER_ID':   'GANTI_DENGAN_OUTPUT_FOLDER_ID',
@@ -2218,7 +2294,7 @@ function normalizePhoneForWA(phone) {
 // Hantar mesej WA via Fonnte API
 // Token disimpan dalam Script Properties: FONNTE_TOKEN
 // ============================================================
-function hantarWhatsApp(noTelefon, mesej) {
+function hantarWhatsApp_(noTelefon, mesej) {
   try {
     var token = PropertiesService.getScriptProperties().getProperty('FONNTE_TOKEN');
     if (!token) {
@@ -2251,6 +2327,8 @@ function hantarWhatsApp(noTelefon, mesej) {
 // ============================================================
 function hantarWAYuran(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var bulan          = (params.bulan || '').toString().trim();
     var namaBelumBayar = params.namaBelumBayar || [];
@@ -2285,7 +2363,7 @@ function hantarWAYuran(params) {
 
       var mesej = 'Assalamualaikum, yuran ' + bulan + ' belum dikemaskini.\n' +
                   'Sila kemaskini bayaran di: ' + portalUrl;
-      var ok = hantarWhatsApp(telefon, mesej);
+      var ok = hantarWhatsApp_(telefon, mesej);
       if (ok) berjaya++; else gagal++;
     });
 
@@ -2303,7 +2381,8 @@ function hantarWAYuran(params) {
 // Semak Kehadiran hari ini, hantar WA ke ibu bapa yang anaknya
 // "Tidak Hadir". Dipanggil oleh trigger harian jam 9pm.
 // ============================================================
-function notifikasiKetidakhadiran() {
+function notifikasiKetidakhadiran(e) {
+  if (!authorizeInstalledTrigger_('notifikasiKetidakhadiran', e, false)) return { success: false, message: 'Trigger tidak sah.' };
   try {
     var ss           = SpreadsheetApp.openById(SPREADSHEET_ID);
     var hadirSheet   = ss.getSheetByName(TAB.KEHADIRAN);
@@ -2331,7 +2410,7 @@ function notifikasiKetidakhadiran() {
       var mesej = 'Assalamualaikum. Makluman: ' + namaMurid +
                   ' tidak hadir ke kelas mengaji hari ini (' + tarikhHari + '). ' +
                   'Sila hubungi guru untuk maklumat lanjut.';
-      hantarWhatsApp(telefon, mesej);
+      hantarWhatsApp_(telefon, mesej);
       hantar++;
     }
     Logger.log('notifikasiKetidakhadiran: ' + hantar + ' notifikasi dihantar (' + tarikhHari + ')');
@@ -2345,7 +2424,7 @@ function notifikasiKetidakhadiran() {
 // Jalankan SEKALI dari editor untuk simpan token Fonnte.
 // Gantikan nilai sebelum menjalankan.
 // ============================================================
-function setFonnteToken() {
+function setFonnteToken_() {
   PropertiesService.getScriptProperties().setProperty('FONNTE_TOKEN', 'GANTI_DENGAN_TOKEN_FONNTE');
   Logger.log('FONNTE_TOKEN telah disimpan dalam Script Properties.');
 }
@@ -2354,10 +2433,10 @@ function setFonnteToken() {
 // 17b. testFonnteToken
 // Jalankan dari editor untuk test token — hantar pada nombor anda sahaja.
 // ============================================================
-function testFonnteToken() {
+function testFonnteToken_() {
   var token = PropertiesService.getScriptProperties().getProperty('FONNTE_TOKEN');
   Logger.log('Token dalam Properties: [' + token + '] (panjang: ' + (token ? token.length : 0) + ')');
-  var result = hantarWhatsApp('60172875136', '[TEST] Token Fonnte berjaya. Boleh abaikan mesej ini.');
+  var result = hantarWhatsApp_('60172875136', '[TEST] Token Fonnte berjaya. Boleh abaikan mesej ini.');
   Logger.log('Test result: ' + result);
 }
 
@@ -2366,7 +2445,7 @@ function testFonnteToken() {
 // Pasang trigger harian untuk notifikasiKetidakhadiran jam 9pm.
 // Jalankan SEKALI dari editor.
 // ============================================================
-function createWhatsAppTriggers() {
+function createWhatsAppTriggers_() {
   var existing = ScriptApp.getProjectTriggers();
   var sudahAda = existing.some(function(t) {
     return t.getHandlerFunction() === 'notifikasiKetidakhadiran';
@@ -2389,7 +2468,7 @@ function createWhatsAppTriggers() {
 // dari Script Properties secara automatik.
 // Dipanggil oleh trigger harian DAN secara rawak dalam doPost.
 // ============================================================
-function cleanupExpiredProperties() {
+function cleanupExpiredPropertiesCore_() {
   var props  = PropertiesService.getScriptProperties();
   var all    = props.getProperties();
   var now    = new Date().getTime();
@@ -2463,7 +2542,8 @@ function cleanupExpiredProperties() {
 // Buang semua session_ yang lebih dari 24 jam (atau expired).
 // Boleh run manual dari editor atau dipanggil oleh trigger.
 // ============================================================
-function cleanOldSessions() {
+function cleanOldSessions(e) {
+  if (!authorizeInstalledTrigger_('cleanOldSessions', e, false)) return { success: false, message: 'Trigger tidak sah.' };
   var props   = PropertiesService.getScriptProperties();
   var all     = props.getProperties();
   var now     = new Date().getTime();
@@ -2487,7 +2567,7 @@ function cleanOldSessions() {
 // dan trigger setiap 24 jam untuk cleanOldSessions.
 // Jalankan SEKALI dari editor.
 // ============================================================
-function createCleanupTrigger() {
+function createCleanupTrigger_() {
   var existing = ScriptApp.getProjectTriggers();
   var handlers = existing.map(function(t) { return t.getHandlerFunction(); });
 
@@ -2547,6 +2627,8 @@ function getGuru() {
 // ============================================================
 function uploadGuruGambar(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var auth = validateToken(params.token);
     if (!auth.valid) return { success: false, message: 'Token tidak sah.' };
@@ -2574,6 +2656,8 @@ function uploadGuruGambar(params) {
 // ============================================================
 function updateGuru(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var auth = validateToken(params.token);
     if (!auth.valid) return { success: false, message: 'Token tidak sah atau tamat tempoh.' };
@@ -2681,7 +2765,7 @@ function getOrgChart() {
 // dan filter status bayaran (exclude yang dah bayar untuk bulan tu)
 // Dipanggil selepas confirmRegisterKanak/Dewasa & doPost 'syncForms'
 // ============================================================
-function syncNamaMuridToAllForms() {
+function syncNamaMuridToAllFormsCore_() {
   try {
     var ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
     var yuranSS = SpreadsheetApp.openById(YURAN_SS_ID);
@@ -2963,7 +3047,7 @@ function getLegacyEbayarCalculationTabName_(bulan) {
   return CALC_TAB_MAP[normalizeLegacyEbayarName_(bulan)] || '';
 }
 
-function syncFormMinusBayar(params) {
+function syncFormMinusBayarCore_(params) {
   params = params || {};
   var diagnostic = {
     action: 'syncFormBulanIni',
@@ -3190,6 +3274,7 @@ function waitForLegacyEbayarCalculationReady_(bulanKey, submittedNames) {
 }
 
 function onEbayarSubmit(e) {
+  if (!authorizeInstalledTrigger_('onEbayarSubmit', e, true)) return { success: false, message: 'Trigger tidak sah.' };
   try {
     var bulanRaw = '';
     if (e && e.namedValues) {
@@ -3230,7 +3315,7 @@ function onEbayarSubmit(e) {
     }
 
     Logger.log('onEbayarSubmit: syncFormMinusBayar untuk ' + bulanKey);
-    var result = syncFormMinusBayar({ bulan: bulanKey });
+    var result = syncFormMinusBayarCore_({ bulan: bulanKey });
     Logger.log('onEbayarSubmit result: ' + JSON.stringify(result));
     return result;
   } catch (err) {
@@ -3239,7 +3324,7 @@ function onEbayarSubmit(e) {
   }
 }
 
-function createEbayarTriggers() {
+function createEbayarTriggers_() {
   var existing = ScriptApp.getProjectTriggers();
   var sudahAda = existing.some(function(t) { return t.getHandlerFunction() === 'onEbayarSubmit'; });
   if (sudahAda) { Logger.log('Trigger sudah wujud.'); return 'Trigger sudah wujud.'; }
@@ -3248,8 +3333,8 @@ function createEbayarTriggers() {
   return 'Trigger berjaya dipasang.';
 }
 
-function testSyncOgosManual() {
-  var result = syncFormMinusBayar({ bulan: 'OGOS2026' });
+function testSyncOgosManual_() {
+  var result = syncFormMinusBayarCore_({ bulan: 'OGOS2026' });
   Logger.log(JSON.stringify(result));
 }
 
@@ -3257,6 +3342,7 @@ function testSyncOgosManual() {
 // Khatam Iqra' / Khatam Quran — onFormSubmit notification trigger
 // ============================================================
 function onKhatamSubmit(e) {
+  if (!authorizeInstalledTrigger_('onKhatamSubmit', e, true)) return { success: false, message: 'Trigger tidak sah.' };
   try {
     Utilities.sleep(2000);
     var sheet = e.range.getSheet();
@@ -3276,7 +3362,7 @@ function onKhatamSubmit(e) {
     var title = icon + ' ' + jenis + ' — ' + nama;
     var body  = 'Guru: ' + guru + (siri ? ' | Siri: ' + siri : '');
 
-    simpanNotifikasi('khatam', title, body, {
+    simpanNotifikasi_('khatam', title, body, {
       nama: nama, guru: guru, siri: siri, jenis: jenis
     });
 
@@ -3286,7 +3372,7 @@ function onKhatamSubmit(e) {
   }
 }
 
-function createKhatamTriggers() {
+function createKhatamTriggers_() {
   var ss = SpreadsheetApp.openById('1jGp9U6lYRBvAVPSHhqSLv2WL5MHxdmKP5f5AnTHC8xU');
   var existing = ScriptApp.getProjectTriggers();
   var sudahAda = existing.some(function(t) {
@@ -3453,7 +3539,7 @@ function getPublicEbayarYears() {
   }
 }
 
-function getEbayarYearManagement() {
+function getEbayarYearManagementCore_() {
   try {
     var years = getEbayarYearConfigs_();
     return { success: true, years: Object.keys(years).sort().map(function(key) { return years[key]; }) };
@@ -3484,7 +3570,7 @@ function writeEbayarYearConfig_(year, status, create) {
     var targetRow = existingIndex >= 0 ? existingIndex + 2 : sheet.getLastRow() + 1;
     sheet.getRange(targetRow, 1, 1, 7).setValues([[year, status, mode, 1, 12, createdAt, now]]);
     SpreadsheetApp.flush();
-    return getEbayarYearManagement();
+    return getEbayarYearManagementCore_();
   } catch (err) {
     Logger.log('writeEbayarYearConfig_ error: ' + err.message);
     return { success: false, message: err.message };
@@ -3492,6 +3578,9 @@ function writeEbayarYearConfig_(year, status, create) {
 }
 
 function createEbayarYear(params) {
+  params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   var rawYear = (params && params.year !== undefined && params.year !== null ? params.year : '').toString().trim();
   var year = Number(rawYear);
   var currentYear = Number(Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy'));
@@ -3502,6 +3591,9 @@ function createEbayarYear(params) {
 }
 
 function updateEbayarYear(params) {
+  params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   var rawYear = (params && params.year !== undefined && params.year !== null ? params.year : '').toString().trim();
   var year = Number(rawYear);
   var status = (params && params.status || '').toString().toUpperCase();
@@ -3671,6 +3763,8 @@ function getEbayarMasterSpreadsheet_(options) {
 
 function ensureEbayarMasterSchemaV2(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var ss = getEbayarMasterSpreadsheet_({ create: params.create === true, spreadsheetId: params.spreadsheetId });
     var payments = ss.getSheetByName(EBAYAR_PAYMENTS_TAB_V2) || ss.insertSheet(EBAYAR_PAYMENTS_TAB_V2);
@@ -4598,7 +4692,7 @@ function generateNativeEbayarReceipt_(paymentGroupId) {
   }
 }
 
-function testCreateNativeEbayarReceiptSlidesPreviewV2() {
+function testCreateNativeEbayarReceiptSlidesPreviewV2_() {
   var props = PropertiesService.getScriptProperties();
   var templateId = (props.getProperty(NATIVE_EBAYAR_RECEIPT_TEMPLATE_PROPERTY_V2_) || '').toString().trim();
   var previewFolderId = (props.getProperty(NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_PROPERTY_V2_) || '').toString().trim();
@@ -5167,7 +5261,7 @@ function inspectEbayarSourceSheetV2_(sheet, sourceYear) {
   };
 }
 
-function auditEbayarSourceTabsV2(params) {
+function auditEbayarSourceTabsV2Core_(params) {
   params = params || {};
   try {
     var includeAllTabs = params.includeAllTabs === true;
@@ -5207,7 +5301,7 @@ function auditEbayarSourceTabsV2(params) {
 }
 
 function testAuditEbayarSourceTabsV2() {
-  var result = auditEbayarSourceTabsV2();
+  var result = auditEbayarSourceTabsV2Core_();
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -5222,7 +5316,7 @@ function compactDetectedColumnsV2_(detectedColumns) {
 }
 
 function testAuditEbayarSourceTabsCompactV2() {
-  var result = auditEbayarSourceTabsV2();
+  var result = auditEbayarSourceTabsV2Core_();
   if (!result || !result.success) {
     Logger.log(JSON.stringify(result, null, 2));
     return result;
@@ -5265,7 +5359,7 @@ function isRawEbayarPaymentTabV2_(tab) {
 }
 
 function testAuditEbayarSourceRawTabsByYearV2_(sourceYear) {
-  var result = auditEbayarSourceTabsV2();
+  var result = auditEbayarSourceTabsV2Core_();
   if (!result || !result.success) {
     Logger.log(JSON.stringify(result, null, 2));
     return result;
@@ -5403,7 +5497,7 @@ function buildEbayarImportRowsDryRunV2_(options) {
   var hasLimit = !isNaN(limitRowsPerTab) && limitRowsPerTab > 0;
   var limitSourceRows = parseInt(options.limitSourceRows, 10);
   var hasSourceLimit = !isNaN(limitSourceRows) && limitSourceRows > 0;
-  var audit = auditEbayarSourceTabsV2();
+  var audit = auditEbayarSourceTabsV2Core_();
   if (!audit || !audit.success) return { success: false, message: audit ? audit.message : 'Audit gagal.' };
 
   var draftRows = [];
@@ -6143,7 +6237,7 @@ function testJulyCatchupAnomaliesV2() {
   return output;
 }
 
-function importJuly2026CatchupGuardedV2(params) {
+function importJuly2026CatchupGuardedV2_(params) {
   params = params || {};
   var allowWrite = params.allowWrite === true;
   var mode = allowWrite
@@ -6674,7 +6768,7 @@ function testImportJuly2026CatchupBatch1PreviewV2() {
   for (var sourceRow = 34; sourceRow <= 58; sourceRow++) {
     paymentGroupIds.push('PG-2026-JULAI2026-' + sourceRow);
   }
-  var result = importJuly2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: false });
+  var result = importJuly2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: false });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -6684,38 +6778,38 @@ function testImportJuly2026CatchupBatch2PreviewV2() {
   for (var sourceRow = 59; sourceRow <= 72; sourceRow++) {
     paymentGroupIds.push('PG-2026-JULAI2026-' + sourceRow);
   }
-  var result = importJuly2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: false });
+  var result = importJuly2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: false });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-function testImportJuly2026CatchupBatch1WriteV2() {
+function testImportJuly2026CatchupBatch1WriteV2_() {
   var paymentGroupIds = [];
   for (var sourceRow = 34; sourceRow <= 58; sourceRow++) {
     paymentGroupIds.push('PG-2026-JULAI2026-' + sourceRow);
   }
-  var result = importJuly2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: true });
+  var result = importJuly2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: true });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-function testImportJuly2026CatchupBatch2WriteV2() {
+function testImportJuly2026CatchupBatch2WriteV2_() {
   var paymentGroupIds = [];
   for (var sourceRow = 59; sourceRow <= 72; sourceRow++) {
     paymentGroupIds.push('PG-2026-JULAI2026-' + sourceRow);
   }
-  var result = importJuly2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: true });
+  var result = importJuly2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: true });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-function runJulyCatchupBatch2SafeV2() {
+function runJulyCatchupBatch2SafeV2_() {
   var paymentGroupIds = [];
   for (var sourceRow = 59; sourceRow <= 72; sourceRow++) {
     paymentGroupIds.push('PG-2026-JULAI2026-' + sourceRow);
   }
 
-  var previewBefore = importJuly2026CatchupGuardedV2({
+  var previewBefore = importJuly2026CatchupGuardedV2_({
     paymentGroupIds: paymentGroupIds,
     allowWrite: false
   });
@@ -6740,7 +6834,7 @@ function runJulyCatchupBatch2SafeV2() {
     return previewFailure;
   }
 
-  var writeResult = importJuly2026CatchupGuardedV2({
+  var writeResult = importJuly2026CatchupGuardedV2_({
     paymentGroupIds: paymentGroupIds,
     allowWrite: true
   });
@@ -7185,7 +7279,7 @@ function testPreviewAugust2026CatchupCompactV2() {
   return compact;
 }
 
-function importAugust2026CatchupGuardedV2(params) {
+function importAugust2026CatchupGuardedV2_(params) {
   params = params || {};
   var allowWrite = params.allowWrite === true;
   var mode = allowWrite
@@ -7719,7 +7813,7 @@ function testImportAugust2026CatchupBatch1PreviewV2() {
   for (var sourceRow = 2; sourceRow <= 26; sourceRow++) {
     paymentGroupIds.push('PG-2026-OGOS2026-' + sourceRow);
   }
-  var result = importAugust2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: false });
+  var result = importAugust2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: false });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -7729,61 +7823,34 @@ function testImportAugust2026CatchupBatch2PreviewV2() {
   for (var sourceRow = 27; sourceRow <= 47; sourceRow++) {
     paymentGroupIds.push('PG-2026-OGOS2026-' + sourceRow);
   }
-  var result = importAugust2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: false });
+  var result = importAugust2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: false });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-function testImportAugust2026CatchupBatch1WriteV2() {
+function testImportAugust2026CatchupBatch1WriteV2_() {
   var paymentGroupIds = [];
   for (var sourceRow = 2; sourceRow <= 26; sourceRow++) {
     paymentGroupIds.push('PG-2026-OGOS2026-' + sourceRow);
   }
-  var result = importAugust2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: true });
+  var result = importAugust2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: true });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-function testImportAugust2026CatchupBatch2WriteV2() {
+function testImportAugust2026CatchupBatch2WriteV2_() {
   var paymentGroupIds = [];
   for (var sourceRow = 27; sourceRow <= 47; sourceRow++) {
     paymentGroupIds.push('PG-2026-OGOS2026-' + sourceRow);
   }
-  var result = importAugust2026CatchupGuardedV2({ paymentGroupIds: paymentGroupIds, allowWrite: true });
+  var result = importAugust2026CatchupGuardedV2_({ paymentGroupIds: paymentGroupIds, allowWrite: true });
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
 function authorizeEbayarV2MaintenanceAdmin_(params) {
-  var authCheck = validateToken(params && params.token ? params.token : '');
-  if (!authCheck.valid || !authCheck.user) {
-    return { valid: false, message: 'Token tidak sah atau tamat tempoh. Sila log masuk semula.' };
-  }
-
-  var email = (authCheck.user.email || '').toString().trim().toLowerCase();
-  if (!email) return { valid: false, message: 'Identiti pengguna tidak lengkap.' };
-
-  try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.GURU);
-    if (!sheet || sheet.getLastRow() < 2) {
-      return { valid: false, message: 'Maklumat role pengguna tidak dijumpai.' };
-    }
-    var rows = sheet.getDataRange().getValues();
-    for (var i = 1; i < rows.length; i++) {
-      var rowEmail = (rows[i][COL_GURU.EMAIL] || '').toString().trim().toLowerCase();
-      var rowRole = (rows[i][COL_GURU.ROLE] || '').toString().trim().toUpperCase();
-      if (rowEmail === email) {
-        return rowRole === 'ADMIN'
-          ? { valid: true, email: email, role: rowRole }
-          : { valid: false, message: 'Akses Admin diperlukan.' };
-      }
-    }
-    return { valid: false, message: 'Akaun pengguna tidak dijumpai.' };
-  } catch (err) {
-    Logger.log('authorizeEbayarV2MaintenanceAdmin_ error: ' + err.message);
-    return { valid: false, message: 'Gagal mengesahkan akses Admin.' };
-  }
+  var auth = authorizePrivilegedHandler_(params, true);
+  return auth.valid ? { valid: true, email: auth.actor.email, role: auth.actor.role } : auth;
 }
 
 function getCurrentEbayarMonthMetaV2_() {
@@ -8171,7 +8238,7 @@ function verifyCurrentMonthLegacyVsV2(params) {
   if (!admin.valid) return { success: false, message: admin.message };
   var meta = getCurrentEbayarMonthMetaV2_();
   if (!meta.success) return meta;
-  return compareYuranLegacyVsV2({
+  return compareYuranLegacyVsV2Core_({
     tahun: meta.tahun,
     bulan: meta.sourceSheet,
     bulanKey: meta.bulanKey
@@ -9042,7 +9109,7 @@ function filterDraftRowsByFirstPaymentGroupsV2_(draftRows, limitSourceRows, opti
   };
 }
 
-function importEbayarPaymentsToMasterV2(params) {
+function importEbayarPaymentsToMasterV2_(params) {
   params = params || {};
   try {
     var sourceYear = parseInt(params.sourceYear, 10);
@@ -9143,8 +9210,8 @@ function importEbayarPaymentsToMasterV2(params) {
   }
 }
 
-function testImportEbayarPayments2026SmallBatchV2() {
-  var result = importEbayarPaymentsToMasterV2({
+function testImportEbayarPayments2026SmallBatchV2_() {
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 5,
     allowWrite: true
@@ -9154,7 +9221,7 @@ function testImportEbayarPayments2026SmallBatchV2() {
 }
 
 function testImportEbayarPayments2026SmallBatchPreviewV2() {
-  var result = importEbayarPaymentsToMasterV2({
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 5,
     dryRun: true
@@ -9164,7 +9231,7 @@ function testImportEbayarPayments2026SmallBatchPreviewV2() {
 }
 
 function testImportEbayarPayments2026NextBatchPreviewV2() {
-  var result = importEbayarPaymentsToMasterV2({
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 10,
     skipExistingGroupsFirst: true,
@@ -9174,8 +9241,8 @@ function testImportEbayarPayments2026NextBatchPreviewV2() {
   return result;
 }
 
-function testImportEbayarPayments2026NextBatchV2() {
-  var result = importEbayarPaymentsToMasterV2({
+function testImportEbayarPayments2026NextBatchV2_() {
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 10,
     skipExistingGroupsFirst: true,
@@ -9186,7 +9253,7 @@ function testImportEbayarPayments2026NextBatchV2() {
 }
 
 function testImportEbayarPayments2026NextBatch25PreviewV2() {
-  var result = importEbayarPaymentsToMasterV2({
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 25,
     skipExistingGroupsFirst: true,
@@ -9196,8 +9263,8 @@ function testImportEbayarPayments2026NextBatch25PreviewV2() {
   return result;
 }
 
-function testImportEbayarPayments2026NextBatch25V2() {
-  var result = importEbayarPaymentsToMasterV2({
+function testImportEbayarPayments2026NextBatch25V2_() {
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2026,
     limitSourceRows: 25,
     skipExistingGroupsFirst: true,
@@ -9208,7 +9275,7 @@ function testImportEbayarPayments2026NextBatch25V2() {
 }
 
 function testImportEbayarPayments2025NextBatch25PreviewV2() {
-  var result = importEbayarPaymentsToMasterV2({
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2025,
     limitSourceRows: 25,
     skipExistingGroupsFirst: true,
@@ -9218,8 +9285,8 @@ function testImportEbayarPayments2025NextBatch25PreviewV2() {
   return result;
 }
 
-function testImportEbayarPayments2025NextBatch25V2() {
-  var result = importEbayarPaymentsToMasterV2({
+function testImportEbayarPayments2025NextBatch25V2_() {
+  var result = importEbayarPaymentsToMasterV2_({
     sourceYear: 2025,
     limitSourceRows: 25,
     skipExistingGroupsFirst: true,
@@ -9243,6 +9310,8 @@ function testDryRunImportEbayar2026V2() {
 
 function listEbayarYears(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var data = getPaymentsRowsV2_();
     var years = {};
@@ -9259,6 +9328,8 @@ function listEbayarYears(params) {
 
 function getMonthlyPaymentSummaryV2(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '');
     var bulanKeyFilter = normalizeBulanKeyV2_(params.bulanKey, tahun, params.bulan || params.bulanKey);
@@ -9447,7 +9518,7 @@ function getYuranParentV2(params) {
   }
 }
 
-function compareYuranLegacyVsV2(params) {
+function compareYuranLegacyVsV2Core_(params) {
   params = params || {};
   try {
     var tahun = (params.tahun || '').toString().replace(/[^0-9]/g, '') || '2026';
@@ -9513,13 +9584,13 @@ function testCompareYuranLegacyVsV2() {
   ];
 
   tests.forEach(function(t) {
-    var result = compareYuranLegacyVsV2(t);
+    var result = compareYuranLegacyVsV2Core_(t);
     Logger.log(t.bulanKey + ': ' + JSON.stringify(result));
   });
 }
 
 function testCompareYuranLegacyVsV2August2026() {
-  var result = compareYuranLegacyVsV2({
+  var result = compareYuranLegacyVsV2Core_({
     tahun: 2026,
     bulan: 'OGOS2026',
     bulanKey: '2026-08'
@@ -9597,7 +9668,7 @@ function testCompareYuranLegacyVsV2JanJun2026() {
     { bulan: 'JUN2026', bulanKey: '2026-06', sudahBayar: 172, totalKutipan: 5780 }
   ];
   var results = expected.map(function(item) {
-    var comparison = compareYuranLegacyVsV2({ tahun: '2026', bulan: item.bulan, bulanKey: item.bulanKey });
+    var comparison = compareYuranLegacyVsV2Core_({ tahun: '2026', bulan: item.bulan, bulanKey: item.bulanKey });
     var passed = !!comparison && comparison.success &&
       comparison.v2.sudahBayar === item.sudahBayar &&
       Math.abs(comparison.v2.totalKutipan - item.totalKutipan) < 0.001 &&
@@ -9746,6 +9817,8 @@ function getYuranStats(params) {
 // ============================================================
 function recordCash(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var nama   = (params.nama   || '').toString().trim().toUpperCase();
     var jumlah = parseFloat(params.jumlah) || 0;
@@ -9772,7 +9845,7 @@ function recordCash(params) {
 
     Logger.log('recordCash: ' + nama + ' ' + bulan + ' RM' + jumlah + ' Resit: ' + noResit);
 
-    try { simpanNotifikasi('yuran', 'Bayaran Yuran Diterima', nama + ' — ' + bulan + ' RM' + jumlah, { noResit: noResit }); } catch(e) {}
+    try { simpanNotifikasi_('yuran', 'Bayaran Yuran Diterima', nama + ' — ' + bulan + ' RM' + jumlah, { noResit: noResit }); } catch(e) {}
 
     return { success: true, noResit: noResit };
 
@@ -9843,6 +9916,8 @@ function getMuridListAll() {
 // ============================================================
 function updateStatusMurid(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var jenis    = (params.jenis    || '').toString().trim().toLowerCase();
     var rowIndex = parseInt(params.rowIndex, 10);
@@ -9866,7 +9941,7 @@ function updateStatusMurid(params) {
     var namaCol   = (jenis === 'kanak') ? COL_KANAK.NAMA + 1 : COL_DEWASA.NAMA + 1;
     var namaMurid = sheet.getRange(rowIndex, namaCol).getValue().toString().trim() || 'Murid';
     Logger.log('updateStatusMurid: ' + jenis + ' baris ' + rowIndex + ' → ' + status);
-    try { simpanNotifikasi('status', '🔄 Status Murid', 'Status ' + namaMurid + ' dikemaskini → ' + status, { jenis: jenis, rowIndex: String(rowIndex) }); } catch(e) {}
+    try { simpanNotifikasi_('status', '🔄 Status Murid', 'Status ' + namaMurid + ' dikemaskini → ' + status, { jenis: jenis, rowIndex: String(rowIndex) }); } catch(e) {}
 
     return { success: true };
 
@@ -10182,6 +10257,8 @@ function cariGuruTetapMurid(namaMurid, kanakData, dewasaData) {
 // ============================================================
 function simpanKehadiran(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var namaGuru    = (params.namaGuru    || '').toString().trim();
     var emailGuru   = (params.emailGuru   || '').toString().trim();
@@ -10254,7 +10331,7 @@ function simpanKehadiran(params) {
 
     Logger.log('simpanKehadiran: ' + Object.keys(groups).length + ' tab, ' + muridHadir.length + ' murid (' + tarikhKelas + ')');
 
-    try { simpanNotifikasi('kehadiran', 'Kehadiran Direkodkan', namaGuru + ' — ' + muridHadir.length + ' murid (' + tarikhKelas + ')', { jumlah: String(muridHadir.length) }); } catch(e) {}
+    try { simpanNotifikasi_('kehadiran', 'Kehadiran Direkodkan', namaGuru + ' — ' + muridHadir.length + ' murid (' + tarikhKelas + ')', { jumlah: String(muridHadir.length) }); } catch(e) {}
 
     return { success: true, jumlahRekod: muridHadir.length };
 
@@ -10269,7 +10346,7 @@ function simpanKehadiran(params) {
 // ============================================================
 
 // ensureLogPertukaranGuruSheet — cipta tab LogPertukaranGuru jika belum ada
-function ensureLogPertukaranGuruSheet(ss) {
+function ensureLogPertukaranGuruSheet_(ss) {
   var sheet = ss.getSheetByName(TAB.LOG_PERTUKARAN);
   if (!sheet) {
     sheet = ss.insertSheet(TAB.LOG_PERTUKARAN);
@@ -10291,6 +10368,8 @@ function ensureLogPertukaranGuruSheet(ss) {
 // ============================================================
 function getMuridByGuruUntukTukar(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var namaGuru = (params.namaGuru || '').toString().trim();
     if (!namaGuru) return { success: false, message: 'namaGuru diperlukan.' };
@@ -10348,6 +10427,8 @@ function getMuridByGuruUntukTukar(params) {
 // ============================================================
 function tukarGuruMurid(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var adminEmail = (params._authActor && params._authActor.email || '').toString().trim();
     var guruLama   = (params.guruLama   || '').toString().trim();
@@ -10423,14 +10504,14 @@ function tukarGuruMurid(params) {
 
     // Log ke LogPertukaranGuru
     if (logRows.length > 0) {
-      var logSheet = ensureLogPertukaranGuruSheet(ss);
+      var logSheet = ensureLogPertukaranGuruSheet_(ss);
       logSheet.getRange(logSheet.getLastRow() + 1, 1, logRows.length, 7).setValues(logRows);
     }
 
     Logger.log('tukarGuruMurid: ' + guruLama + ' → ' + guruBaru + ', ' + jumlahDipindah + ' dipindah, ' + ralat.length + ' ralat');
 
     try {
-      simpanNotifikasi('pertukaran', '🔄 Pertukaran Guru',
+      simpanNotifikasi_('pertukaran', '🔄 Pertukaran Guru',
         guruLama + ' → ' + guruBaru + ' (' + jumlahDipindah + ' murid)',
         { jumlah: String(jumlahDipindah) });
     } catch(e) {}
@@ -10449,7 +10530,10 @@ function tukarGuruMurid(params) {
 // Input:  {}
 // Output: { success, murid: [{bil, nama, jenis}, ...] }
 // ============================================================
-function getMuridTanpaGuru() {
+function getMuridTanpaGuru(params) {
+  params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var ss   = SpreadsheetApp.openById(SPREADSHEET_ID);
     var list = [];
@@ -10503,6 +10587,8 @@ function getMuridTanpaGuru() {
 // ============================================================
 function assignGuruMurid(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var adminEmail = (params._authActor && params._authActor.email || '').toString().trim();
     var namaGuru   = (params.namaGuru   || '').toString().trim();
@@ -10582,14 +10668,14 @@ function assignGuruMurid(params) {
 
     // Log ke LogPertukaranGuru
     if (logRows.length > 0) {
-      var logSheet = ensureLogPertukaranGuruSheet(ss);
+      var logSheet = ensureLogPertukaranGuruSheet_(ss);
       logSheet.getRange(logSheet.getLastRow() + 1, 1, logRows.length, 7).setValues(logRows);
     }
 
     Logger.log('assignGuruMurid: ' + namaGuru + ', ' + jumlahDitetapkan + ' ditetapkan, ' + ralat.length + ' ralat');
 
     try {
-      simpanNotifikasi('pertukaran', '👤 Guru Ditetapkan',
+      simpanNotifikasi_('pertukaran', '👤 Guru Ditetapkan',
         namaGuru + ' (' + jumlahDitetapkan + ' murid)',
         { jumlah: String(jumlahDitetapkan) });
     } catch(e) {}
@@ -10607,7 +10693,7 @@ function assignGuruMurid(params) {
 // ============================================================
 
 // ensureBlastQueueSheet — cipta tab BlastQueue jika belum ada, dengan header
-function ensureBlastQueueSheet(ss) {
+function ensureBlastQueueSheet_(ss) {
   var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
   if (!sheet) {
     sheet = ss.insertSheet(TAB.BLAST_QUEUE);
@@ -10624,6 +10710,8 @@ function ensureBlastQueueSheet(ss) {
 // Input: { token, mesejTemplate, bulan, muridList:[{nama, telefon}] }
 function queueWABlast(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var mesejTemplate = (params.mesejTemplate || '').toString().trim();
     var bulan         = (params.bulan         || '').toString().trim();
@@ -10634,7 +10722,7 @@ function queueWABlast(params) {
     }
 
     var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet     = ensureBlastQueueSheet(ss);
+    var sheet     = ensureBlastQueueSheet_(ss);
     var timestamp = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
 
     var rows = muridList.map(function(m) {
@@ -10656,7 +10744,7 @@ function queueWABlast(params) {
     // 40 mesej × 5 saat = 200 saat = ~3.3 min per batch + 8 min gap antara batch
     var estimasiMinit = Math.ceil((totalQueued * 5) / 60) + (batchCount - 1) * 8;
 
-    setupBlastTrigger();
+    setupBlastTrigger_();
 
     Logger.log('queueWABlast: ' + totalQueued + ' mesej diqueue untuk ' + bulan);
     return {
@@ -10673,12 +10761,13 @@ function queueWABlast(params) {
 }
 
 // blastQueueProcessor — proses max 40 PENDING rows, trigger semula jika ada lagi
-function blastQueueProcessor() {
+function blastQueueProcessor(e) {
+  if (!authorizeInstalledTrigger_('blastQueueProcessor', e, false)) return { success: false, message: 'Trigger tidak sah.' };
   try {
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
     if (!sheet || sheet.getLastRow() < 2) {
-      deleteBlastTrigger();
+      deleteBlastTrigger_();
       return;
     }
 
@@ -10696,7 +10785,7 @@ function blastQueueProcessor() {
 
       var ok = false;
       if (telefon && mesej) {
-        ok = hantarWhatsApp(telefon, mesej);
+        ok = hantarWhatsApp_(telefon, mesej);
       }
 
       var blastedAt = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
@@ -10718,7 +10807,7 @@ function blastQueueProcessor() {
       .length;
 
     if (remaining === 0) {
-      deleteBlastTrigger();
+      deleteBlastTrigger_();
       Logger.log('blastQueueProcessor: Semua mesej selesai. Trigger dipadam.');
     }
 
@@ -10728,7 +10817,7 @@ function blastQueueProcessor() {
 }
 
 // setupBlastTrigger — pasang time-based trigger setiap 8 minit jika belum ada
-function setupBlastTrigger() {
+function setupBlastTrigger_() {
   var existing = ScriptApp.getProjectTriggers();
   var sudahAda = existing.some(function(t) {
     return t.getHandlerFunction() === 'blastQueueProcessor';
@@ -10743,7 +10832,7 @@ function setupBlastTrigger() {
 }
 
 // deleteBlastTrigger — padam semua trigger blastQueueProcessor
-function deleteBlastTrigger() {
+function deleteBlastTrigger_() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'blastQueueProcessor') {
       ScriptApp.deleteTrigger(t);
@@ -10755,6 +10844,9 @@ function deleteBlastTrigger() {
 // getBlastStatus — return stats semasa BlastQueue
 // Output: { success, pending, sent, failed, total }
 function getBlastStatus(params) {
+  params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, true);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(TAB.BLAST_QUEUE);
@@ -10800,21 +10892,21 @@ function logHeaders() {
   });
 }
 
-function testLogin() {
-  return testRequestStaffLoginOtpV2();
+function testLogin_() {
+  return testRequestStaffLoginOtpV2_();
 }
 
-function testLoginDirect() {
-  return testRequestStaffLoginOtpV2();
+function testLoginDirect_() {
+  return testRequestStaffLoginOtpV2_();
 }
 
-function testRequestStaffLoginOtpV2() {
+function testRequestStaffLoginOtpV2_() {
   var email = PropertiesService.getScriptProperties().getProperty('TEST_STAFF_EMAIL');
   if (!email) throw new Error('TEST_STAFF_EMAIL Script Property diperlukan untuk ujian editor.');
   return requestStaffLoginOtp({ email: email });
 }
 
-function testRegisterKanak() {
+function testRegisterKanak_() {
   var result = registerKanak({
     namaIbu:  'Siti Aminah binti Ahmad',
     telefon:  '0123456789',
@@ -10830,7 +10922,7 @@ function testRegisterKanak() {
   Logger.log(JSON.stringify(result));
 }
 
-function testRegisterDewasa() {
+function testRegisterDewasa_() {
   var result = registerDewasa({
     nama:    'Ahmad bin Yusof',
     telefon: '0198765432',
@@ -10842,7 +10934,7 @@ function testRegisterDewasa() {
   Logger.log(JSON.stringify(result));
 }
 
-function testAttendance() {
+function testAttendance_() {
   var result = attendance({
     guru:   'Ustaz Hafiz',
     murid:  'Muhammad Danish bin Ahmad',
@@ -10852,13 +10944,13 @@ function testAttendance() {
   Logger.log(JSON.stringify(result));
 }
 
-function testGenerateSlip() {
+function testGenerateSlip_() {
   // Jana slip untuk baris terakhir dalam tab PendaftaranBaru
   var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(TAB.KANAK);
   var last  = sheet.getLastRow();
   Logger.log('Jana slip untuk baris: ' + last);
-  generateSlipKanak(last);
+  generateSlipKanak_(last);
 }
 
 // ============================================================
@@ -11051,7 +11143,7 @@ function confirmRegisterKanak(params) {
     }
 
     try {
-      generateSlipKanak(result.row);
+      generateSlipKanak_(result.row);
     } catch (e) {
       Logger.log('generateSlipKanak error: ' + e.message);
     }
@@ -11066,7 +11158,7 @@ function confirmRegisterKanak(params) {
     );
 
     try {
-      syncNamaMuridToAllForms();
+      syncNamaMuridToAllFormsCore_();
     } catch (e) {
       Logger.log('syncForms error: ' + e.message);
     }
@@ -11149,7 +11241,7 @@ function confirmRegisterDewasa(params) {
     );
 
     try {
-      syncNamaMuridToAllForms();
+      syncNamaMuridToAllFormsCore_();
     } catch (e) {
       Logger.log('syncForms error: ' + e.message);
     }
@@ -11663,7 +11755,7 @@ function getYuranParent(params) {
 // FCM — Firebase Cloud Messaging
 // ============================================================
 
-function ensureDeviceTokensSheet(ss) {
+function ensureDeviceTokensSheet_(ss) {
   var sheet = ss.getSheetByName(TAB.DEVICE_TOKENS);
   if (!sheet) {
     sheet = ss.insertSheet(TAB.DEVICE_TOKENS);
@@ -11673,7 +11765,7 @@ function ensureDeviceTokensSheet(ss) {
   return sheet;
 }
 
-function ensureNotifikasiSheet(ss) {
+function ensureNotifikasiSheet_(ss) {
   var sheet = ss.getSheetByName(TAB.NOTIFIKASI);
   if (!sheet) {
     sheet = ss.insertSheet(TAB.NOTIFIKASI);
@@ -11686,6 +11778,8 @@ function ensureNotifikasiSheet(ss) {
 // simpanDeviceToken — simpan/kemaskini FCM token device guru
 function simpanDeviceToken(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var fcmToken  = (params.fcmToken || '').toString().trim();
     var device    = (params.device   || '').toString().trim().substring(0, 200);
@@ -11695,7 +11789,7 @@ function simpanDeviceToken(params) {
     var email = authCheck.valid ? (authCheck.user.email || '') : '';
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ensureDeviceTokensSheet(ss);
+    var sheet = ensureDeviceTokensSheet_(ss);
     var ts    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
 
     // Kemaskini jika token sudah wujud
@@ -11720,7 +11814,7 @@ function simpanDeviceToken(params) {
 }
 
 // getFCMAccessToken — jana OAuth2 bearer token untuk FCM HTTP V1 API
-function getFCMAccessToken() {
+function getFCMAccessToken_() {
   var props       = PropertiesService.getScriptProperties();
   var clientEmail = (props.getProperty('FCM_CLIENT_EMAIL') || '').trim();
   var privateKey  = (props.getProperty('FCM_PRIVATE_KEY')  || '').replace(/\\n/g, '\n');
@@ -11760,14 +11854,14 @@ function getFCMAccessToken() {
 }
 
 // hantarFCM — hantar push notification ke semua token dalam DeviceTokens
-function hantarFCM(title, body, dataMap) {
+function hantarFCM_(title, body, dataMap) {
   try {
     var props      = PropertiesService.getScriptProperties();
     var projectId  = (props.getProperty('FCM_PROJECT_ID') || '').trim();
     if (!projectId) return;
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ensureDeviceTokensSheet(ss);
+    var sheet = ensureDeviceTokensSheet_(ss);
     if (sheet.getLastRow() < 2) return;
 
     var rows   = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
@@ -11775,7 +11869,7 @@ function hantarFCM(title, body, dataMap) {
                      .filter(function(t) { return t.length > 0; });
     if (!tokens.length) return;
 
-    var accessToken = getFCMAccessToken();
+    var accessToken = getFCMAccessToken_();
     var url         = 'https://fcm.googleapis.com/v1/projects/' + projectId + '/messages:send';
     var dataStr     = {};
     if (dataMap) {
@@ -11814,15 +11908,15 @@ function hantarFCM(title, body, dataMap) {
 }
 
 // simpanNotifikasi — simpan ke tab Notifikasi dan trigger FCM push
-function simpanNotifikasi(type, title, body, dataMap) {
+function simpanNotifikasi_(type, title, body, dataMap) {
   try {
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ensureNotifikasiSheet(ss);
+    var sheet = ensureNotifikasiSheet_(ss);
     var id    = Utilities.getUuid();
     var ts    = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
     sheet.appendRow([id, ts, type || 'umum', title || '', body || '', dataMap ? JSON.stringify(dataMap) : '']);
     SpreadsheetApp.flush();
-    try { hantarFCM(title || '', body || '', Object.assign({ type: type || 'umum', id: id }, dataMap || {})); } catch(fe) {}
+    try { hantarFCM_(title || '', body || '', Object.assign({ type: type || 'umum', id: id }, dataMap || {})); } catch(fe) {}
     return id;
   } catch (err) {
     Logger.log('simpanNotifikasi error: ' + err.message);
@@ -11833,10 +11927,12 @@ function simpanNotifikasi(type, title, body, dataMap) {
 // getNotifikasi — return 20 notifikasi terbaru, filter selepas lastId
 function getNotifikasi(params) {
   params = params || {};
+  var handlerAuth = authorizePrivilegedHandler_(params, false);
+  if (!handlerAuth.valid) return { success: false, message: handlerAuth.message };
   try {
     var lastId = (params.lastId || '').toString().trim();
     var ss     = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet  = ensureNotifikasiSheet(ss);
+    var sheet  = ensureNotifikasiSheet_(ss);
     if (sheet.getLastRow() < 2) return { success: true, notifikasi: [] };
 
     var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();

@@ -5041,7 +5041,7 @@
     if (!guruAsal) { ptSemakEnableBtn(); return; }
 
     document.getElementById('ptLoadingMsg').style.display = 'block';
-    callGAS('getMuridByGuruUntukTukar', { namaGuru: guruAsal },
+    callGAS('getMuridByGuruUntukTukar', { namaGuru: guruAsal, token: _spkm_st.getItem('spkm_token') },
       function(data) {
         document.getElementById('ptLoadingMsg').style.display = 'none';
         if (!data.success) {
@@ -5191,7 +5191,7 @@
       mtgPopulasiDropdown();
     }
 
-    callGAS('getMuridTanpaGuru', {},
+    callGAS('getMuridTanpaGuru', { token: _spkm_st.getItem('spkm_token') },
       function(data) {
         document.getElementById('mtgLoadingMsg').style.display = 'none';
         if (!data.success) {
@@ -6086,7 +6086,7 @@
     const btn = document.getElementById('submitCashBtn');
     btn.classList.add('loading'); btn.disabled = true;
 
-    callGAS('recordCash', { nama, jumlah: parseFloat(jumlah), tarikh, bulan },
+    callGAS('recordCash', { nama, jumlah: parseFloat(jumlah), tarikh, bulan, token: _spkm_st.getItem('spkm_token') },
       function(data) {
         btn.classList.remove('loading'); btn.disabled = false;
         if (data.success) {

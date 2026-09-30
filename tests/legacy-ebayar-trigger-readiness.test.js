@@ -41,6 +41,7 @@ function createContext(calculationSnapshots) {
   const syncCalls = [];
   const logs = [];
   const context = {
+    authorizeInstalledTrigger_: () => true,
     YURAN_SS_ID: 'YURAN',
     SpreadsheetApp: {
       openById(id) {
@@ -60,7 +61,7 @@ function createContext(calculationSnapshots) {
     },
     Utilities: { sleep: ms => sleeps.push(ms) },
     Logger: { log: message => logs.push(message) },
-    syncFormMinusBayar(params) {
+    syncFormMinusBayarCore_(params) {
       syncCalls.push(params);
       return { success: true, bulan: params.bulan };
     }

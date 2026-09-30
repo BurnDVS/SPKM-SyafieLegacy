@@ -220,7 +220,7 @@ test('one payment group writes the same receipt URL to every child row', () => {
 });
 
 test('synthetic preview helper stays outside Payments and uses the real Slides-to-PDF layer', () => {
-  const source = extractFunction(backendSource, 'testCreateNativeEbayarReceiptSlidesPreviewV2');
+  const source = extractFunction(backendSource, 'testCreateNativeEbayarReceiptSlidesPreviewV2_');
   assert.match(source, /NATIVE_EBAYAR_RECEIPT_PREVIEW_FOLDER_ID/);
   assert.match(source, /createNativeEbayarReceiptPdfBlobV2_/);
   assert.match(source, /CONTOH/);

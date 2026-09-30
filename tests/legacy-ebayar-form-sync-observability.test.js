@@ -110,15 +110,15 @@ function createContext(options = {}) {
     'normalizeLegacyEbayarName_',
     'logLegacyEbayarFormSyncDiagnostic_',
     'getLegacyEbayarCalculationTabName_',
-    'syncNamaMuridToAllForms',
-    'syncFormMinusBayar'
+    'syncNamaMuridToAllFormsCore_',
+    'syncFormMinusBayarCore_'
   ].forEach(name => vm.runInContext(extractFunction(name), context));
   return { context, logs, openedFormIds, setCalls };
 }
 
 test('all-month sync reports verified 12/12 success and logs non-sensitive diagnostics', () => {
   const setup = createContext();
-  const result = setup.context.syncNamaMuridToAllForms();
+  const result = setup.context.syncNamaMuridToAllFormsCore_();
 
   assert.equal(result.success, true);
   assert.equal(result.updated, 12);
@@ -137,7 +137,7 @@ test('all-month sync reports verified 12/12 success and logs non-sensitive diagn
 
 test('all-month sync skips a Form when its Calculation source cannot be read', () => {
   const setup = createContext({ unreadableCalculation: 'CalculationOgos2026' });
-  const result = setup.context.syncNamaMuridToAllForms();
+  const result = setup.context.syncNamaMuridToAllFormsCore_();
 
   assert.equal(result.success, false);
   assert.equal(result.updated, 11);
@@ -150,7 +150,7 @@ test('all-month sync skips a Form when its Calculation source cannot be read', (
 
 test('single-month sync verifies matching read-back choices and excludes paid names', () => {
   const setup = createContext();
-  const result = setup.context.syncFormMinusBayar({ bulan: 'OGOS2026' });
+  const result = setup.context.syncFormMinusBayarCore_({ bulan: 'OGOS2026' });
 
   assert.equal(result.success, true);
   assert.equal(result.diagnostic.action, 'syncFormBulanIni');
@@ -166,7 +166,7 @@ test('single-month sync verifies matching read-back choices and excludes paid na
 
 test('single-month sync fails when the read-back count does not match', () => {
   const setup = createContext({ readBackMode: 'count-mismatch' });
-  const result = setup.context.syncFormMinusBayar({ bulan: 'OGOS2026' });
+  const result = setup.context.syncFormMinusBayarCore_({ bulan: 'OGOS2026' });
 
   assert.equal(result.success, false);
   assert.equal(result.diagnostic.generatedChoiceCount, 1);
@@ -177,7 +177,7 @@ test('single-month sync fails when the read-back count does not match', () => {
 
 test('single-month sync fails when a normalized paid name remains in read-back choices', () => {
   const setup = createContext({ readBackMode: 'paid-name-present' });
-  const result = setup.context.syncFormMinusBayar({ bulan: 'OGOS2026' });
+  const result = setup.context.syncFormMinusBayarCore_({ bulan: 'OGOS2026' });
 
   assert.equal(result.success, false);
   assert.equal(result.diagnostic.generatedChoiceCount, 1);
