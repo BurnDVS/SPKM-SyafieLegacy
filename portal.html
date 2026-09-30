@@ -3572,6 +3572,15 @@
     <button class="btn btn-ghost btn-sm" id="btnSyncMinusBayar" onclick="syncFormMinusBayar()" style="display:none; margin-bottom:2px;">
       🧹 Kemas Form (Tolak Dah Bayar)
     </button>
+    <button class="btn btn-ghost btn-sm" id="btnEbayarYears" type="button" onclick="loadEbayarYearManagement()" style="display:none; margin-bottom:2px;">Pengurusan Tahun eBayar</button>
+  </div>
+  <div class="card" id="ebayarYearsAdmin" style="display:none; margin-bottom:18px;">
+    <div class="card-header"><div class="card-header-text"><h3>Pengurusan Tahun eBayar</h3><p>Tahun aktif tersedia pada portal bayaran awam. Tahun baharu menggunakan Native Januari–Disember; 2026 dilindungi.</p></div></div>
+    <div class="card-body">
+      <div id="ebayarYearsList"></div>
+      <button class="btn btn-primary btn-sm" id="btnCreateEbayarYear" type="button" onclick="createNewEbayarYear()" disabled>+ Wujudkan Tahun Baharu</button>
+      <p id="ebayarYearsMessage" role="status" aria-live="polite"></p>
+    </div>
   </div>
   <div class="alert alert-success" id="syncSuccess" style="display:none; margin-bottom:16px;">
     <span class="alert-icon">✓</span>
@@ -4170,6 +4179,8 @@
   let nativeEbayarPendingSubmission = null;
   let nativeEbayarSubmissionBusy = false;
   let nativeEbayarYearConfig = null;
+  let ebayarYearsBusy = false;
+  let ebayarYearsLoaded = false;
 
   // Kehadiran state
   let kehadiranStatsData  = [];
@@ -4308,6 +4319,16 @@
     if (btnSyncMinus) btnSyncMinus.style.display = isAdmin ? '' : 'none';
     const ebayarV2Maintenance = document.getElementById('ebayarV2Maintenance');
     if (ebayarV2Maintenance) ebayarV2Maintenance.style.display = isAdmin ? '' : 'none';
+    const btnEbayarYears = document.getElementById('btnEbayarYears');
+    if (btnEbayarYears) btnEbayarYears.style.display = isAdmin ? '' : 'none';
+    const ebayarYearsAdmin = document.getElementById('ebayarYearsAdmin');
+    if (!isAdmin) {
+      if (ebayarYearsAdmin) ebayarYearsAdmin.style.display = 'none';
+      ebayarYearsLoaded = false;
+      const yearsList = document.getElementById('ebayarYearsList');
+      if (yearsList) yearsList.replaceChildren();
+      setEbayarYearsBusy(ebayarYearsBusy);
+    }
     const tabRekodGuru = document.getElementById('tabBtnRekodKehadiran');
     if (tabRekodGuru)  tabRekodGuru.style.display = loggedIn ? '' : 'none';
     var bellWrap = document.getElementById('notifBellWrap');
@@ -6121,6 +6142,133 @@
       if (continueBtn) continueBtn.disabled = false;
       setEbayarV2MaintenanceButtonLoading('ebayarV2AutoSyncBtn', false, 'Sedang Sync...');
     }
+  }
+
+  function showEbayarYearsMessage(message, isError) {
+    var element = document.getElementById('ebayarYearsMessage');
+    if (element) {
+      element.textContent = message || '';
+      element.style.color = isError ? 'var(--error)' : '';
+    }
+  }
+
+  function setEbayarYearsBusy(busy) {
+    ebayarYearsBusy = busy;
+    var button = document.getElementById('btnEbayarYears');
+    if (button) button.disabled = busy;
+    var panel = document.getElementById('ebayarYearsAdmin');
+    if (panel) {
+      panel.setAttribute('aria-busy', busy ? 'true' : 'false');
+      panel.querySelectorAll('button').forEach(function(control) {
+        control.disabled = busy || !ebayarYearsLoaded;
+      });
+    }
+  }
+
+  function getEbayarYearAdminToken_() {
+    if (!loggedInGuru || currentRole !== 'ADMIN') {
+      showEbayarYearsMessage('Akses Admin diperlukan. Sila log masuk sebagai Admin.', true);
+      return '';
+    }
+    var token = _spkm_st.getItem('spkm_token');
+    if (!token) {
+      ebayarYearsLoaded = false;
+      setEbayarYearsBusy(false);
+      showEbayarYearsMessage('Sesi Admin tidak sah atau telah tamat. Sila log masuk semula.', true);
+    }
+    return token;
+  }
+
+  function isEbayarYearAdminSessionCurrent_(token) {
+    return !!loggedInGuru && currentRole === 'ADMIN' && token === _spkm_st.getItem('spkm_token');
+  }
+
+  function renderEbayarYearManagement(data) {
+    if (!data || !data.success || !Array.isArray(data.years)) throw new Error(data && data.message || 'Konfigurasi tahun tidak tersedia.');
+    var list = document.getElementById('ebayarYearsList');
+    list.replaceChildren();
+    var currentYear = Number(getNativeEbayarMalaysiaDateParts().dateKey.slice(0, 4));
+    data.years.forEach(function(year) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;';
+      var label = document.createElement('span');
+      label.textContent = year.year + ' · ' + year.mode + ' · ' + year.status + (year.year === 2026 ? ' · Dilindungi' : '');
+      row.appendChild(label);
+      if (year.year > 2026 && year.year > currentYear) {
+        var toggle = document.createElement('button');
+        toggle.type = 'button'; toggle.className = 'btn btn-ghost btn-sm';
+        toggle.textContent = year.status === 'ACTIVE' ? 'Nyahaktif' : 'Aktifkan';
+        toggle.disabled = ebayarYearsBusy;
+        toggle.onclick = function() { updateEbayarYearAdmin(year.year, year.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); };
+        row.appendChild(toggle);
+      }
+      list.appendChild(row);
+    });
+    ebayarYearsLoaded = true;
+  }
+
+  async function loadEbayarYearManagement() {
+    if (ebayarYearsBusy) return;
+    if (loggedInGuru && currentRole === 'ADMIN') document.getElementById('ebayarYearsAdmin').style.display = '';
+    var token = getEbayarYearAdminToken_();
+    if (!token) return;
+    ebayarYearsLoaded = false;
+    setEbayarYearsBusy(true);
+    showEbayarYearsMessage('Memuatkan tahun...', false);
+    try {
+      var data = await callGASPromise('getEbayarYearManagement', { token: _spkm_st.getItem('spkm_token') }, 30000);
+      if (!isEbayarYearAdminSessionCurrent_(token)) return;
+      renderEbayarYearManagement(data);
+      showEbayarYearsMessage('Senarai tahun dimuatkan.', false);
+    } catch (err) {
+      if (isEbayarYearAdminSessionCurrent_(token)) showEbayarYearsMessage(err.message || 'Tahun gagal dimuatkan.', true);
+    } finally { setEbayarYearsBusy(false); }
+  }
+
+  async function saveEbayarYearAdmin_(action, payload, successMessage) {
+    if (ebayarYearsBusy) return;
+    var token = getEbayarYearAdminToken_();
+    if (!token) return;
+    if (!ebayarYearsLoaded) {
+      showEbayarYearsMessage('Muat semula senarai tahun sebelum membuat perubahan.', true);
+      return;
+    }
+    setEbayarYearsBusy(true);
+    showEbayarYearsMessage('Menyimpan konfigurasi tahun...', false);
+    try {
+      var data = await callGASPromise(action, payload, 120000);
+      if (!isEbayarYearAdminSessionCurrent_(token)) return;
+      renderEbayarYearManagement(data);
+      showEbayarYearsMessage(successMessage, false);
+    } catch (err) {
+      ebayarYearsLoaded = false;
+      if (isEbayarYearAdminSessionCurrent_(token)) {
+        showEbayarYearsMessage((err.message || 'Tahun gagal dikemaskini.') + ' Jangan ulang perubahan sehingga senarai tahun dimuat semula untuk menyemak hasil.', true);
+      }
+    } finally { setEbayarYearsBusy(false); }
+  }
+
+  async function createNewEbayarYear() {
+    if (ebayarYearsBusy || !getEbayarYearAdminToken_()) return;
+    if (!ebayarYearsLoaded) { showEbayarYearsMessage('Muat semula senarai tahun sebelum membuat perubahan.', true); return; }
+    var input = window.prompt('Masukkan tahun baharu (contoh: 2028):');
+    if (input === null) return;
+    var currentYear = Number(getNativeEbayarMalaysiaDateParts().dateKey.slice(0, 4));
+    if (!/^\d{4}$/.test(input.trim()) || Number(input) < 2028 || Number(input) <= currentYear) {
+      showEbayarYearsMessage('Tahun baharu mesti selepas tahun semasa dan sekurang-kurangnya 2028.', true); return;
+    }
+    return saveEbayarYearAdmin_('createEbayarYear', { token: _spkm_st.getItem('spkm_token'), year: Number(input) },
+      'Tahun ' + input.trim() + ' diwujudkan sebagai Native Januari–Disember.');
+  }
+
+  async function updateEbayarYearAdmin(year, status) {
+    if (ebayarYearsBusy || !getEbayarYearAdminToken_()) return;
+    var currentYear = Number(getNativeEbayarMalaysiaDateParts().dateKey.slice(0, 4));
+    if (!Number.isInteger(year) || year <= 2026 || year <= currentYear || ['ACTIVE', 'INACTIVE'].indexOf(status) < 0) {
+      showEbayarYearsMessage('Tahun 2026 dilindungi; hanya status tahun akan datang boleh dikemaskini.', true); return;
+    }
+    return saveEbayarYearAdmin_('updateEbayarYear', { token: _spkm_st.getItem('spkm_token'), year: year, status: status },
+      'Konfigurasi tahun ' + year + ' dikemaskini.');
   }
 
   function syncMuridToForms() {
