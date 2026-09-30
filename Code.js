@@ -1143,59 +1143,394 @@ function confirmStaffLoginOtp(params) {
 // ============================================================
 function registerKanak(params) {
   params = params || {};
+
   try {
-    ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','faham','pakej','kaedah'].forEach(function(f) {
+    [
+      'namaIbu',
+      'telefon',
+      'namaAnak',
+      'mykid',
+      'email',
+      'alamat',
+      'tahap',
+      'faham',
+      'pakej',
+      'kaedah'
+    ].forEach(function(f) {
       if (params[f]) params[f] = sanitizeInput(params[f]);
     });
-    var required = ['telefon','namaAnak','mykid','email','alamat','tahap','pakej','kaedah'];
+
+    var required = [
+      'telefon',
+      'namaAnak',
+      'mykid',
+      'email',
+      'alamat',
+      'tahap',
+      'pakej',
+      'kaedah'
+    ];
+
     for (var r = 0; r < required.length; r++) {
-      if (!params[required[r]] || !params[required[r]].toString().trim()) {
-        return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
+      if (!params[required[r]] ||
+          !params[required[r]].toString().trim()) {
+        return {
+          success: false,
+          message: 'Medan "' + required[r] + '" diperlukan.'
+        };
       }
     }
 
-    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.KANAK);
-    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
+    var result = saveKanakWithStudentUid_(params);
 
-    var existing = findExistingKanakByMykid_(sheet, params.mykid);
-    if (existing) return duplicateKanakMessage_(params.mykid, existing);
+    if (!result || !result.success) {
+      return result || {
+        success: false,
+        message: 'Pendaftaran tidak berjaya.'
+      };
+    }
 
-    var lastRow   = sheet.getLastRow();
-    var nextBil   = lastRow;
-    var timestamp = new Date();
+    Logger.log(
+      'registerKanak berjaya: Bil ' +
+      result.bil +
+      ' — ' +
+      params.namaAnak +
+      ' — UID ' +
+      result.studentUid
+    );
 
-    // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
-    var newRow = new Array(19).fill('');
-    newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
-    newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
-    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim().toUpperCase();
-    newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
-    newRow[COL_KANAK.EMAIL]     = params.email.trim();
-    newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
-    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
-    newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
-    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
-    newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
-    newRow[COL_KANAK.STATUS]    = 'AKTIF';
+    try {
+      generateSlipKanak(result.row);
+    } catch (e) {
+      Logger.log('generateSlipKanak error: ' + e.message);
+    }
 
-    sheet.appendRow(newRow);
-    SpreadsheetApp.flush();
+    try {
+      simpanNotifikasi(
+        'kanak',
+        'Murid Baru Didaftarkan',
+        (params.namaAnak || '') + ' — ' + (params.tahap || ''),
+        { bil: String(result.bil) }
+      );
+    } catch (e) {}
 
-    Logger.log('registerKanak berjaya: Bil ' + nextBil + ' — ' + params.namaAnak);
-
-    // Cuba jana slip terus (jika tidak guna trigger)
-    var slipRow = sheet.getLastRow();
-    generateSlipKanak(slipRow);
-
-    try { simpanNotifikasi('kanak', 'Murid Baru Didaftarkan', (params.namaAnak || '') + ' — ' + (params.tahap || ''), { bil: String(nextBil) }); } catch(e) {}
-
-    return { success: true, bil: nextBil };
+    return {
+      success: true,
+      bil: result.bil,
+      studentUid: result.studentUid
+    };
 
   } catch (err) {
     Logger.log('registerKanak error: ' + err.message);
-    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+
+    return {
+      success: false,
+      message: 'Ralat semasa mendaftar: ' + err.message
+    };
+  }
+}
+
+function saveKanakWithStudentUid_(params) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    throw new Error('Pendaftaran sedang diproses. Sila cuba semula.');
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.KANAK);
+
+    if (!sheet ||
+        sheet.getLastColumn() < 20 ||
+        sheet.getRange(1, 20).getValue().toString().trim() !== 'STUDENT_UID') {
+      throw new Error('Konfigurasi STUDENT_UID roster belum sedia.');
+    }
+
+    // Duplicate check mesti dibuat semula di dalam lock.
+    var existing = findExistingKanakByMykid_(sheet, params.mykid);
+    if (existing) {
+      return duplicateKanakMessage_(params.mykid, existing);
+    }
+
+    var timestamp = new Date();
+    var nextBil = sheet.getLastRow();
+
+    // Selepas UID cutover, row KANAK ialah 20 kolum.
+    var newRow = new Array(20).fill('');
+
+    newRow[COL_KANAK.TIMESTAMP] =
+      Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_KANAK.NAMA_IBU] = (params.namaIbu || '').trim().toUpperCase();
+    newRow[COL_KANAK.TELEFON] = params.telefon.trim();
+    newRow[COL_KANAK.NAMA] = params.namaAnak.trim().toUpperCase();
+    newRow[COL_KANAK.NO_MYKID] = params.mykid.trim();
+    newRow[COL_KANAK.EMAIL] = params.email.trim();
+    newRow[COL_KANAK.ALAMAT] = params.alamat.trim();
+    newRow[COL_KANAK.TAHAP] = params.tahap.trim();
+    newRow[COL_KANAK.FAHAM] = (params.faham || '').trim();
+    newRow[COL_KANAK.PAKEJ] = params.pakej.trim();
+    newRow[COL_KANAK.KAEDAH] = params.kaedah.trim();
+    newRow[COL_KANAK.STATUS] = 'AKTIF';
+
+    var identityKey =
+      getStudentUidIdentityKey_(newRow, COL_KANAK, 'KANAK');
+
+    if (!identityKey) {
+      throw new Error(
+        'No. MYKID mesti nombor 12 digit yang sah untuk pendaftaran baharu. ' +
+        'Jika tiada MYKID sah, sila hubungi admin untuk semakan manual.'
+      );
+    }
+
+    var secret = getStudentUidHmacSecret_();
+    var fingerprint = makeStudentUidFingerprint_(identityKey, secret);
+    var registry = readStudentUidRegistry_();
+
+    var approval = {
+      confirmedNewIdentity: true,
+      approvalId: 'AUTO_OFFICIAL_ID_REGISTRATION'
+    };
+
+    var decision = resolveStudentUidOwnership_(
+      registry,
+      'KANAK',
+      'OFFICIAL_ID',
+      fingerprint,
+      newRow[COL_KANAK.NAMA],
+      approval
+    );
+
+    if (decision.decision !== 'REUSE' &&
+        decision.decision !== 'NEW') {
+      throw new Error(
+        'Identiti murid memerlukan semakan admin sebelum pendaftaran diteruskan.'
+      );
+    }
+
+    var uid = decision.decision === 'REUSE'
+      ? decision.uid
+      : generateStudentUid_('KANAK', registry);
+
+    if (decision.decision === 'NEW') {
+      var registrySheet =
+        getEbayarMasterSpreadsheet_().getSheetByName(STUDENT_UID_REGISTRY_TAB_);
+
+      if (!registrySheet) {
+        throw new Error('StudentUidRegistry tidak dijumpai.');
+      }
+
+      var now = new Date();
+
+      registrySheet.appendRow([
+        uid,
+        'KANAK',
+        newRow[COL_KANAK.NAMA],
+        fingerprint,
+        'OFFICIAL_ID',
+        'ACTIVE',
+        now,
+        now
+      ]);
+
+      SpreadsheetApp.flush();
+
+      // Registry mesti sah dahulu sebelum roster ditulis.
+      registry = readStudentUidRegistry_();
+
+      var owner = registry.byUid[uid];
+
+      if (!owner ||
+          owner.TYPE !== 'KANAK' ||
+          owner.VERIFY_METHOD !== 'OFFICIAL_ID' ||
+          owner.IDENTITY_FINGERPRINT !== fingerprint) {
+        throw new Error(
+          'Pengesahan registry UID gagal. Pendaftaran roster belum disimpan.'
+        );
+      }
+    }
+
+    newRow[COL_KANAK.STUDENT_UID] = uid;
+
+    var expectedRow = sheet.getLastRow() + 1;
+    sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+
+    var readBack = sheet.getRange(
+      expectedRow,
+      COL_KANAK.STUDENT_UID + 1
+    ).getValue().toString().trim();
+
+    if (readBack !== uid) {
+      throw new Error(
+        'Pengesahan STUDENT_UID roster gagal. Sila hubungi admin.'
+      );
+    }
+
+    return {
+      success: true,
+      bil: nextBil,
+      row: expectedRow,
+      studentUid: uid
+    };
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveDewasaWithStudentUid_(params) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    throw new Error('Pendaftaran sedang diproses. Sila cuba semula.');
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(TAB.DEWASA);
+
+    if (!sheet ||
+        sheet.getLastColumn() < 20 ||
+        sheet.getRange(1, 20).getValue().toString().trim() !== 'STUDENT_UID') {
+      throw new Error('Konfigurasi STUDENT_UID roster belum sedia.');
+    }
+
+    // Duplicate check mesti dibuat semula di dalam lock.
+    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
+    if (existing) {
+      return duplicateDewasaMessage_(params.mykad, existing);
+    }
+
+    var timestamp = new Date();
+
+    // Selepas UID cutover, row DEWASA ialah 20 kolum.
+    var newRow = new Array(20).fill('');
+
+    newRow[COL_DEWASA.TIMESTAMP] =
+      Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
+    newRow[COL_DEWASA.EMAIL] = params.email.trim();
+    newRow[COL_DEWASA.NAMA] = params.nama.trim().toUpperCase();
+    newRow[COL_DEWASA.TELEFON] = params.telefon.trim();
+    newRow[COL_DEWASA.NO_MYKAD] = params.mykad.trim();
+    newRow[COL_DEWASA.PAKEJ] = params.pakej.trim();
+    newRow[COL_DEWASA.KAEDAH] = params.kaedah.trim();
+    newRow[COL_DEWASA.ALAMAT] = params.alamat.trim();
+    newRow[COL_DEWASA.TAHAP] = params.tahap.trim();
+    newRow[COL_DEWASA.FAHAM] = (params.faham || '').trim();
+    newRow[COL_DEWASA.STATUS] = 'AKTIF';
+
+    var identityKey =
+      getStudentUidIdentityKey_(newRow, COL_DEWASA, 'DEWASA');
+
+    if (!identityKey) {
+      throw new Error(
+        'No. MYKAD mesti nombor 12 digit yang sah untuk pendaftaran baharu. ' +
+        'Jika tiada MYKAD sah, sila hubungi admin untuk semakan manual.'
+      );
+    }
+
+    var secret = getStudentUidHmacSecret_();
+    var fingerprint = makeStudentUidFingerprint_(identityKey, secret);
+    var registry = readStudentUidRegistry_();
+
+    var approval = {
+      confirmedNewIdentity: true,
+      approvalId: 'AUTO_OFFICIAL_ID_REGISTRATION'
+    };
+
+    var decision = resolveStudentUidOwnership_(
+      registry,
+      'DEWASA',
+      'OFFICIAL_ID',
+      fingerprint,
+      newRow[COL_DEWASA.NAMA],
+      approval
+    );
+
+    if (decision.decision !== 'REUSE' &&
+        decision.decision !== 'NEW') {
+      throw new Error(
+        'Identiti murid memerlukan semakan admin sebelum pendaftaran diteruskan.'
+      );
+    }
+
+    var uid = decision.decision === 'REUSE'
+      ? decision.uid
+      : generateStudentUid_('DEWASA', registry);
+
+    if (decision.decision === 'NEW') {
+      var registrySheet =
+        getEbayarMasterSpreadsheet_().getSheetByName(STUDENT_UID_REGISTRY_TAB_);
+
+      if (!registrySheet) {
+        throw new Error('StudentUidRegistry tidak dijumpai.');
+      }
+
+      var now = new Date();
+
+      registrySheet.appendRow([
+        uid,
+        'DEWASA',
+        newRow[COL_DEWASA.NAMA],
+        fingerprint,
+        'OFFICIAL_ID',
+        'ACTIVE',
+        now,
+        now
+      ]);
+
+      SpreadsheetApp.flush();
+
+      // Registry mesti sah dahulu sebelum roster ditulis.
+      registry = readStudentUidRegistry_();
+
+      var owner = registry.byUid[uid];
+
+      if (!owner ||
+          owner.TYPE !== 'DEWASA' ||
+          owner.VERIFY_METHOD !== 'OFFICIAL_ID' ||
+          owner.IDENTITY_FINGERPRINT !== fingerprint) {
+        throw new Error(
+          'Pengesahan registry UID gagal. Pendaftaran roster belum disimpan.'
+        );
+      }
+    }
+
+    newRow[COL_DEWASA.STUDENT_UID] = uid;
+
+    var expectedRow = sheet.getLastRow() + 1;
+    sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+
+    var readBack = sheet.getRange(
+      expectedRow,
+      COL_DEWASA.STUDENT_UID + 1
+    ).getValue().toString().trim();
+
+    if (readBack !== uid) {
+      throw new Error(
+        'Pengesahan STUDENT_UID roster gagal. Sila hubungi admin.'
+      );
+    }
+
+    var muridId =
+      'D' +
+      Utilities.formatDate(
+        new Date(),
+        'Asia/Kuala_Lumpur',
+        'yyyyMMdd'
+      ) +
+      '-' +
+      expectedRow;
+
+    return {
+      success: true,
+      id: muridId,
+      row: expectedRow,
+      studentUid: uid
+    };
+
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -1207,61 +1542,86 @@ function registerKanak(params) {
 // ============================================================
 function registerDewasa(params) {
   params = params || {};
+
   try {
-    ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'].forEach(function(f) {
-      if (params[f]) params[f] = sanitizeInput(params[f]);
+    [
+      'nama',
+      'telefon',
+      'email',
+      'alamat',
+      'tahap',
+      'mykad',
+      'pakej',
+      'kaedah'
+    ].forEach(function(f) {
+      if (params[f]) {
+        params[f] = sanitizeInput(params[f]);
+      }
     });
-    var required = ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'];
+
+    var required = [
+      'nama',
+      'telefon',
+      'email',
+      'alamat',
+      'tahap',
+      'mykad',
+      'pakej',
+      'kaedah'
+    ];
+
     for (var r = 0; r < required.length; r++) {
-      if (!params[required[r]] || !params[required[r]].toString().trim()) {
-        return { success: false, message: 'Medan "' + required[r] + '" diperlukan.' };
+      if (!params[required[r]] ||
+          !params[required[r]].toString().trim()) {
+        return {
+          success: false,
+          message: 'Medan "' + required[r] + '" diperlukan.'
+        };
       }
     }
 
-    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.DEWASA);
-    if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
+    var result = saveDewasaWithStudentUid_(params);
 
-    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
-    if (existing) return duplicateDewasaMessage_(params.mykad, existing);
+    if (!result || !result.success) {
+      return result || {
+        success: false,
+        message: 'Pendaftaran tidak berjaya.'
+      };
+    }
 
-    var lastRow   = sheet.getLastRow();
-    var nextBil   = lastRow;
-    var timestamp = new Date();
+    Logger.log(
+      'registerDewasa berjaya: ' +
+      params.nama +
+      ' (' +
+      result.id +
+      ') — UID ' +
+      result.studentUid
+    );
 
-    // BIL kolum A dikira oleh formula SEQUENCE dalam sheet — jangan tulis ke kolum A
-    var newRow = new Array(19).fill('');
-    newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_DEWASA.EMAIL]     = params.email.trim();
-    newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
-    newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
-    newRow[COL_DEWASA.NO_MYKAD]  = (params.mykad  || '').trim();
-    newRow[COL_DEWASA.PAKEJ]     = (params.pakej   || '').trim();
-    newRow[COL_DEWASA.KAEDAH]    = (params.kaedah  || '').trim();
-    newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
-    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
-    newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
-    newRow[COL_DEWASA.STATUS]    = 'AKTIF';
+    try {
+      simpanNotifikasi(
+        'dewasa',
+        'Murid Dewasa Didaftarkan',
+        (params.nama || '') + ' — ' + (params.tahap || ''),
+        { id: result.id }
+      );
+    } catch (e) {}
 
-    sheet.appendRow(newRow);
-    SpreadsheetApp.flush();
-
-    // Jana ID selepas appendRow supaya nombor baris adalah tepat
-    var actualRow = sheet.getLastRow();
-    var muridId = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
-
-    Logger.log('registerDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
-
-    try { simpanNotifikasi('dewasa', 'Murid Dewasa Didaftarkan', (params.nama || '') + ' — ' + (params.tahap || ''), { id: muridId }); } catch(e) {}
-
-    return { success: true, id: muridId };
+    return {
+      success: true,
+      id: result.id,
+      studentUid: result.studentUid
+    };
 
   } catch (err) {
     Logger.log('registerDewasa error: ' + err.message);
-    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+
+    return {
+      success: false,
+      message: 'Ralat semasa mendaftar: ' + err.message
+    };
   }
 }
-
 // ============================================================
 // 4. attendance
 // Rekod kehadiran murid ke tab Kehadiran
@@ -10566,54 +10926,89 @@ function sendOTPDewasa(params) {
 // ============================================================
 function confirmRegisterKanak(params) {
   params = params || {};
+
   try {
     var email = (params.email || '').trim();
-    var otp   = (params.otp   || '').toString().trim();
-    if (!email || !otp) return { success: false, message: 'E-mel dan OTP diperlukan.' };
+    var otp = (params.otp || '').toString().trim();
+
+    if (!email || !otp) {
+      return {
+        success: false,
+        message: 'E-mel dan OTP diperlukan.'
+      };
+    }
 
     var verify = verifyOTP_(email, otp);
-    if (!verify.valid) return { success: false, expired: verify.expired || false, message: verify.message, attemptsLeft: verify.attemptsLeft };
 
-    ['namaIbu','telefon','namaAnak','mykid','email','alamat','tahap','faham','pakej','kaedah'].forEach(function(f) {
-      if (params[f]) params[f] = sanitizeInput(params[f]);
+    if (!verify.valid) {
+      return {
+        success: false,
+        expired: verify.expired || false,
+        message: verify.message,
+        attemptsLeft: verify.attemptsLeft
+      };
+    }
+
+    [
+      'namaIbu',
+      'telefon',
+      'namaAnak',
+      'mykid',
+      'email',
+      'alamat',
+      'tahap',
+      'faham',
+      'pakej',
+      'kaedah'
+    ].forEach(function(f) {
+      if (params[f]) {
+        params[f] = sanitizeInput(params[f]);
+      }
     });
 
-    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.KANAK);
-    if (!sheet) return { success: false, message: 'Tab PendaftaranBaru tidak dijumpai.' };
+    var result = saveKanakWithStudentUid_(params);
 
-    var existing = findExistingKanakByMykid_(sheet, params.mykid);
-    if (existing) return duplicateKanakMessage_(params.mykid, existing);
+    if (!result || !result.success) {
+      return result || {
+        success: false,
+        message: 'Pendaftaran tidak berjaya.'
+      };
+    }
 
-    var nextBil   = sheet.getLastRow();
-    var timestamp = new Date();
-    var newRow    = new Array(19).fill('');
-    newRow[COL_KANAK.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_KANAK.NAMA_IBU]  = (params.namaIbu || '').trim().toUpperCase();
-    newRow[COL_KANAK.TELEFON]   = params.telefon.trim();
-    newRow[COL_KANAK.NAMA]      = params.namaAnak.trim().toUpperCase();
-    newRow[COL_KANAK.NO_MYKID]  = params.mykid.trim();
-    newRow[COL_KANAK.EMAIL]     = params.email.trim();
-    newRow[COL_KANAK.ALAMAT]    = params.alamat.trim();
-    newRow[COL_KANAK.TAHAP]     = params.tahap.trim();
-    newRow[COL_KANAK.FAHAM]     = (params.faham || '').trim();
-    newRow[COL_KANAK.PAKEJ]     = params.pakej.trim();
-    newRow[COL_KANAK.KAEDAH]    = params.kaedah.trim();
-    newRow[COL_KANAK.STATUS]    = 'AKTIF';
+    try {
+      generateSlipKanak(result.row);
+    } catch (e) {
+      Logger.log('generateSlipKanak error: ' + e.message);
+    }
 
-    sheet.appendRow(newRow);
-    SpreadsheetApp.flush();
+    Logger.log(
+      'confirmRegisterKanak berjaya: Bil ' +
+      result.bil +
+      ' — ' +
+      params.namaAnak +
+      ' — UID ' +
+      result.studentUid
+    );
 
-    var slipRow = sheet.getLastRow();
-    try { generateSlipKanak(slipRow); } catch(e) { Logger.log('generateSlipKanak error: ' + e.message); }
+    try {
+      syncNamaMuridToAllForms();
+    } catch (e) {
+      Logger.log('syncForms error: ' + e.message);
+    }
 
-    Logger.log('confirmRegisterKanak berjaya: Bil ' + nextBil + ' — ' + params.namaAnak);
-    try { syncNamaMuridToAllForms(); } catch(e) { Logger.log('syncForms error: ' + e.message); }
-    return { success: true, bil: nextBil };
+    return {
+      success: true,
+      bil: result.bil,
+      studentUid: result.studentUid
+    };
 
   } catch (err) {
     Logger.log('confirmRegisterKanak error: ' + err.message);
-    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+
+    return {
+      success: false,
+      message: 'Ralat semasa mendaftar: ' + err.message
+    };
   }
 }
 
@@ -10622,53 +11017,81 @@ function confirmRegisterKanak(params) {
 // ============================================================
 function confirmRegisterDewasa(params) {
   params = params || {};
+
   try {
     var email = (params.email || '').trim();
-    var otp   = (params.otp   || '').toString().trim();
-    if (!email || !otp) return { success: false, message: 'E-mel dan OTP diperlukan.' };
+    var otp = (params.otp || '').toString().trim();
+
+    if (!email || !otp) {
+      return {
+        success: false,
+        message: 'E-mel dan OTP diperlukan.'
+      };
+    }
 
     var verify = verifyOTP_(email, otp);
-    if (!verify.valid) return { success: false, expired: verify.expired || false, message: verify.message, attemptsLeft: verify.attemptsLeft };
 
-    ['nama','telefon','email','alamat','tahap','mykad','pakej','kaedah'].forEach(function(f) {
-      if (params[f]) params[f] = sanitizeInput(params[f]);
+    if (!verify.valid) {
+      return {
+        success: false,
+        expired: verify.expired || false,
+        message: verify.message,
+        attemptsLeft: verify.attemptsLeft
+      };
+    }
+
+    [
+      'nama',
+      'telefon',
+      'email',
+      'alamat',
+      'tahap',
+      'mykad',
+      'pakej',
+      'kaedah'
+    ].forEach(function(f) {
+      if (params[f]) {
+        params[f] = sanitizeInput(params[f]);
+      }
     });
 
-    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(TAB.DEWASA);
-    if (!sheet) return { success: false, message: 'Tab KelasDewasa tidak dijumpai.' };
+    var result = saveDewasaWithStudentUid_(params);
 
-    var existing = findExistingDewasaByMykad_(sheet, params.mykad);
-    if (existing) return duplicateDewasaMessage_(params.mykad, existing);
+    if (!result || !result.success) {
+      return result || {
+        success: false,
+        message: 'Pendaftaran tidak berjaya.'
+      };
+    }
 
-    var nextBil   = sheet.getLastRow();
-    var timestamp = new Date();
-    var newRow    = new Array(19).fill('');
-    newRow[COL_DEWASA.TIMESTAMP] = Utilities.formatDate(timestamp, 'Asia/Kuala_Lumpur', 'dd/MM/yyyy HH:mm:ss');
-    newRow[COL_DEWASA.EMAIL]     = params.email.trim();
-    newRow[COL_DEWASA.NAMA]      = params.nama.trim().toUpperCase();
-    newRow[COL_DEWASA.TELEFON]   = params.telefon.trim();
-    newRow[COL_DEWASA.NO_MYKAD]  = (params.mykad  || '').trim();
-    newRow[COL_DEWASA.PAKEJ]     = (params.pakej   || '').trim();
-    newRow[COL_DEWASA.KAEDAH]    = (params.kaedah  || '').trim();
-    newRow[COL_DEWASA.ALAMAT]    = params.alamat.trim();
-    newRow[COL_DEWASA.TAHAP]     = params.tahap.trim();
-    newRow[COL_DEWASA.FAHAM]     = (params.faham   || '').trim();
-    newRow[COL_DEWASA.STATUS]    = 'AKTIF';
+    Logger.log(
+      'confirmRegisterDewasa berjaya: ' +
+      params.nama +
+      ' (' +
+      result.id +
+      ') — UID ' +
+      result.studentUid
+    );
 
-    sheet.appendRow(newRow);
-    SpreadsheetApp.flush();
+    try {
+      syncNamaMuridToAllForms();
+    } catch (e) {
+      Logger.log('syncForms error: ' + e.message);
+    }
 
-    var actualRow = sheet.getLastRow();
-    var muridId   = 'D' + Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyyMMdd') + '-' + actualRow;
-
-    Logger.log('confirmRegisterDewasa berjaya: ' + params.nama + ' (' + muridId + ')');
-    try { syncNamaMuridToAllForms(); } catch(e) { Logger.log('syncForms error: ' + e.message); }
-    return { success: true, id: muridId };
+    return {
+      success: true,
+      id: result.id,
+      studentUid: result.studentUid
+    };
 
   } catch (err) {
     Logger.log('confirmRegisterDewasa error: ' + err.message);
-    return { success: false, message: 'Ralat semasa mendaftar: ' + err.message };
+
+    return {
+      success: false,
+      message: 'Ralat semasa mendaftar: ' + err.message
+    };
   }
 }
 
@@ -11409,4 +11832,100 @@ function searchSijilKhatam(params) {
     Logger.log('searchSijilKhatam error: ' + err.message);
     return { success: false, message: 'Ralat semasa mencari sijil: ' + err.message };
   }
+}
+function verifyStudentUidMigration_() {
+  var rosterSs = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var registry = readStudentUidRegistry_();
+
+  var summary = {
+    rosterTotal: 0,
+    rosterUidMissing: 0,
+    rosterUidInvalid: 0,
+    duplicateRosterUid: 0,
+    registryCount: Object.keys(registry.byUid).length,
+    officialId: 0,
+    manualRoster: 0,
+    registryStatus: {},
+    problems: []
+  };
+
+  var seenRosterUid = {};
+
+  ['KANAK', 'DEWASA'].forEach(function(type) {
+    var sheet = rosterSs.getSheetByName(
+      type === 'KANAK' ? TAB.KANAK : TAB.DEWASA
+    );
+
+    var columns = type === 'KANAK' ? COL_KANAK : COL_DEWASA;
+
+    var rows = sheet.getLastRow() > 1
+      ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 20).getValues()
+      : [];
+
+    rows.forEach(function(row, index) {
+      summary.rosterTotal++;
+
+      var uid = (row[columns.STUDENT_UID] || '').toString().trim();
+
+      if (!uid) {
+        summary.rosterUidMissing++;
+        summary.problems.push(
+          type + ' row ' + (index + 2) + ': UID missing'
+        );
+        return;
+      }
+
+      if (!isStudentUid_(uid, type)) {
+        summary.rosterUidInvalid++;
+        summary.problems.push(
+          type + ' row ' + (index + 2) + ': UID invalid ' + uid
+        );
+      }
+
+      if (seenRosterUid[uid]) {
+        summary.duplicateRosterUid++;
+        summary.problems.push(
+          type + ' row ' + (index + 2) + ': duplicate UID ' + uid
+        );
+      }
+
+      seenRosterUid[uid] = true;
+
+      var owner = registry.byUid[uid];
+
+      if (!owner) {
+        summary.problems.push(
+          type + ' row ' + (index + 2) + ': UID not in registry ' + uid
+        );
+      }
+    });
+  });
+
+  Object.keys(registry.byUid).forEach(function(uid) {
+    var record = registry.byUid[uid];
+
+    if (record.VERIFY_METHOD === 'OFFICIAL_ID') summary.officialId++;
+    if (record.VERIFY_METHOD === 'MANUAL_ROSTER') summary.manualRoster++;
+
+    var status = record.STATUS || '(BLANK)';
+    summary.registryStatus[status] =
+      (summary.registryStatus[status] || 0) + 1;
+  });
+
+  summary.success =
+    summary.rosterTotal === 185 &&
+    summary.rosterUidMissing === 0 &&
+    summary.rosterUidInvalid === 0 &&
+    summary.duplicateRosterUid === 0 &&
+    summary.registryCount === 185 &&
+    summary.officialId === 173 &&
+    summary.manualRoster === 12 &&
+    summary.problems.length === 0;
+
+  Logger.log(JSON.stringify(summary));
+  return summary;
+}
+
+function runVerifyStudentUidMigrationOnce() {
+  return verifyStudentUidMigration_();
 }
