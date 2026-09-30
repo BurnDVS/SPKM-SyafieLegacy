@@ -323,11 +323,15 @@ test('manual roster candidate needs approval manifest, not an official number', 
   assert.equal(approved.status, 'PASS');
 });
 
-test('2026 compatibility and current 2027 payment identity paths remain untouched', () => {
+test('2026 compatibility stays BIL-based while 2027 uses stable STUDENT_UID', () => {
   const start = code.indexOf('function getNativeEbayarOfficialStudentsV2_(');
   const end = code.indexOf('function getNativeEbayarStudentLookup(', start);
-  assert.match(code.slice(start, end), /studentType \+ ':' \+ bil/);
+  const block = code.slice(start, end);
+
+  assert.match(block, /studentType \+ ':' \+ bil/);
+  assert.match(block, /STUDENT_UID/);
+  assert.match(block, /studentKey = uid/);
+
   assert.match(code, /var BULAN_2026 = \[/);
   assert.match(code, /STUDENT_ID: student\.studentKey/);
-  assert.doesNotMatch(code.slice(start, end), /STUDENT_UID/);
 });

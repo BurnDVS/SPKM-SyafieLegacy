@@ -118,25 +118,95 @@ test('2027 public stats use Payments and return aggregates only for opened month
   assert.doesNotMatch(JSON.stringify(result), /KANAK:1|nama|resit|telefon/i);
 });
 
-test('eligibility handles year boundary, blank registration date, and inactive students', () => {
+test('eligibility keeps 2026 BIL identity but uses stable UID from 2027 onward', () => {
+  function rosterRow(bil, nama, timestamp, status, uid) {
+    const row = Array(20).fill('');
+    row[0] = bil;
+    row[1] = nama;
+    row[2] = timestamp;
+    row[3] = status;
+    row[19] = uid;
+    return row;
+  }
+
   const kanak = [
-    ['1', 'ALI', '2026-12-15', 'AKTIF'],
-    ['2', 'BAKAR', '2027-02-02', 'AKTIF'],
-    ['3', 'CICI', '', ''],
-    ['4', 'DANI', '2026-01-01', 'TIDAK AKTIF']
+    rosterRow('1', 'ALI',   '2026-12-15', 'AKTIF',        'KANAK:U11111'),
+    rosterRow('2', 'BAKAR', '2027-02-02', 'AKTIF',        'KANAK:U22222'),
+    rosterRow('3', 'CICI',  '',           '',             'KANAK:U33333'),
+    rosterRow('4', 'DANI',  '2026-01-01', 'TIDAK AKTIF', 'KANAK:U44444')
   ];
-  const fakeSheet = rows => ({ getLastRow: () => rows.length + 1, getRange: () => ({ getValues: () => rows }) });
-  const ctx = load(['isStudentRegisteredForEbayarMonth_', 'getNativeEbayarOfficialStudentsV2_'], {
-    SPREADSHEET_ID: 'master', TAB: { KANAK: 'Kanak', DEWASA: 'Dewasa' },
-    COL_KANAK: { BIL: 0, NAMA: 1, TIMESTAMP: 2, STATUS: 3, GURU: 3 },
-    COL_DEWASA: { BIL: 0, NAMA: 1, TIMESTAMP: 2, STATUS: 3, GURU: 3 },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: name => fakeSheet(name === 'Kanak' ? kanak : []) }) },
-    normalizeYuranNameV2_: value => String(value || '').trim().toUpperCase(),
-    Utilities: { formatDate: date => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') }
+
+  const fakeSheet = rows => ({
+    getLastRow: () => rows.length + 1,
+    getRange: () => ({
+      getValues: () => rows
+    })
   });
-  assert.deepEqual(Object.keys(ctx.getNativeEbayarOfficialStudentsV2_('2026-11').byKey), ['KANAK:1', 'KANAK:2', 'KANAK:3']);
-  assert.deepEqual(Object.keys(ctx.getNativeEbayarOfficialStudentsV2_('2027-01').byKey), ['KANAK:1', 'KANAK:3']);
-  assert.deepEqual(Object.keys(ctx.getNativeEbayarOfficialStudentsV2_('2027-02').byKey), ['KANAK:1', 'KANAK:2', 'KANAK:3']);
+
+  const ctx = load([
+    'isStudentRegisteredForEbayarMonth_',
+    'isStudentUid_',
+    'getNativeEbayarOfficialStudentsV2_'
+  ], {
+    SPREADSHEET_ID: 'master',
+    TAB: {
+      KANAK: 'Kanak',
+      DEWASA: 'Dewasa'
+    },
+    COL_KANAK: {
+      BIL: 0,
+      NAMA: 1,
+      TIMESTAMP: 2,
+      STATUS: 3,
+      GURU: 3,
+      STUDENT_UID: 19
+    },
+    COL_DEWASA: {
+      BIL: 0,
+      NAMA: 1,
+      TIMESTAMP: 2,
+      STATUS: 3,
+      GURU: 3,
+      STUDENT_UID: 19
+    },
+    SpreadsheetApp: {
+      openById: () => ({
+        getSheetByName: name =>
+          fakeSheet(name === 'Kanak' ? kanak : [])
+      })
+    },
+    normalizeYuranNameV2_: value =>
+      String(value || '').trim().toUpperCase(),
+    Utilities: {
+      formatDate: date =>
+        date.getFullYear() +
+        '-' +
+        String(date.getMonth() + 1).padStart(2, '0')
+    }
+  });
+
+  // 2026 compatibility kekal BIL-based.
+  assert.deepEqual(
+    Object.keys(
+      ctx.getNativeEbayarOfficialStudentsV2_('2026-11').byKey
+    ),
+    ['KANAK:1', 'KANAK:2', 'KANAK:3']
+  );
+
+  // 2027+ mesti guna permanent STUDENT_UID.
+  assert.deepEqual(
+    Object.keys(
+      ctx.getNativeEbayarOfficialStudentsV2_('2027-01').byKey
+    ),
+    ['KANAK:U11111', 'KANAK:U33333']
+  );
+
+  assert.deepEqual(
+    Object.keys(
+      ctx.getNativeEbayarOfficialStudentsV2_('2027-02').byKey
+    ),
+    ['KANAK:U11111', 'KANAK:U22222', 'KANAK:U33333']
+  );
 });
 
 test('2027 Native search uses the selected month and hides paid students', () => {

@@ -3750,34 +3750,105 @@ function getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows) {
   var ss = rosterRows ? null : SpreadsheetApp.openById(SPREADSHEET_ID);
   var studentsByKey = {};
   var ambiguousKeys = {};
+  var useStableUid =
+    bulanKey && Number(bulanKey.slice(0, 4)) >= 2027;
 
   function collect(sheetName, columns, studentType) {
     var rows;
-    if (rosterRows) rows = rosterRows[studentType] || [];
-    else {
+
+    if (rosterRows) {
+      rows = rosterRows[studentType] || [];
+    } else {
       var sheet = ss.getSheetByName(sheetName);
       if (!sheet || sheet.getLastRow() < 2) return;
-      var width = bulanKey && Number(bulanKey.slice(0, 4)) >= 2027
-        ? Math.max(columns.BIL, columns.NAMA, columns.STATUS, columns.GURU, columns.TIMESTAMP) + 1
-        : Math.max(columns.BIL, columns.NAMA, columns.STATUS, columns.GURU) + 1;
-      rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+
+      var width = useStableUid
+        ? Math.max(
+            columns.BIL,
+            columns.NAMA,
+            columns.STATUS,
+            columns.GURU,
+            columns.TIMESTAMP,
+            columns.STUDENT_UID
+          ) + 1
+        : Math.max(
+            columns.BIL,
+            columns.NAMA,
+            columns.STATUS,
+            columns.GURU
+          ) + 1;
+
+      rows = sheet
+        .getRange(2, 1, sheet.getLastRow() - 1, width)
+        .getValues();
     }
+
     rows.forEach(function(row) {
-      var bil = (row[columns.BIL] === null || row[columns.BIL] === undefined)
-        ? ''
-        : row[columns.BIL].toString().trim();
-      var canonicalName = normalizeYuranNameV2_(row[columns.NAMA]);
-      var status = (row[columns.STATUS] || '').toString().trim().toUpperCase();
-      if (!bil || !/^[A-Za-z0-9._-]{1,40}$/.test(bil) || !canonicalName || (status && status !== 'AKTIF')) return;
-      if (bulanKey && Number(bulanKey.slice(0, 4)) >= 2027 &&
-          !isStudentRegisteredForEbayarMonth_(row[columns.TIMESTAMP], bulanKey)) return;
-      var studentKey = studentType + ':' + bil;
-      if (studentsByKey[studentKey] || ambiguousKeys[studentKey]) {
+      var bil =
+        row[columns.BIL] === null ||
+        row[columns.BIL] === undefined
+          ? ''
+          : row[columns.BIL].toString().trim();
+
+      var canonicalName =
+        normalizeYuranNameV2_(row[columns.NAMA]);
+
+      var status =
+        (row[columns.STATUS] || '')
+          .toString()
+          .trim()
+          .toUpperCase();
+
+      if (!canonicalName ||
+          (status && status !== 'AKTIF')) {
+        return;
+      }
+
+      if (useStableUid &&
+          !isStudentRegisteredForEbayarMonth_(
+            row[columns.TIMESTAMP],
+            bulanKey
+          )) {
+        return;
+      }
+
+      var studentKey;
+
+      if (useStableUid) {
+        var uid =
+          (row[columns.STUDENT_UID] || '')
+            .toString()
+            .trim();
+
+        if (!isStudentUid_(uid, studentType)) {
+          throw new Error(
+            'STUDENT_UID roster tidak sah untuk Native eBayar ' +
+            bulanKey +
+            '.'
+          );
+        }
+
+        studentKey = uid;
+
+      } else {
+        if (!bil ||
+            !/^[A-Za-z0-9._-]{1,40}$/.test(bil)) {
+          return;
+        }
+
+        studentKey = studentType + ':' + bil;
+      }
+
+      if (studentsByKey[studentKey] ||
+          ambiguousKeys[studentKey]) {
         delete studentsByKey[studentKey];
         ambiguousKeys[studentKey] = true;
         return;
       }
-      var guru = normalizeYuranNameV2_(row[columns.GURU]);
+
+      var guru =
+        normalizeYuranNameV2_(row[columns.GURU]);
+
       studentsByKey[studentKey] = {
         studentKey: studentKey,
         nama: canonicalName,
@@ -3789,7 +3860,11 @@ function getNativeEbayarOfficialStudentsV2_(bulanKey, rosterRows) {
 
   collect(TAB.KANAK, COL_KANAK, 'KANAK');
   collect(TAB.DEWASA, COL_DEWASA, 'DEWASA');
-  return { byKey: studentsByKey, ambiguousKeys: ambiguousKeys };
+
+  return {
+    byKey: studentsByKey,
+    ambiguousKeys: ambiguousKeys
+  };
 }
 
 // Compatibility only: BIL-based 2026 IDs must be corroborated by type and name.
