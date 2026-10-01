@@ -1,22 +1,42 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 1 October 2026, Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 1 Oktober 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
 This file is the primary continuity handoff. Historical plans and staging logs remain useful, but this checkpoint controls whenever they conflict with an older note.
 
-## Production Checkpoint — 1 October 2026: Native eBayar v1.0.1
+## Production Checkpoint — 1 Oktober 2026: Native eBayar v1.0.1
 
-- `Bayaran Untuk` was moved above `Pilih Murid / Anak`.
-- October 2026 remains selected after choosing students; the current month is derived from `config.serverDate`, with Malaysia date as the fallback.
-- Published app version: **v1.0.1**. Service worker cache: `spkm-v13`.
-- Production PWA repository: `shafielegacy/SPKM`; release commits: `fb12ee6` (`fix native ebayar current month and refresh pwa cache`) and `9483088` (`bump app version to 1.0.1`).
-- Development/source repository: `BurnDVS/SPKM-SyafieLegacy`. Pushing only to the source repository does not update production GitHub Pages; Pages publication must reach `shafielegacy/SPKM` after inspecting divergence and confirming safe history.
-- Production PWA was manually verified with **2 students and RM40 preflight**: October 2026 remained selected, and the confirmation screen showed both students, October 2026, payment date `2026-10-01` and RM40.00 correctly.
-- This verification records preflight/confirmation only, without claiming a completed payment submission. The release and manual verification are recorded from the supplied handoff; this documentation task does not rerun production checks.
+- `Bayaran Untuk` dipindahkan ke atas `Pilih Murid / Anak`.
+- Oktober 2026 kekal dipilih selepas ibu bapa memilih murid; bulan semasa lalai menggunakan `config.serverDate`, dengan tarikh Malaysia sebagai fallback.
+- App production: **v1.0.1**. Cache Service Worker: `spkm-v13`.
+- Repo production PWA: `shafielegacy/SPKM`; release commits `fb12ee6` (`fix native ebayar current month and refresh pwa cache`) dan `9483088` (`bump app version to 1.0.1`).
+- Repo source/development: `BurnDVS/SPKM-SyafieLegacy`. Push source sahaja tidak mengemas kini production Pages; perubahan Pages mesti sampai ke `shafielegacy/SPKM` selepas semakan divergence dan history.
+- Preflight PWA production disahkan secara manual dengan **2 murid dan RM40 sehingga confirmation screen**: Oktober 2026 kekal dipilih, kedua-dua murid, tarikh `2026-10-01` dan RM40.00 dipaparkan dengan betul.
+- Verifikasi ini terhad kepada preflight/confirmation; tiada dakwaan submission bayaran selesai. Rekod ini berdasarkan handoff, bukan ujian production baharu dalam audit dokumentasi ini.
 
-The 2 September checkpoint and repository snapshots below are retained as history. This October checkpoint supersedes their PWA release state; it does not record a new Apps Script deployment or a change to Portal Mode `AUTO`.
+Checkpoint 2 September dan snapshot repo di bawah dikekalkan sebagai sejarah. Checkpoint 1 Oktober 2026 menggantikan status release PWA terdahulu; ia tidak merekodkan deployment Apps Script baharu atau perubahan Portal Mode `AUTO`.
+
+### Topologi dan rekod release — 1 Oktober 2026
+
+| Workspace | Repo dan remote | Kegunaan |
+|---|---|---|
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM` | `BurnDVS/SPKM-SyafieLegacy`; `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`; `pages` → `https://github.com/shafielegacy/SPKM.git` | Source/development utama |
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX` | `shafielegacy/SPKM`; `origin` → `https://github.com/shafielegacy/SPKM.git` | Clone production Pages bersih dan berasingan |
+
+Push ke source `BurnDVS/SPKM-SyafieLegacy` sahaja **tidak** mengemas kini production Pages. Perubahan Pages mesti sampai ke `shafielegacy/SPKM`. Sehingga isu metadata/ACL source diselesaikan, utamakan `SPKM_LIVE_FIX` untuk publication/verification Pages secara langsung. Nama `origin` mempunyai tujuan berbeza dalam kedua-dua workspace; semak workspace, remote, status dan divergence sebelum publication, tanpa force push.
+
+- Production Pages: `fb12ee6` — `fix native ebayar current month and refresh pwa cache`; `9483088` — `bump app version to 1.0.1`; `69c368a` — `docs: update SPKM v1.0.1 production checkpoint`.
+- Dokumentasi source: `e956c62` — `docs: update SPKM v1.0.1 production checkpoint`.
+
+### Cleanup workspace dan isu OneDrive/Git — 1 Oktober 2026
+
+- Fail kerja sementara/untracked telah dipindahkan keluar repo ke `C:\Users\burnk\OneDrive\SPKM_ARCHIVE_20261001`. `Code.js.bak` dan `portal.html.bak` kekal kerana tracked oleh Git; jangan anggap kedua-duanya fail sementara untuk dibuang.
+- Parent `C:\Users\burnk\OneDrive\Documents-assets` mempunyai inherited ACL `Everyone:(I)(CI)(DENY)(DC)`, yang menyekat sesetengah operasi rename/delete. `SPKM_LIVE_FIX` tidak dapat dinamakan semula kepada `SPKM_PAGES`; terus gunakan nama sedia ada. Jangan cadangkan perubahan parent ACL secara kasual.
+- Source repo kadangkala melaporkan cleanup failures di `.git/refs/remotes/origin/wip`, `.git/refs/remotes/origin/security`, `.git/refs/heads/wip`, `.git/refs/codex/...` dan `.git/worktrees/SPKM`. Ini isu permission/metadata OneDrive; commit dan push masih boleh berjaya. Semak hasil operasi sebenar sebelum menganggap ia gagal; jangan terus menganggap blob corrupt atau memadam metadata.
+
+Checkpoint 1 Oktober 2026 ini berkuat kuasa untuk PWA dan topologi repo. Checkpoint, angka verifikasi dan arahan deployment terdahulu dikekalkan sebagai sejarah apabila bercanggah. Handoff ini tidak menetapkan versi backend baharu atau mengesahkan semula deployment Apps Script; jangan anggap @185 yang direkod pada 2 September sebagai versi live terkini tanpa semakan berasingan.
 
 ## Production Checkpoint — 2 September 2026: Staff Auth V2 LIVE
 
@@ -34,6 +54,8 @@ Completed validation from the rollout handoff (not rerun by this documentation c
 - Pentest used a separate standalone Apps Script project with synthetic staff/attendance data. Pentest-only IDs, helpers and endpoint overrides were verified absent from the production security branch before merge. Temporary pentest/security/pages-auth worktrees and the merged local `security/auth-v2` branch were removed after rollout. The temporary pages-hotfix worktree was also removed after confirming no unique changes. Final worktree list contains only the main SPKM workspace.
 
 Next recommended security work, **pending**: define the eSemak Phase 2 privacy/authentication scope, assess public lookup/receipt exposure and parent–student access rules, then agree controlled tests before any implementation. Staff Auth V2 completion does not imply parent authentication or ownership controls are implemented.
+
+> **Snapshot sejarah 2 September 2026:** seksyen 1–3 dan 12–15 di bawah mengekalkan checkpoint repo, backend, dirty worktree serta checklist ketika itu. Gunakan topologi/commit 1 Oktober di atas untuk operasi repo semasa; semak deployment backend secara berasingan.
 
 ## 1. Repository and Deployment State
 

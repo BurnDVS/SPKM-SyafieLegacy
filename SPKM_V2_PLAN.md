@@ -1,6 +1,20 @@
 # SPKM V2 — Pelan Pembangunan dan Rekod Milestone
 
-> **Status 2 September 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Staff Auth V2 / security Phase 1 **COMPLETE dan LIVE**, backend **@185** dan PWA auth `de0d608`; `main` pada merge `1d07e8f`. eSemak privacy/authentication security Phase 2 **PENDING**, berasingan dan tidak diubah dalam rollout ini. Ogos Legacy/V2 fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Native September, public hybrid eSemak, Admin hybrid dashboard dan receipt links kekal production-verified. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
+## Checkpoint Pelan — 1 Oktober 2026
+
+- PWA production kini **v1.0.1**, dengan cache Service Worker `spkm-v13`.
+- Native eBayar memaparkan `Bayaran Untuk` di atas `Pilih Murid / Anak`. Oktober 2026 kekal dipilih selepas ibu bapa memilih murid.
+- Bulan semasa lalai menggunakan `config.serverDate`, dengan tarikh Malaysia sebagai fallback.
+- Preflight production disahkan secara manual dengan **2 murid dan RM40 sehingga confirmation screen sahaja**; ini bukan pengesahan submission bayaran selesai.
+
+- Release Pages: `fb12ee6`, `9483088`; checkpoint dokumentasi production `69c368a`, source `e956c62`.
+- Production `shafielegacy/SPKM` diterbitkan berasingan daripada source `BurnDVS/SPKM-SyafieLegacy`; push source sahaja tidak mengemas kini Pages. Utamakan clone `SPKM_LIVE_FIX` sehingga isu metadata/ACL source selesai; topologi penuh dalam `CURRENT_STATUS.md`.
+
+Checkpoint 1 Oktober 2026 ini berkuat kuasa untuk PWA dan topologi repo. Checkpoint, angka verifikasi dan arahan deployment terdahulu dikekalkan sebagai sejarah apabila bercanggah. Handoff ini tidak menetapkan versi backend baharu atau mengesahkan semula deployment Apps Script; jangan anggap @185 yang direkod pada 2 September sebagai versi live terkini tanpa semakan berasingan.
+
+Milestone ini tidak menandakan pelan parent login, privacy/authentication atau roadmap lain selesai.
+
+> **Status sejarah 2 September 2026:** Bahagian awal dokumen ini ialah pelan asal dan dikekalkan sebagai rekod sejarah. Staff Auth V2 / security Phase 1 **COMPLETE dan LIVE**, backend **@185** dan PWA auth `de0d608`; `main` pada merge `1d07e8f`. eSemak privacy/authentication security Phase 2 **PENDING**, berasingan dan tidak diubah dalam rollout ini. Ogos Legacy/V2 fully reconciled pada 70 groups, 109 paid, 77 unpaid, 186 active students dan RM3,760. Native September, public hybrid eSemak, Admin hybrid dashboard dan receipt links kekal production-verified. Rujuk `CURRENT_STATUS.md` untuk checkpoint berkuat kuasa.
 >
 > **Prinsip utama:** SPKM production mesti kekal stabil. Januari–Ogos 2026 kekal legacy-only; Native eBayar bermula September. Parents menggunakan public eSemak tanpa login, manakala Guru/Admin login kekal berasingan.
 

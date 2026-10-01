@@ -2,8 +2,19 @@
 
 Read [CURRENT_STATUS.md](CURRENT_STATUS.md) before changing this repository. Use [REFERENCE.md](REFERENCE.md) for architecture and deployment details, and [INTERNAL_OPERATIONS.md](INTERNAL_OPERATIONS.md) for operational procedures.
 
+## Checkpoint Berkuat Kuasa — 1 Oktober 2026
+
+- PWA `v1.0.1`, cache `spkm-v13`; `Bayaran Untuk` di atas `Pilih Murid / Anak`. Oktober kekal selepas memilih murid; default menggunakan `config.serverDate` dengan fallback tarikh Malaysia.
+- Bukti release: manual preflight 2 murid/RM40 sehingga confirmation sahaja; jangan dakwa submission selesai.
+- Production Pages commits `fb12ee6`, `9483088`, dokumentasi `69c368a`; source documentation `e956c62`. Ini checkpoint handoff, bukan dakwaan HEAD/remote tip semasa tanpa semakan.
+- Source workspace `C:\Users\burnk\OneDrive\Documents-assets\SPKM`: `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `pages` → `https://github.com/shafielegacy/SPKM.git`.
+- Clone production bersih `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX`: `origin` → `https://github.com/shafielegacy/SPKM.git`. Push source sahaja tidak update Pages; perubahan mesti sampai ke `shafielegacy/SPKM`. Utamakan clone ini untuk publication/verification Pages sehingga isu metadata/ACL source selesai.
+- Parent `Documents-assets` mempunyai ACL inherited `Everyone:(I)(CI)(DENY)(DC)`; rename ke `SPKM_PAGES` gagal. Jangan ubah parent ACL secara kasual. Cleanup `.git/refs/...` / `.git/worktrees/SPKM` boleh gagal kerana permission/OneDrive walaupun commit/push berjaya; rujuk `CURRENT_STATUS.md` untuk lokasi terperinci.
+- Fail sementara/untracked dipindahkan ke `C:\Users\burnk\OneDrive\SPKM_ARCHIVE_20261001`; `Code.js.bak` dan `portal.html.bak` kekal tracked. Jangan buang tracked backup atau perubahan setempat yang masih ada.
+- Checkpoint lama di bawah ialah sejarah apabila bercanggah dengan handoff ini. Versi backend baharu tidak ditetapkan oleh release PWA; semak deployment berasingan, kekalkan URL dan Portal Mode `AUTO`.
+
 - Active workspace: `C:\Users\burnk\OneDrive\Documents-assets\SPKM`
-- Current checkpoint: `1d07e8f`
+- Historical checkpoint: `1d07e8f`
 - Portal Mode: `AUTO`
 
 ## Critical Invariants
@@ -29,7 +40,7 @@ Read [CURRENT_STATUS.md](CURRENT_STATUS.md) before changing this repository. Use
 - After `/dev` approval, edit the existing active Web App deployment and assign `New version`. Preserve its existing production URL; do not create a new deployment unless explicitly intended.
 - Never stage all files blindly. Review `git status --short` and stage only intended files.
 
-## Current Safety State
+## Safety State — Snapshot Sejarah 2 September 2026
 
 - Git checkpoint: `1d07e8f` (PR #1 merge of `98e585c`, Staff Auth V2).
 - Production Apps Script is Version 185 (@185) on the existing deployment ID; the web app executes as `USER_DEPLOYING` under the documented owner account. Staff Auth V2 production smoke test passed on 2 September 2026.

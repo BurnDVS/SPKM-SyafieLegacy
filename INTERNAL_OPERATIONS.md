@@ -6,6 +6,31 @@ Maklumat sensitif seperti credential sebenar dan token tidak boleh dimasukkan ke
 
 ---
 
+## Checkpoint Operasi — 1 Oktober 2026
+
+- PWA production kini **v1.0.1**, dengan cache Service Worker `spkm-v13`.
+- Native eBayar memaparkan `Bayaran Untuk` di atas `Pilih Murid / Anak`. Oktober 2026 kekal dipilih selepas ibu bapa memilih murid.
+- Bulan semasa lalai menggunakan `config.serverDate`, dengan tarikh Malaysia sebagai fallback.
+- Preflight production disahkan secara manual dengan **2 murid dan RM40 sehingga confirmation screen sahaja**; ini bukan pengesahan submission bayaran selesai.
+
+- Production Pages: `fb12ee6` — `fix native ebayar current month and refresh pwa cache`; `9483088` — `bump app version to 1.0.1`; `69c368a` — `docs: update SPKM v1.0.1 production checkpoint`.
+- Dokumentasi source: `e956c62` — `docs: update SPKM v1.0.1 production checkpoint`.
+
+Checkpoint 1 Oktober 2026 ini berkuat kuasa untuk PWA dan topologi repo. Checkpoint, angka verifikasi dan arahan deployment terdahulu dikekalkan sebagai sejarah apabila bercanggah. Handoff ini tidak menetapkan versi backend baharu atau mengesahkan semula deployment Apps Script; jangan anggap @185 yang direkod pada 2 September sebagai versi live terkini tanpa semakan berasingan.
+
+| Workspace | Repo dan remote | Kegunaan |
+|---|---|---|
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM` | `BurnDVS/SPKM-SyafieLegacy`; `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`; `pages` → `https://github.com/shafielegacy/SPKM.git` | Source/development utama |
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX` | `shafielegacy/SPKM`; `origin` → `https://github.com/shafielegacy/SPKM.git` | Clone production Pages bersih dan berasingan |
+
+Push ke source `BurnDVS/SPKM-SyafieLegacy` sahaja **tidak** mengemas kini production Pages. Perubahan Pages mesti sampai ke `shafielegacy/SPKM`. Sehingga isu metadata/ACL source diselesaikan, utamakan `SPKM_LIVE_FIX` untuk publication/verification Pages secara langsung. Nama `origin` mempunyai tujuan berbeza dalam kedua-dua workspace; semak workspace, remote, status dan divergence sebelum publication, tanpa force push.
+
+### Cleanup workspace dan isu OneDrive/Git — 1 Oktober 2026
+
+- Fail kerja sementara/untracked telah dipindahkan keluar repo ke `C:\Users\burnk\OneDrive\SPKM_ARCHIVE_20261001`. `Code.js.bak` dan `portal.html.bak` kekal kerana tracked oleh Git; jangan anggap kedua-duanya fail sementara untuk dibuang.
+- Parent `C:\Users\burnk\OneDrive\Documents-assets` mempunyai inherited ACL `Everyone:(I)(CI)(DENY)(DC)`, yang menyekat sesetengah operasi rename/delete. `SPKM_LIVE_FIX` tidak dapat dinamakan semula kepada `SPKM_PAGES`; terus gunakan nama sedia ada. Jangan cadangkan perubahan parent ACL secara kasual.
+- Source repo kadangkala melaporkan cleanup failures di `.git/refs/remotes/origin/wip`, `.git/refs/remotes/origin/security`, `.git/refs/heads/wip`, `.git/refs/codex/...` dan `.git/worktrees/SPKM`. Ini isu permission/metadata OneDrive; commit dan push masih boleh berjaya. Semak hasil operasi sebenar sebelum menganggap ia gagal; jangan terus menganggap blob corrupt atau memadam metadata.
+
 ## Repo & Deployment
 
 | Perkara | Nota |
@@ -260,6 +285,8 @@ Drive controls:
 - Safe preview helper: `testCreateNativeEbayarReceiptSlidesPreviewV2`. It uses two synthetic September children and RM100.00, adds `CONTOH / TIDAK SAH`, exercises the real Slides-to-PDF path and does not write payment rows or `RESIT_URL`. The synthetic preview completed successfully.
 
 Production checkpoint 1 September: Version 184 pada existing deployment identity. Version progression: 180 eSemak hybrid, 181 Form readiness, 182 Admin dashboard hybrid, 183 Form sync observability/read-back verification, 184 explicit Google Forms OAuth scope.
+
+> **Checklist sejarah September:** commit `1d07e8f`, Pages `de0d608`, @185 dan angka September di bawah ialah snapshot ketika itu, bukan sasaran reset. Untuk sesi semasa, gunakan checkpoint/topologi 1 Oktober di atas dan sahkan backend secara berasingan.
 
 #### September Production Monitoring Checklist
 

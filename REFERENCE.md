@@ -2,7 +2,32 @@
 
 Rujukan pantas semua akaun, ID, URL, dan langkah deploy untuk projek SPKM (Sistem Pengurusan Kelas Mengaji — Syafie Legacy). Kemaskini fail ni bila ada perubahan struktur.
 
-> **Checkpoint berkuat kuasa: 2 September 2026.** `main` / `origin/main` pada `1d07e8f` (merge PR #1, feature `98e585c`); Staff Auth V2 LIVE pada Apps Script **Version 185 (@185)** dengan existing project, deployment identity dan production URL. PWA auth diterbitkan berasingan di `de0d608`, hanya `index.html`. Native September serta hybrid eSemak/dashboard kekal production-verified; eSemak privacy/authentication security Phase 2 masih pending dan tidak berubah. Ogos Legacy/V2 fully reconciled: 70 groups, 109 paid, 77 unpaid, 186 active students, RM3,760. Rujuk `CURRENT_STATUS.md` untuk validation dan sejarah.
+## Checkpoint Berkuat Kuasa — 1 Oktober 2026
+
+- PWA production kini **v1.0.1**, dengan cache Service Worker `spkm-v13`.
+- Native eBayar memaparkan `Bayaran Untuk` di atas `Pilih Murid / Anak`. Oktober 2026 kekal dipilih selepas ibu bapa memilih murid.
+- Bulan semasa lalai menggunakan `config.serverDate`, dengan tarikh Malaysia sebagai fallback.
+- Preflight production disahkan secara manual dengan **2 murid dan RM40 sehingga confirmation screen sahaja**; ini bukan pengesahan submission bayaran selesai.
+
+- Production Pages: `fb12ee6` — `fix native ebayar current month and refresh pwa cache`; `9483088` — `bump app version to 1.0.1`; `69c368a` — `docs: update SPKM v1.0.1 production checkpoint`.
+- Dokumentasi source: `e956c62` — `docs: update SPKM v1.0.1 production checkpoint`.
+
+Checkpoint 1 Oktober 2026 ini berkuat kuasa untuk PWA dan topologi repo. Checkpoint, angka verifikasi dan arahan deployment terdahulu dikekalkan sebagai sejarah apabila bercanggah. Handoff ini tidak menetapkan versi backend baharu atau mengesahkan semula deployment Apps Script; jangan anggap @185 yang direkod pada 2 September sebagai versi live terkini tanpa semakan berasingan.
+
+| Workspace | Repo dan remote | Kegunaan |
+|---|---|---|
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM` | `BurnDVS/SPKM-SyafieLegacy`; `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`; `pages` → `https://github.com/shafielegacy/SPKM.git` | Source/development utama |
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX` | `shafielegacy/SPKM`; `origin` → `https://github.com/shafielegacy/SPKM.git` | Clone production Pages bersih dan berasingan |
+
+Push ke source `BurnDVS/SPKM-SyafieLegacy` sahaja **tidak** mengemas kini production Pages. Perubahan Pages mesti sampai ke `shafielegacy/SPKM`. Sehingga isu metadata/ACL source diselesaikan, utamakan `SPKM_LIVE_FIX` untuk publication/verification Pages secara langsung. Nama `origin` mempunyai tujuan berbeza dalam kedua-dua workspace; semak workspace, remote, status dan divergence sebelum publication, tanpa force push.
+
+### Cleanup workspace dan isu OneDrive/Git — 1 Oktober 2026
+
+- Fail kerja sementara/untracked telah dipindahkan keluar repo ke `C:\Users\burnk\OneDrive\SPKM_ARCHIVE_20261001`. `Code.js.bak` dan `portal.html.bak` kekal kerana tracked oleh Git; jangan anggap kedua-duanya fail sementara untuk dibuang.
+- Parent `C:\Users\burnk\OneDrive\Documents-assets` mempunyai inherited ACL `Everyone:(I)(CI)(DENY)(DC)`, yang menyekat sesetengah operasi rename/delete. `SPKM_LIVE_FIX` tidak dapat dinamakan semula kepada `SPKM_PAGES`; terus gunakan nama sedia ada. Jangan cadangkan perubahan parent ACL secara kasual.
+- Source repo kadangkala melaporkan cleanup failures di `.git/refs/remotes/origin/wip`, `.git/refs/remotes/origin/security`, `.git/refs/heads/wip`, `.git/refs/codex/...` dan `.git/worktrees/SPKM`. Ini isu permission/metadata OneDrive; commit dan push masih boleh berjaya. Semak hasil operasi sebenar sebelum menganggap ia gagal; jangan terus menganggap blob corrupt atau memadam metadata.
+
+> **Checkpoint sejarah: 2 September 2026.** `main` / `origin/main` pada `1d07e8f` (merge PR #1, feature `98e585c`); Staff Auth V2 LIVE pada Apps Script **Version 185 (@185)** dengan existing project, deployment identity dan production URL. PWA auth diterbitkan berasingan di `de0d608`, hanya `index.html`. Native September serta hybrid eSemak/dashboard kekal production-verified; eSemak privacy/authentication security Phase 2 masih pending dan tidak berubah. Ogos Legacy/V2 fully reconciled: 70 groups, 109 paid, 77 unpaid, 186 active students, RM3,760. Rujuk `CURRENT_STATUS.md` untuk validation dan sejarah.
 
 ---
 
@@ -60,7 +85,7 @@ Lepas tu push semula, login sebagai `BurnDVS` bila diminta.
 
 🌐 **Live URL:** `https://shafielegacy.github.io/SPKM`
 
-Current remote checkpoints:
+Remote checkpoints sejarah — 2 September 2026:
 
 - `origin`: `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`, `origin/main` at `1d07e8f`.
 - `pages`: `https://github.com/shafielegacy/SPKM.git`, production `pages/main` at `de0d608` (`feat: publish staff auth otp v2 to pwa`); PWA [SPKM](https://shafielegacy.github.io/SPKM/).
@@ -84,6 +109,8 @@ git fetch pages
 git diff --stat pages/main main
 ```
 `Code.js` dan `portal.html` boleh push ke `pages` dengan selamat walaupun tak berkaitan PWA — dua-dua fail ni diserve dari GAS (`doGet`), BUKAN dari GitHub Pages, jadi duduk je dalam repo Pages tanpa kesan runtime. Hanya `index.html`/`sw.js`/`config.json`/`manifest.json` yang benar-benar live di Pages.
+
+> **Bezakan insiden:** prosedur corruption berikut ialah rekod insiden blob hilang/rosak pada 16 Julai. Cleanup failure permission/OneDrive pada 1 Oktober tidak dengan sendirinya membuktikan corruption; jangan terus guna langkah rename/reclone di bawah untuk isu ACL semasa.
 
 ### 🚨 Git Repo Corruption ("geometric-repack failed")
 
@@ -286,6 +313,8 @@ Fonts: **Lora** (headings) + **DM Sans** (body)
 - **Mobile fetch:** guna `fetch()` dengan `redirect: 'follow'` (JSONP tak handle GAS redirect pada mobile Chrome)
 - **Service Worker:** `sw.js` — bump cache version bila ada update besar untuk force refresh
 
+> **Publication semasa:** checklist ringkas terdahulu di bawah perlu dibaca bersama topologi 1 Oktober. Utamakan clone `SPKM_LIVE_FIX` dan `origin` production di situ; semak perubahan serta divergence sebelum publish. Push source sahaja tidak menerbitkan Pages.
+
 ### Deploy checklist bila GAS URL bertukar
 1. Edit `config.json` → tukar `gasUrl`
 2. `git add config.json && git commit -m "..." && git push && git push pages main`
@@ -359,7 +388,7 @@ Central authorization policy mengelaskan actions sebagai **PUBLIC**, **authentic
 | 12 | Murid Tanpa Guru — assign guru pukal (page Kehadiran) | ✅ Selesai (16 Jul 2026) |
 | 13 | Statistik Kehadiran admin view — guru lookup gap (`getKehadiranStats` hardcode `guru:''` untuk admin branch) | QUEUE — prompt dah dihantar, belum verify/deploy |
 | 14 | Normalize double-whitespace nama murid (`KEHADIRAN_SS_ID`) | QUEUE |
-| 15 | Update Available Popup (PWA) — `version.json`+`APP_VERSION`+`sw.js` | IN PROGRESS — uncommitted, rujuk pattern SPDK |
+| 15 | Update Available Popup (PWA) — `version.json`+`APP_VERSION`+`sw.js` | Catatan IN PROGRESS terdahulu ialah sejarah. v1.0.1 dan cache `spkm-v13` telah diterbitkan; status keseluruhan popup tidak disahkan oleh preflight ini |
 | 16 | eSemak privacy/authentication — security Phase 2 | PENDING — scope berasingan; public eSemak tidak diubah oleh Staff Auth V2 |
 | — | FCM Push Notification | KIV |
 

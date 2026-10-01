@@ -2,7 +2,18 @@
 
 SPKM ialah portal pengurusan kelas mengaji untuk pendaftaran murid, kehadiran, yuran, carian rekod, pengurusan guru dan operasi pentadbiran.
 
-## Status Semasa
+## Checkpoint Terkini — 1 Oktober 2026
+
+- PWA production kini **v1.0.1**, dengan cache Service Worker `spkm-v13`.
+- Native eBayar memaparkan `Bayaran Untuk` di atas `Pilih Murid / Anak`. Oktober 2026 kekal dipilih selepas ibu bapa memilih murid.
+- Bulan semasa lalai menggunakan `config.serverDate`, dengan tarikh Malaysia sebagai fallback.
+- Preflight production disahkan secara manual dengan **2 murid dan RM40 sehingga confirmation screen sahaja**; ini bukan pengesahan submission bayaran selesai.
+
+Production Pages: `shafielegacy/SPKM`; source: `BurnDVS/SPKM-SyafieLegacy`. Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md) untuk commit dan batas verifikasi.
+
+Checkpoint 1 Oktober 2026 ini berkuat kuasa untuk PWA dan topologi repo. Checkpoint, angka verifikasi dan arahan deployment terdahulu dikekalkan sebagai sejarah apabila bercanggah. Handoff ini tidak menetapkan versi backend baharu atau mengesahkan semula deployment Apps Script; jangan anggap @185 yang direkod pada 2 September sebagai versi live terkini tanpa semakan berasingan.
+
+## Status Sejarah — 2 September 2026
 
 Setakat checkpoint production 2 September 2026:
 
@@ -45,6 +56,13 @@ Rujuk [CURRENT_STATUS.md](CURRENT_STATUS.md) untuk checkpoint dan validation, [I
 - `CHANGELOG.md` — sejarah perubahan.
 
 ## Deployment
+
+| Workspace | Repo dan remote | Kegunaan |
+|---|---|---|
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM` | `BurnDVS/SPKM-SyafieLegacy`; `origin` → `https://github.com/BurnDVS/SPKM-SyafieLegacy.git`; `pages` → `https://github.com/shafielegacy/SPKM.git` | Source/development utama |
+| `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX` | `shafielegacy/SPKM`; `origin` → `https://github.com/shafielegacy/SPKM.git` | Clone production Pages bersih dan berasingan |
+
+Push ke source `BurnDVS/SPKM-SyafieLegacy` sahaja **tidak** mengemas kini production Pages. Perubahan Pages mesti sampai ke `shafielegacy/SPKM`. Sehingga isu metadata/ACL source diselesaikan, utamakan `SPKM_LIVE_FIX` untuk publication/verification Pages secara langsung. Nama `origin` mempunyai tujuan berbeza dalam kedua-dua workspace; semak workspace, remote, status dan divergence sebelum publication, tanpa force push.
 
 Repositori menggunakan dua remote dengan tujuan berbeza:
 

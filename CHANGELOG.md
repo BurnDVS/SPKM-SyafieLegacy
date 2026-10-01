@@ -39,6 +39,19 @@ Semua perubahan utama sistem direkodkan di sini.
 
 ---
 
+### Tambahan handoff dokumentasi dan operasi — 1 Oktober 2026
+
+- Production Pages: `fb12ee6` — `fix native ebayar current month and refresh pwa cache`; `9483088` — `bump app version to 1.0.1`; `69c368a` — `docs: update SPKM v1.0.1 production checkpoint`.
+- Dokumentasi source: `e956c62` — `docs: update SPKM v1.0.1 production checkpoint`.
+
+- Verifikasi release ini terhad kepada preflight/confirmation dengan 2 murid dan RM40; tiada dakwaan submission bayaran selesai.
+- Clone production Pages bersih ialah `C:\Users\burnk\OneDrive\Documents-assets\SPKM_LIVE_FIX`, dengan `origin` production `https://github.com/shafielegacy/SPKM.git`. Utamakan clone ini sehingga isu metadata/ACL source diselesaikan.
+- Source workspace `C:\Users\burnk\OneDrive\Documents-assets\SPKM` menggunakan `origin` source dan `pages` production; push source sahaja tidak mengemas kini Pages.
+- Fail sementara/untracked dipindahkan ke `C:\Users\burnk\OneDrive\SPKM_ARCHIVE_20261001`; backup `Code.js.bak` dan `portal.html.bak` kekal tracked. Isu rename/cleanup ACL OneDrive direkodkan dalam `CURRENT_STATUS.md` dan `REFERENCE.md` tanpa perubahan ACL.
+- Entri terdahulu dikekalkan sebagai sejarah; handoff ini tidak merekodkan deployment backend baharu.
+
+---
+
 ## [2 September 2026] — Staff Auth V2 LIVE: Email OTP Security Hardening
 
 ### Security model dan frontend
