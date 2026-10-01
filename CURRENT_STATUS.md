@@ -1,10 +1,22 @@
 # SPKM — Current Development Status
 
-> **LAST VERIFIED: 2 September 2026, Asia/Kuala_Lumpur**
+> **LAST VERIFIED: 1 October 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**
 
 This file is the primary continuity handoff. Historical plans and staging logs remain useful, but this checkpoint controls whenever they conflict with an older note.
+
+## Production Checkpoint — 1 October 2026: Native eBayar v1.0.1
+
+- `Bayaran Untuk` was moved above `Pilih Murid / Anak`.
+- October 2026 remains selected after choosing students; the current month is derived from `config.serverDate`, with Malaysia date as the fallback.
+- Published app version: **v1.0.1**. Service worker cache: `spkm-v13`.
+- Production PWA repository: `shafielegacy/SPKM`; release commits: `fb12ee6` (`fix native ebayar current month and refresh pwa cache`) and `9483088` (`bump app version to 1.0.1`).
+- Development/source repository: `BurnDVS/SPKM-SyafieLegacy`. Pushing only to the source repository does not update production GitHub Pages; Pages publication must reach `shafielegacy/SPKM` after inspecting divergence and confirming safe history.
+- Production PWA was manually verified with **2 students and RM40 preflight**: October 2026 remained selected, and the confirmation screen showed both students, October 2026, payment date `2026-10-01` and RM40.00 correctly.
+- This verification records preflight/confirmation only, without claiming a completed payment submission. The release and manual verification are recorded from the supplied handoff; this documentation task does not rerun production checks.
+
+The 2 September checkpoint and repository snapshots below are retained as history. This October checkpoint supersedes their PWA release state; it does not record a new Apps Script deployment or a change to Portal Mode `AUTO`.
 
 ## Production Checkpoint — 2 September 2026: Staff Auth V2 LIVE
 

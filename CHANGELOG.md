@@ -3,6 +3,41 @@
 Semua perubahan utama sistem direkodkan di sini.
 
 ---
+## [1 Oktober 2026] — Native eBayar v1.0.1: current-month fix dan PWA refresh
+
+### Fixed
+
+- Betulkan Native eBayar supaya `Bayaran Untuk` kekal pada bulan semasa server Malaysia selepas parent mencari dan memilih murid.
+- Isu Oktober 2026 bertukar semula kepada September selepas pilihan murid telah diselesaikan.
+- `Bayaran Untuk` dipindahkan ke atas `Pilih Murid / Anak` supaya flow pembayaran lebih logik: pilih bulan dahulu, kemudian pilih murid.
+- Default Native eBayar kini menggunakan `config.serverDate` atau tarikh Malaysia sebagai fallback untuk memilih bulan semasa yang sah.
+
+### PWA
+
+- App version dinaikkan daripada `v1.0.0` kepada `v1.0.1`.
+- Service Worker cache dinaikkan daripada `spkm-v12` kepada `spkm-v13`.
+- Existing `skipWaiting()`, cache cleanup dan `SW_UPDATED` reload flow dikekalkan supaya PWA menerima frontend terkini tanpa clear cache manual.
+
+### Verified
+
+- Production Pages repo: `shafielegacy/SPKM`.
+- Production branch: `main`.
+- Commit production Pages:
+  - `fb12ee6` — `fix native ebayar current month and refresh pwa cache`
+  - `9483088` — `bump app version to 1.0.1`
+- Production PWA disahkan secara manual memaparkan `Bayaran Untuk` di atas pilihan murid.
+- Oktober 2026 kekal dipilih selepas dua murid dipilih.
+- Preflight dua murid dengan jumlah RM40 berjaya sehingga confirmation screen tanpa pertukaran bulan.
+- Confirmation memaparkan dua murid, Oktober 2026, tarikh 2026-10-01 dan RM40.00 dengan betul.
+
+### Repository Note
+
+- Development/source repo: `BurnDVS/SPKM-SyafieLegacy`.
+- Production GitHub Pages repo: `shafielegacy/SPKM`.
+- Push ke repo source sahaja tidak mengemas kini PWA production.
+- Production Pages perlu dikemas kini melalui `shafielegacy/SPKM` dengan history yang selamat dan tanpa force push.
+
+---
 
 ## [2 September 2026] — Staff Auth V2 LIVE: Email OTP Security Hardening
 
