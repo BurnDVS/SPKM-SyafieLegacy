@@ -26,12 +26,11 @@ _messaging.onBackgroundMessage(function(payload) {
 // ============================================================
 // Cache logic (kekalkan asal, bump version untuk SW baru)
 // ============================================================
-const CACHE = 'spkm-v12';
+const CACHE = 'spkm-v13';
 
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
 });
-
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -50,7 +49,6 @@ self.addEventListener('activate', function(e) {
     })
   );
 });
-
 self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;

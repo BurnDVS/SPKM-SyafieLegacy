@@ -3701,6 +3701,13 @@
     <div class="native-ebayar-body">
       <form id="nativeEbayarForm" onsubmit="submitNativeEbayarPreflight(event)" novalidate>
         <div class="native-ebayar-grid">
+          <div class="native-ebayar-field">
+            <label for="nativeEbayarMonth">Bayaran Untuk <span class="req">*</span></label>
+            <select id="nativeEbayarMonth" required></select>
+            <p class="native-ebayar-help">Bayaran Januari–Ogos 2026 kekal di sistem bayaran lama. Bulan akan datang tidak boleh dipilih.</p>
+            <p class="native-ebayar-help" id="nativeEbayarLaunchStatus" role="status"></p>
+          </div>
+
           <div class="native-ebayar-field full">
             <label for="nativeEbayarStudentSearch">Pilih Murid / Anak <span class="req">*</span></label>
             <div class="native-ebayar-student-wrap">
@@ -3709,13 +3716,6 @@
             </div>
             <div class="native-ebayar-selected" id="nativeEbayarSelectedStudents" aria-live="polite"></div>
             <p class="native-ebayar-help" id="nativeEbayarStudentHelp">Cari dan pilih 1 hingga 5 murid daripada rekod rasmi SPKM.</p>
-          </div>
-
-          <div class="native-ebayar-field">
-            <label for="nativeEbayarMonth">Bayaran Untuk <span class="req">*</span></label>
-            <select id="nativeEbayarMonth" required></select>
-            <p class="native-ebayar-help">Bayaran Januari–Ogos 2026 kekal di sistem bayaran lama. Bulan akan datang tidak boleh dipilih.</p>
-            <p class="native-ebayar-help" id="nativeEbayarLaunchStatus" role="status"></p>
           </div>
 
           <div class="native-ebayar-field">
@@ -7257,6 +7257,18 @@
         });
       });
       yearSelect.value = String(config.defaultYear);
+
+      if (nativeSelect && nativeSelect.options.length) {
+        var serverMonthKey = ((config.serverDate || getEbayarMalaysiaDateParts().dateKey || '') + '').slice(0, 7);
+        var serverMonthExists = Array.prototype.some.call(nativeSelect.options, function(option) {
+          return option.value === serverMonthKey;
+        });
+
+        if (serverMonthExists) {
+          nativeSelect.value = serverMonthKey;
+        }
+      }
+
       renderEbayarYear(config.defaultYear);
     } catch (err) {
       console.error('getPublicEbayarYears error:', err);
