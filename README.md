@@ -1,5 +1,9 @@
 # Sistem Pengurusan Kelas Mengaji Syafie Legacy (SPKM)
 
+## Latest production checkpoint â€” 3 November 2026
+
+Native eBayar now preserves the explicitly selected payment month across the 30-second background refresh. The October 2026 selection was verified after choosing a student on localhost and on the installed phone PWA. Source commit `1c5f3b1` (`BurnDVS/SPKM-SyafieLegacy`); production Pages commit `d8655bb` (`shafielegacy/SPKM`). This is a frontend-only fix: legacy Google Forms Januaryâ€“August, backend/GAS, Google Sheets, and live payment submission behaviour were not changed or retested. See `CURRENT_STATUS.md` and `CHANGELOG.md` for the release boundary.
+
 SPKM ialah portal pengurusan kelas mengaji untuk pendaftaran murid, kehadiran, yuran, carian rekod, pengurusan guru dan operasi pentadbiran.
 
 ## Checkpoint Terkini — 1 Oktober 2026

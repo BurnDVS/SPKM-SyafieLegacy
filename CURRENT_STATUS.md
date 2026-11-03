@@ -1,5 +1,16 @@
 # SPKM — Current Development Status
 
+## Checkpoint â€” 3 November 2026: Native eBayar preserves selected payment month (LIVE)
+
+- **Issue:** When parents selected a prior payment month (for example October 2026) and searched/selected a child, the `Bayaran Untuk` dropdown could jump back to the current month (November 2026). The 30-second eBayar stats auto-refresh calls `initEbayar()`, which rebuilt the Native eBayar month options and reselected `serverMonthKey`.
+- **Fix:** `index.html` stores `selectedPaymentMonth` before rebuilding the month options and restores it if the month remains available and not payment-blocked; otherwise the existing current-month fallback applies. This preserves an explicitly selected September/October month while allowing manual month changes.
+- **Scope:** Native eBayar frontend only. Legacy Google Forms for Januaryâ€“August 2026, `portal.html`, `Code.js`, Google Sheets, GAS deployment, and payment submission logic were **not changed**. No Service Worker cache version bump was required for this patch; the existing network-first strategy remains.
+- **Source:** `BurnDVS/SPKM-SyafieLegacy`, `main` commit `1c5f3b1` (`fix: preserve selected month in native eBayar`).
+- **Production Pages/PWA:** `shafielegacy/SPKM`, `main` commit `d8655bb` (cherry-picked onto prior Pages checkpoint `69c368a`, not a cross-repository force push).
+- **Validation:** `git diff --check` passed; only `index.html` changed (8 insertions, 1 deletion). Localhost browser and installed-phone PWA manual checks confirmed that October 2026 stayed selected after choosing **Muhammad Ayreel Aduka**, including the original no-month-jump scenario. The owner reported success on the phone PWA after release.
+- **Validation boundary:** No live payment submission, duplicate-payment write, receipt generation, or full Septemberâ€“November regression suite was performed in this fix. No claim is made that individual payment records were reconciled. Dates and other previously documented checkpoints remain historical.
+- **Operational note:** `origin` points to the BurnDVS source repository; `pages` points to the shafielegacy production Pages repository. Their histories diverge. Publish a minimal fix on top of current `pages/main` (as done using a detached release worktree); never `git push --force` or overwrite Pages with source `main`.
+
 > **LAST VERIFIED: 1 Oktober 2026, Asia/Kuala_Lumpur**
 >
 > **START HERE when resuming development.**

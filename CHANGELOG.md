@@ -1,5 +1,21 @@
 # Changelog — SPKM Syafie Legacy
 
+## [3 November 2026] â€” Native eBayar: selected historical month preserved in PWA LIVE
+
+### Fixed
+
+- Resolved Native eBayar `Bayaran Untuk` reverting to the current month after the parent searched/selected a student during background auto-refresh.
+- `initEbayar()` now preserves the user's month choice when rebuilding payment-month options; falls back to the current month only when the prior selection is no longer eligible.
+
+### Release and verification
+
+- Source: `BurnDVS/SPKM-SyafieLegacy` `main` at `1c5f3b1`.
+- PWA Pages LIVE: `shafielegacy/SPKM` `main` at `d8655bb`, based on `69c368a`.
+- Verified with Muhammad Ayreel Aduka: October 2026 remained selected after student selection, including on installed phone PWA. `git diff --check` passed; only `index.html` changed (8 insertions, 1 deletion).
+- No test payment submitted; backend/GAS, Google Sheets, `portal.html`, legacy Google Forms Januaryâ€“August, and Service Worker version were not changed.
+
+---
+
 Semua perubahan utama sistem direkodkan di sini.
 
 ---
