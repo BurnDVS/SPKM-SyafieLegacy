@@ -7245,6 +7245,8 @@
       var yearSelect = document.getElementById('ebayarYearSelect');
       yearSelect.replaceChildren();
       var nativeSelect = document.getElementById('nativeEbayarMonth');
+      // Preserve selected payment month during auto-refresh.
+      var selectedPaymentMonth = nativeSelect.value;
       nativeSelect.replaceChildren();
       config.years.forEach(function(year) {
         var option = document.createElement('option'); option.value = String(year.year); option.textContent = String(year.year); yearSelect.appendChild(option);
@@ -7264,7 +7266,12 @@
           return option.value === serverMonthKey;
         });
 
-        if (serverMonthExists) {
+        var selectedMonthStillAvailable = Array.prototype.some.call(nativeSelect.options, function(option) {
+          return option.value === selectedPaymentMonth && option.dataset.paymentBlocked !== 'true';
+        });
+        if (selectedMonthStillAvailable) {
+          nativeSelect.value = selectedPaymentMonth;
+        } else if (serverMonthExists) {
           nativeSelect.value = serverMonthKey;
         }
       }
